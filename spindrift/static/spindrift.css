@@ -12,8 +12,9 @@
   /* Platform tints, assigned by family rather than per platform. PS1–PS4 are one blue
      ramp running light to dark, which is what makes the four PlayStation generations
      read as a single region of the grid with internal structure rather than four
-     unrelated hues taking up half its width. Steam is deliberately desaturated so it
-     stays distinct from the ramp it sits beside.
+     unrelated hues taking up half its width. Xbox and Xbox One are a two-step green ramp
+     on the same principle, running the same direction: older lighter, newer darker.
+     Steam is deliberately desaturated so it stays distinct from the ramp it sits beside.
 
      Each tint is paired with the ink that stays legible on it, because the reflowed
      layout prints a platform's name on top of its own colour — a light tint takes the
@@ -23,6 +24,8 @@
   --steam-ink: #ffffff;
   --xbox: #4a9b3f;
   --xbox-ink: #16181d;
+  --xboxone: #2f6b28;
+  --xboxone-ink: #ffffff;
   --ps1: #a8c6ee;
   --ps1-ink: #16181d;
   --ps2: #6e9fdf;
@@ -56,6 +59,8 @@
     --steam-ink: #14161a;
     --xbox: #5cbb4c;
     --xbox-ink: #14161a;
+    --xboxone: #2d7526;
+    --xboxone-ink: #e8eaef;
     --ps1: #c2d9f5;
     --ps1-ink: #14161a;
     --ps2: #8bb6ec;
@@ -135,7 +140,7 @@ h1 {
 
      The trailing column is the delete control's own, rather than somewhere inside the name
      cell, so that it sits as far from the toggles as the row allows. */
-  --columns: minmax(8rem, 1fr) repeat(8, 2.75rem) 3.5rem;
+  --columns: minmax(8rem, 1fr) repeat(9, 2.75rem) 3.5rem;
 
   display: flex;
   flex-direction: column;
@@ -176,7 +181,7 @@ h1 {
   align-items: flex-end;
 }
 
-/* Sticky as one row rather than nine independently sticky cells, so it is always clear
+/* Sticky as one row rather than ten independently sticky cells, so it is always clear
    which column is being clicked in a long catalogue. Opaque, because the 1px gaps between
    its cells would otherwise show the row sliding underneath. */
 .matrix-head {
@@ -203,11 +208,11 @@ h1 {
 
 /* Turned on its side, so a column's width is set by the tap target beneath it rather than
    by the length of the platform's name. Horizontal labels are not something this layout
-   can afford: eight columns each wide enough for "Emulator" need a 738px page, which is
-   wider than the 700px at which the matrix reflows, so between those two widths there
-   would be nothing to render but a sideways scrollbar. They also cost the name column
-   half its width at the page's own maximum. Height is the axis with room going spare, and
-   unlike width it stays constant however many platforms are added later.
+   can afford: nine columns each wide enough for "Emulator" need past 800px of page, which
+   is wider than the 700px at which the matrix reflows, so between those two widths there
+   would be nothing to render but a sideways scrollbar. They also cost the name column more
+   than half its width at the page's own maximum. Height is the axis with room going spare,
+   and unlike width it stays constant however many platforms are added later.
 
    `rotate(180deg)` on top of `vertical-rl` is what makes a label read bottom-to-top, the
    direction a matrix header conventionally runs. `sideways-lr` states that in a single
@@ -219,8 +224,8 @@ h1 {
 .column {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  /* Flush to the bottom of the header, so eight labels of different lengths start on one
-     line with "Game" rather than floating at eight different heights. */
+  /* Flush to the bottom of the header, so labels of different lengths start on one line
+     with "Game" rather than floating at nine different heights. */
   justify-content: flex-start;
   padding-block: 0.25rem;
   padding-inline: 0.5rem;
@@ -303,6 +308,7 @@ h1 {
    header has scrolled past. */
 .cell[data-platform="Steam"] { --tint: var(--steam); --tint-ink: var(--steam-ink); }
 .cell[data-platform="Xbox"] { --tint: var(--xbox); --tint-ink: var(--xbox-ink); }
+.cell[data-platform="Xbox One"] { --tint: var(--xboxone); --tint-ink: var(--xboxone-ink); }
 .cell[data-platform="PS1"] { --tint: var(--ps1); --tint-ink: var(--ps1-ink); }
 .cell[data-platform="PS2"] { --tint: var(--ps2); --tint-ink: var(--ps2-ink); }
 .cell[data-platform="PS3"] { --tint: var(--ps3); --tint-ink: var(--ps3-ink); }
@@ -362,10 +368,10 @@ h1 {
   outline-offset: -3px;
 }
 
-/* Deleting is unrecoverable and the eight controls beside it are not, so the delete
+/* Deleting is unrecoverable and the nine controls beside it are not, so the delete
    control is given every separation the row can offer: the last column, a gutter of
    empty space between it and Emulator, the page's background rather than a row's, and
-   no platform tint. It should not read as a ninth toggle. */
+   no platform tint. It should not read as one more toggle. */
 .remove {
   display: flex;
   align-items: center;
@@ -431,10 +437,10 @@ h1 {
   font-weight: 600;
 }
 
-/* A name column plus eight tinted columns cannot fit a phone: the cells come out around
-   35px wide, below a comfortable tap target and with no room for a label saying what is
+/* A name column plus nine tinted columns cannot fit a phone: the cells come out around
+   30px wide, below a comfortable tap target and with no room for a label saying what is
    being tapped. Below this width the matrix stops being a matrix and becomes one card
-   per game — the name on its own line, its eight platforms as labelled chips beneath it.
+   per game — the name on its own line, its nine platforms as labelled chips beneath it.
 
    Nothing about the markup or the endpoints changes; the grid is redefined and the
    labels already sitting in every cell are revealed. This is what the grid-plus-ARIA
@@ -463,9 +469,12 @@ h1 {
   .add,
   .row {
     display: grid;
-    /* Four chips to a line. Eight across is precisely what did not fit, and four leaves
-       every chip wide enough for its longest label, which is "Emulator". */
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    /* Three chips to a line. Nine across is precisely what did not fit, and three divides
+       the platforms into equal lines with no lone chip stranded on a line of its own —
+       which four, the count this held when there were eight platforms, no longer does.
+       Three also leaves every chip wider than its longest label, "Emulator" and "Xbox One"
+       tied at eight characters. */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1px;
     margin-bottom: 0.75rem;
     border: 1px solid var(--line);
@@ -595,7 +604,7 @@ h1 {
 
   /* Thumb-sized like every other target on the card. It stays on the name's line,
      between the field and the delete control, which is the one place on the card that
-     is not a chip — a search link among the platform chips would read as a ninth
+     is not a chip — a search link among the platform chips would read as one more
      platform. */
   .search {
     width: 2.75rem;
