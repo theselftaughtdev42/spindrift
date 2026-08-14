@@ -1,13 +1,6 @@
-from tests.matrix_html import add_form, cells, rows
+from tests.matrix_html import add_form, cells, rows, set_platforms
 
 PLATFORMS = ["Steam", "Xbox", "PS1", "PS2", "PS3", "PS4", "Switch", "Emulator"]
-
-
-def set_platforms(page, game):
-    """Which platforms are set for one game, read off the rendered grid."""
-    return {
-        platform for (row, platform), is_set in cells(page).items() if row == game and is_set
-    }
 
 
 def test_a_game_added_with_platforms_ticked_has_exactly_those_set(client):

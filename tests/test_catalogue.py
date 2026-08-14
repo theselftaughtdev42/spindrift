@@ -1,4 +1,5 @@
 from spindrift import create_app
+from tests.matrix_html import rows
 
 
 def test_added_game_appears_in_the_catalogue(client):
@@ -47,7 +48,9 @@ def test_a_name_already_listed_is_rejected_whatever_its_case(client):
     response = client.post("/games", data={"name": "hades"})
 
     assert "already" in response.get_data(as_text=True).lower()
-    assert client.get("/").get_data(as_text=True).lower().count("hades") == 1
+    # Counted as rows rather than as occurrences of the word: a game's name appears in
+    # its row's controls too, so counting text would say "twice" about one game.
+    assert rows(client.get("/").get_data(as_text=True)) == ["add", "Hades"]
 
 
 def test_surrounding_whitespace_is_stripped_from_a_name(client):

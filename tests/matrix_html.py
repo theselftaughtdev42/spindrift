@@ -14,6 +14,7 @@ from html.parser import HTMLParser
 
 Cell = namedtuple("Cell", "platform pressed url")
 AddForm = namedtuple("AddForm", "action name platforms checked focused")
+Deletion = namedtuple("Deletion", "url confirm")
 
 
 class _Reader(HTMLParser):
@@ -70,6 +71,11 @@ def _read(html):
 def cells(html):
     """Whether each cell in a page is set, keyed by (game name, platform label)."""
     return {key: cell.pressed for key, cell in _read(html).items()}
+
+
+def set_platforms(html, game):
+    """Which platforms are set for one game, read off the rendered grid."""
+    return {platform for (row, platform), is_set in cells(html).items() if row == game and is_set}
 
 
 def toggle_url(html, game, platform):
@@ -182,3 +188,43 @@ def rows(html):
     reader = _RowReader()
     reader.feed(html)
     return [row for row in reader.rows if row is not None]
+
+
+class _DeleteReader(HTMLParser):
+    """Each row's delete control: where it sends, and what it asks before sending."""
+
+    def __init__(self):
+        super().__init__()
+        self.controls = {}
+        self._game = None
+        self._header = None
+        self._text = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if self._header is None and attrs.get("role") == "rowheader":
+            self._header, self._text = tag, []
+        elif "hx-delete" in attrs:
+            self.controls[self._game] = Deletion(
+                attrs["hx-delete"], attrs.get("hx-confirm")
+            )
+
+    def handle_data(self, data):
+        if self._header is not None:
+            self._text.append(data)
+
+    def handle_endtag(self, tag):
+        if self._header is not None and tag == self._header:
+            self._game = " ".join("".join(self._text).split())
+            self._header = None
+
+
+def deletion(html, game):
+    """That game's delete control as `Deletion(url, confirm)`.
+
+    `confirm` is the question the cataloguer is asked first, or `None` if the control
+    would delete without asking.
+    """
+    reader = _DeleteReader()
+    reader.feed(html)
+    return reader.controls[game]

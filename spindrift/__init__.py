@@ -77,6 +77,17 @@ def create_app(database_path):
             "_cell.html", game_id=game_id, platform=platform, available=not removed
         )
 
+    @app.delete("/games/<int:game_id>")
+    def delete_game(game_id):
+        connection = db.get_connection()
+        # No row check: a game already gone is the outcome asked for, and on a second
+        # device holding a stale page a 404 here would raise the failure banner over a
+        # deletion that did in fact happen.
+        connection.execute("DELETE FROM games WHERE id = ?", (game_id,))
+        connection.commit()
+        # The whole list body, because a deletion closes a gap: every row below it moves.
+        return render_template("_catalogue.html", **catalogue())
+
     def catalogue():
         """Everything the grid draws: the games, and which of their cells are set."""
         connection = db.get_connection()

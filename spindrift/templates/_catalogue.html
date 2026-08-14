@@ -8,6 +8,9 @@
     {% for platform in platforms %}
       <span class="column" role="columnheader">{{ platform }}</span>
     {% endfor %}
+    {#- Unlabelled: the ✕ on each row says what the column is, and a heading here would
+        put the word "Delete" at the top of a grid whose subject is platforms. -#}
+    <span class="column remove" role="columnheader"></span>
   </div>
 
   {#- The entry row is a row of the grid rather than a card above it, so a checkbox sits
@@ -32,6 +35,9 @@
         </label>
       </span>
     {% endfor %}
+    {#- Empty: rows contribute their cells straight to the grid, so the entry row needs
+        the delete column's place held or its neighbours slide out of alignment. -#}
+    <span class="remove entry" role="cell"></span>
   </form>
 
   {% for game in games %}
@@ -42,6 +48,19 @@
         {% set available = (game.id, platform) in availability %}
         {% include "_cell.html" %}
       {% endfor %}
+      {#- Deliberately last and outside the tinted block of toggles: this is the one
+          control on the row that destroys data, and with no backup or undo behind it,
+          reaching it by accident instead of Emulator has to be hard. -#}
+      <span class="remove" role="cell">
+        {#- The question names the game and says what it costs: this dialog is the
+            entire safety net, and one that says nothing is one people learn to dismiss
+            without reading. -#}
+        <button type="button"
+                aria-label="Delete {{ game.name }}"
+                hx-delete="{{ url_for('delete_game', game_id=game.id) }}"
+                hx-target="#catalogue"
+                hx-confirm="Delete {{ game.name }}? This cannot be undone.">&times;</button>
+      </span>
     </div>
   {% endfor %}
 </div>
