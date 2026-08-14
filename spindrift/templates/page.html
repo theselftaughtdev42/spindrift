@@ -7,8 +7,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}">
     <script src="{{ url_for('static', filename='htmx.min.js') }}" defer></script>
   </head>
-  <body>
+  {#- A failed toggle must not look identical to a successful one, which is what it
+      would do if the cell simply never changed. htmx's error events bubble to the body,
+      so one handler covers every request on the page. -#}
+  <body hx-on::before-request="document.getElementById('failure').hidden = true"
+        hx-on::response-error="document.getElementById('failure').hidden = false"
+        hx-on::send-error="document.getElementById('failure').hidden = false">
     <h1>Spindrift</h1>
+
+    <p id="failure" class="failure" role="alert" hidden>
+      That change wasn’t saved — the server didn’t respond.
+    </p>
 
     <form class="add"
           hx-post="{{ url_for('add_game') }}"

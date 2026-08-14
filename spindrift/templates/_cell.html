@@ -1,0 +1,17 @@
+{#- One availability: whether `game_id` can be played on `platform`.
+
+    Rendered both as part of the grid and alone as the toggle endpoint's response, so the
+    two can never disagree about what a set cell looks like. The button fills the cell,
+    which is what makes the whole cell the click target rather than an inner control. -#}
+<div class="cell" role="cell" data-platform="{{ platform }}">
+  <button type="button"
+          aria-pressed="{{ 'true' if available else 'false' }}"
+          hx-post="{{ url_for('toggle_platform', game_id=game_id, platform=platform) }}"
+          hx-target="closest .cell"
+          hx-swap="outerHTML">
+    {#- Repeated on every cell so one markup shape serves both layouts: the column header
+        names the platform on desktop, this label does it on mobile, where the header is
+        gone. -#}
+    <span class="cell-label">{{ platform }}</span>
+  </button>
+</div>

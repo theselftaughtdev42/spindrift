@@ -1,6 +1,4 @@
-/* Palette tokens are defined once and re-selected by `prefers-color-scheme`. The next
-   slice hangs eight platform tints off this same structure, so the token names matter
-   more here than the visual polish does. */
+/* Palette tokens are defined once and re-selected by `prefers-color-scheme`. */
 :root {
   --surface: #f7f7f8;
   --raised: #ffffff;
@@ -10,6 +8,20 @@
   --accent: #3f5fd0;
   --accent-ink: #ffffff;
   --danger: #b3261e;
+
+  /* Platform tints, assigned by family rather than per platform. PS1–PS4 are one blue
+     ramp running light to dark, which is what makes the four PlayStation generations
+     read as a single region of the grid with internal structure rather than four
+     unrelated hues taking up half its width. Steam is deliberately desaturated so it
+     stays distinct from the ramp it sits beside. */
+  --steam: #59688c;
+  --xbox: #4a9b3f;
+  --ps1: #a8c6ee;
+  --ps2: #6e9fdf;
+  --ps3: #3f76c9;
+  --ps4: #244f8f;
+  --switch: #d8443a;
+  --emulator: #7d4bbf;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +34,17 @@
     --accent: #7d95e8;
     --accent-ink: #14161a;
     --danger: #f2b8b5;
+
+    /* Lifted and slightly more saturated: the same hues go muddy against a dark
+       surface, and the four ramp steps stop being tellable apart. */
+    --steam: #8593bb;
+    --xbox: #5cbb4c;
+    --ps1: #c2d9f5;
+    --ps2: #8bb6ec;
+    --ps3: #5b90dd;
+    --ps4: #3468b4;
+    --switch: #f0655a;
+    --emulator: #a173e0;
   }
 }
 
@@ -77,23 +100,105 @@ h1 {
   cursor: pointer;
 }
 
-ul {
-  margin: 0;
-  padding: 0;
+/* The matrix is a CSS Grid carrying ARIA table roles rather than a `<table>`, because
+   the mobile slice reflows it into chip rows. Reflowing a real table means overriding
+   `display` on every row and cell; a grid reflows by redefining its columns. */
+.matrix {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) repeat(8, 2.75rem);
+  gap: 1px;
   border: 1px solid var(--line);
   border-radius: 0.5rem;
-  background: var(--raised);
-  list-style: none;
+  background: var(--line);
   overflow: hidden;
 }
 
-li {
-  padding: 0.65rem 0.9rem;
-  border-bottom: 1px solid var(--line);
+/* Rows contribute their children directly to the grid, so every cell aligns to the
+   column it belongs to without subgrid. */
+.matrix-head,
+.row {
+  display: contents;
 }
 
-li:last-child {
-  border-bottom: none;
+.corner,
+.column,
+.name {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.6rem;
+  background: var(--raised);
+}
+
+/* Sticky so it is always clear which column is being clicked in a long catalogue. */
+.corner,
+.column {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.column {
+  justify-content: center;
+  padding-inline: 0.25rem;
+  text-align: center;
+}
+
+.name {
+  font-weight: 500;
+}
+
+/* Each cell is tinted by its column, so a column stays identifiable by sight once the
+   header has scrolled past. */
+.cell[data-platform="Steam"] { --tint: var(--steam); }
+.cell[data-platform="Xbox"] { --tint: var(--xbox); }
+.cell[data-platform="PS1"] { --tint: var(--ps1); }
+.cell[data-platform="PS2"] { --tint: var(--ps2); }
+.cell[data-platform="PS3"] { --tint: var(--ps3); }
+.cell[data-platform="PS4"] { --tint: var(--ps4); }
+.cell[data-platform="Switch"] { --tint: var(--switch); }
+.cell[data-platform="Emulator"] { --tint: var(--emulator); }
+
+/* The button fills the cell entirely: that is what makes the whole cell the click
+   target rather than a small control sitting inside one. */
+.cell button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 2.5rem;
+  padding: 0;
+  border: none;
+  background: color-mix(in srgb, var(--tint) 10%, var(--raised));
+  cursor: pointer;
+}
+
+.cell button[aria-pressed="true"] {
+  background: var(--tint);
+}
+
+.cell button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+/* Present in the markup on every cell, but hidden here: at these widths the column
+   header already names the platform. The mobile slice reveals it, where there is no
+   header. It stays in the accessibility tree either way, which is what gives the
+   button its name. */
+.cell-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .empty {
@@ -104,7 +209,8 @@ li:last-child {
   text-align: center;
 }
 
-.error {
+.error,
+.failure {
   margin: 0 0 1rem;
   color: var(--danger);
   font-weight: 600;

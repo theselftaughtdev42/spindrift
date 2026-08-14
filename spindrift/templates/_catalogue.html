@@ -3,11 +3,25 @@
 {% endif %}
 
 {% if games %}
-  <ul>
+  <div class="matrix" role="table" aria-label="Games by platform">
+    <div class="matrix-head" role="row">
+      <span class="corner" role="columnheader">Game</span>
+      {% for platform in platforms %}
+        <span class="column" role="columnheader">{{ platform }}</span>
+      {% endfor %}
+    </div>
+
     {% for game in games %}
-      <li>{{ game.name }}</li>
+      <div class="row" role="row">
+        <span class="name" role="rowheader">{{ game.name }}</span>
+        {% for platform in platforms %}
+          {% set game_id = game.id %}
+          {% set available = (game.id, platform) in availability %}
+          {% include "_cell.html" %}
+        {% endfor %}
+      </div>
     {% endfor %}
-  </ul>
+  </div>
 {% else %}
   <p class="empty">No games yet — add one above.</p>
 {% endif %}

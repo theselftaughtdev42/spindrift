@@ -13,6 +13,13 @@ MIGRATIONS = [
     );
     CREATE UNIQUE INDEX games_name_unique ON games (name COLLATE NOCASE);
     """,
+    """
+    CREATE TABLE game_platforms (
+        game_id INTEGER NOT NULL REFERENCES games (id) ON DELETE CASCADE,
+        platform TEXT NOT NULL,
+        PRIMARY KEY (game_id, platform)
+    );
+    """,
 ]
 
 
