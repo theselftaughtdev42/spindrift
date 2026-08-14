@@ -90,12 +90,6 @@ h1 {
   letter-spacing: -0.01em;
 }
 
-/* Like `.row`: the form contributes its cells directly to the grid, which is what puts
-   each checkbox in the column it names. */
-.add {
-  display: contents;
-}
-
 .add input[type="text"] {
   flex: 1;
   min-width: 0;
@@ -124,26 +118,48 @@ h1 {
   cursor: pointer;
 }
 
-/* The matrix is a CSS Grid carrying ARIA table roles rather than a `<table>`, because
-   the mobile slice reflows it into chip rows. Reflowing a real table means overriding
-   `display` on every row and cell; a grid reflows by redefining its columns. */
+/* The matrix is CSS Grid carrying ARIA table roles rather than a `<table>`, because the
+   mobile slice reflows it into chip rows. Reflowing a real table means overriding
+   `display` on every row and cell; a grid reflows by redefining its columns.
+
+   Specifically it is a column of rows, each row a grid of its own sharing one column
+   definition, rather than a single grid every row pours its cells into. The two resolve to
+   identical widths — every column is a fixed size bar the name, which takes what is left
+   of the same total — but only this way can the header stick. Sticky travel is bounded by
+   the element's containing block, and a grid item's containing block is its own grid area:
+   one row tall, which is no travel at all. A flex item's containing block is the whole
+   flex container, so the header can travel the length of the catalogue. */
 .matrix {
-  display: grid;
-  /* The trailing column is the delete control's own, rather than somewhere inside the
-     name cell, so that it sits as far from the toggles as the row allows. */
-  grid-template-columns: minmax(8rem, 1fr) repeat(8, 2.75rem) 3.5rem;
+  /* Declared once and inherited by every row, so the header, the entry form and the games
+     cannot drift out of alignment with each other.
+
+     The trailing column is the delete control's own, rather than somewhere inside the name
+     cell, so that it sits as far from the toggles as the row allows. */
+  --columns: minmax(8rem, 1fr) repeat(8, 2.75rem) 3.5rem;
+
+  display: flex;
+  flex-direction: column;
   gap: 1px;
   border: 1px solid var(--line);
   border-radius: 0.5rem;
   background: var(--line);
+  /* Both declarations are wanted: `clip` is what the rule means, and `hidden` is what a
+     browser too old to know `clip` falls back to. They round the corners identically. The
+     difference is that `hidden` makes the matrix a scroll container, and a sticky element
+     sticks to its nearest scrollport — which would be this box, a box that never scrolls,
+     so the header would sit at the top of the catalogue looking sticky and never move. */
   overflow: hidden;
+  overflow: clip;
 }
 
-/* Rows contribute their children directly to the grid, so every cell aligns to the
-   column it belongs to without subgrid. */
+/* The entry form is in here with the header and the games because it is a row like any
+   other: sharing their columns is what puts each checkbox under the platform it names. */
 .matrix-head,
+.add,
 .row {
-  display: contents;
+  display: grid;
+  grid-template-columns: var(--columns);
+  gap: 1px;
 }
 
 .corner,
@@ -155,12 +171,29 @@ h1 {
   background: var(--raised);
 }
 
-/* Sticky so it is always clear which column is being clicked in a long catalogue. */
-.corner,
-.column {
+/* Bottom-aligned to sit on the same line as the rotated platform labels beside it. */
+.corner {
+  align-items: flex-end;
+}
+
+/* Sticky as one row rather than nine independently sticky cells, so it is always clear
+   which column is being clicked in a long catalogue. Opaque, because the 1px gaps between
+   its cells would otherwise show the row sliding underneath. */
+.matrix-head {
   position: sticky;
   top: 0;
   z-index: 1;
+  background: var(--line);
+  /* The rule beneath the header is a flex gap, and a gap stays where the header would
+     have been rather than travelling with it — so a stuck header sits flush on the row
+     sliding underneath, with nothing dividing them. A shadow occupies no space in the
+     layout, so it can draw that line under the stuck header while falling exactly on the
+     gap, same colour and same pixel, when the header is back at rest. */
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.corner,
+.column {
   background: var(--surface);
   color: var(--ink-muted);
   font-size: 0.75rem;
@@ -168,10 +201,29 @@ h1 {
   letter-spacing: 0.02em;
 }
 
+/* Turned on its side, so a column's width is set by the tap target beneath it rather than
+   by the length of the platform's name. Horizontal labels are not something this layout
+   can afford: eight columns each wide enough for "Emulator" need a 738px page, which is
+   wider than the 700px at which the matrix reflows, so between those two widths there
+   would be nothing to render but a sideways scrollbar. They also cost the name column
+   half its width at the page's own maximum. Height is the axis with room going spare, and
+   unlike width it stays constant however many platforms are added later.
+
+   `rotate(180deg)` on top of `vertical-rl` is what makes a label read bottom-to-top, the
+   direction a matrix header conventionally runs. `sideways-lr` states that in a single
+   declaration and is what this rule becomes once it is safe to rely on.
+
+   The padding is logical rather than physical because the axes have swapped: here
+   `padding-inline` is the gap at the ends of the label and `padding-block` the gap across
+   the column. Physical values would silently mean the other one. */
 .column {
-  justify-content: center;
-  padding-inline: 0.25rem;
-  text-align: center;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  /* Flush to the bottom of the header, so eight labels of different lengths start on one
+     line with "Game" rather than floating at eight different heights. */
+  justify-content: flex-start;
+  padding-block: 0.25rem;
+  padding-inline: 0.5rem;
 }
 
 .name {
