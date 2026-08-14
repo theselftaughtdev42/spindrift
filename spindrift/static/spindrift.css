@@ -13,15 +13,28 @@
      ramp running light to dark, which is what makes the four PlayStation generations
      read as a single region of the grid with internal structure rather than four
      unrelated hues taking up half its width. Steam is deliberately desaturated so it
-     stays distinct from the ramp it sits beside. */
+     stays distinct from the ramp it sits beside.
+
+     Each tint is paired with the ink that stays legible on it, because the reflowed
+     layout prints a platform's name on top of its own colour — a light tint takes the
+     dark ink, a dark tint the light one. The pair lives together so that changing a
+     tint and forgetting its ink is not possible at a glance. */
   --steam: #59688c;
+  --steam-ink: #ffffff;
   --xbox: #4a9b3f;
+  --xbox-ink: #16181d;
   --ps1: #a8c6ee;
+  --ps1-ink: #16181d;
   --ps2: #6e9fdf;
+  --ps2-ink: #16181d;
   --ps3: #3f76c9;
+  --ps3-ink: #ffffff;
   --ps4: #244f8f;
+  --ps4-ink: #ffffff;
   --switch: #d8443a;
+  --switch-ink: #ffffff;
   --emulator: #7d4bbf;
+  --emulator-ink: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -36,15 +49,25 @@
     --danger: #f2b8b5;
 
     /* Lifted and slightly more saturated: the same hues go muddy against a dark
-       surface, and the four ramp steps stop being tellable apart. */
+       surface, and the four ramp steps stop being tellable apart. Lifting them also
+       flips almost every ink: a tint bright enough to read against a dark page is
+       bright enough to need dark text on it. */
     --steam: #8593bb;
+    --steam-ink: #14161a;
     --xbox: #5cbb4c;
+    --xbox-ink: #14161a;
     --ps1: #c2d9f5;
+    --ps1-ink: #14161a;
     --ps2: #8bb6ec;
+    --ps2-ink: #14161a;
     --ps3: #5b90dd;
+    --ps3-ink: #14161a;
     --ps4: #3468b4;
+    --ps4-ink: #e8eaef;
     --switch: #f0655a;
+    --switch-ink: #14161a;
     --emulator: #a173e0;
+    --emulator-ink: #14161a;
   }
 }
 
@@ -189,14 +212,14 @@ h1 {
 
 /* Each cell is tinted by its column, so a column stays identifiable by sight once the
    header has scrolled past. */
-.cell[data-platform="Steam"] { --tint: var(--steam); }
-.cell[data-platform="Xbox"] { --tint: var(--xbox); }
-.cell[data-platform="PS1"] { --tint: var(--ps1); }
-.cell[data-platform="PS2"] { --tint: var(--ps2); }
-.cell[data-platform="PS3"] { --tint: var(--ps3); }
-.cell[data-platform="PS4"] { --tint: var(--ps4); }
-.cell[data-platform="Switch"] { --tint: var(--switch); }
-.cell[data-platform="Emulator"] { --tint: var(--emulator); }
+.cell[data-platform="Steam"] { --tint: var(--steam); --tint-ink: var(--steam-ink); }
+.cell[data-platform="Xbox"] { --tint: var(--xbox); --tint-ink: var(--xbox-ink); }
+.cell[data-platform="PS1"] { --tint: var(--ps1); --tint-ink: var(--ps1-ink); }
+.cell[data-platform="PS2"] { --tint: var(--ps2); --tint-ink: var(--ps2-ink); }
+.cell[data-platform="PS3"] { --tint: var(--ps3); --tint-ink: var(--ps3-ink); }
+.cell[data-platform="PS4"] { --tint: var(--ps4); --tint-ink: var(--ps4-ink); }
+.cell[data-platform="Switch"] { --tint: var(--switch); --tint-ink: var(--switch-ink); }
+.cell[data-platform="Emulator"] { --tint: var(--emulator); --tint-ink: var(--emulator-ink); }
 
 /* The entry row sits between the sticky header and the catalogue, tinted like the
    header rather than the rows so it reads as chrome, not as a game. */
@@ -317,4 +340,174 @@ h1 {
   margin: 0 0 1rem;
   color: var(--danger);
   font-weight: 600;
+}
+
+/* A name column plus eight tinted columns cannot fit a phone: the cells come out around
+   35px wide, below a comfortable tap target and with no room for a label saying what is
+   being tapped. Below this width the matrix stops being a matrix and becomes one card
+   per game — the name on its own line, its eight platforms as labelled chips beneath it.
+
+   Nothing about the markup or the endpoints changes; the grid is redefined and the
+   labels already sitting in every cell are revealed. This is what the grid-plus-ARIA
+   choice in place of a `<table>` bought.
+
+   The breakpoint is in `em` so it follows the reader's own font size — the layout runs
+   out of room when the text gets bigger, not when the screen gets smaller. 43.75em is
+   700px at a default 16px root. */
+@media (max-width: 43.75em) {
+  /* The frame belongs to the rows now: each is a card of its own rather than a band of
+     one shared grid. */
+  .matrix {
+    display: block;
+    border: none;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
+
+  /* There is no column left for a header to name, so it goes entirely and the chips'
+     own labels take the job over. */
+  .matrix-head {
+    display: none;
+  }
+
+  .add,
+  .row {
+    display: grid;
+    /* Four chips to a line. Eight across is precisely what did not fit, and four leaves
+       every chip wide enough for its longest label, which is "Emulator". */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  /* The entry card is an action, not the first game, so it keeps more space beneath it
+     than the games keep between themselves. */
+  .add {
+    margin-bottom: 1.5rem;
+  }
+
+  /* Pinned to the first line rather than left to flow, which is also what keeps the
+     chips off that line: auto-placement fills around what has been placed explicitly,
+     so the first chip starts a fresh line beneath instead of taking the gap beside the
+     name. */
+  .name {
+    grid-row: 1;
+    grid-column: 1 / -2;
+  }
+
+  /* Nothing sits beside the name field here — the entry card has no delete control —
+     so it takes the full width for the longest possible game name. */
+  .name.entry {
+    grid-row: 1;
+    grid-column: 1 / -1;
+  }
+
+  /* Delete keeps a column of its own, as it does on desktop. It sits on the name's line
+     rather than among the chips, on the page's background rather than the card's, and a
+     whole line's height away from the nearest chip. This is the one control on the card
+     that destroys data, and a phone is where a thumb is least precise. */
+  .remove {
+    grid-row: 1;
+    grid-column: -2 / -1;
+    padding: 0 0.25rem 0 0.75rem;
+  }
+
+  /* The desktop grid needs this column's place held or its neighbours slide out of
+     alignment. Cards have no column to align to, so the placeholder goes. */
+  .remove.entry {
+    display: none;
+  }
+
+  .remove button {
+    width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  /* The reason the reflow works: the label every cell has been carrying since slice 2,
+     visually hidden where a column header named the platform, shown here where nothing
+     else does. */
+  .cell-label {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    clip-path: none;
+  }
+
+  /* Both kinds of chip — the toggle on a game card and the checkbox on the entry card —
+     are one shape: a full-width target no shorter than a thumb, with its platform named
+     inside it. */
+  .cell button,
+  .cell.entry label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.75rem;
+    padding: 0.4rem 0.3rem;
+    color: var(--ink-muted);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  /* A set chip prints its name on top of its own tint, which the desktop grid never has
+     to do — hence the ink paired with each tint in the palette. */
+  .cell button[aria-pressed="true"] {
+    color: var(--tint-ink);
+  }
+
+  /* A tick box beside "Emulator" does not fit a chip at 320px, and the box was never the
+     point: the entry chip means the same thing as the toggle below it, so it is given
+     the same shape and states the same way — filled is ticked. The input itself stays in
+     the markup, because it is what the form submits and what a screen reader announces.
+
+     Guarded, because without `:has()` the chip cannot show its own state and the native
+     box is then the only thing that can. */
+  @supports selector(:has(*)) {
+    .cell.entry input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      clip-path: inset(50%);
+    }
+
+    .cell.entry label {
+      position: relative;
+    }
+
+    .cell.entry label:has(:checked) {
+      background: var(--tint);
+      color: var(--tint-ink);
+    }
+
+    /* The outline the box would have taken has to move with it, or the form loses its
+       keyboard trail. */
+    .cell.entry label:has(:focus-visible) {
+      outline: 2px solid var(--accent);
+      outline-offset: -3px;
+    }
+  }
+
+  /* Typing targets get the same thumb-sized minimum as the chips they sit above. */
+  .rename input,
+  .add input[type="text"],
+  .add button {
+    min-height: 2.75rem;
+  }
+
+  /* The name field earns its border here instead of waiting to be pointed at. Slice 4
+     let a hover reveal it, and a finger cannot hover: without this the one control that
+     looks like nothing is the one you are supposed to tap to correct a typo. */
+  .rename input {
+    border-color: var(--line);
+  }
 }
