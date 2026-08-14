@@ -2,26 +2,50 @@
   <p class="error" role="alert">{{ error }}</p>
 {% endif %}
 
-{% if games %}
-  <div class="matrix" role="table" aria-label="Games by platform">
-    <div class="matrix-head" role="row">
-      <span class="corner" role="columnheader">Game</span>
-      {% for platform in platforms %}
-        <span class="column" role="columnheader">{{ platform }}</span>
-      {% endfor %}
-    </div>
-
-    {% for game in games %}
-      <div class="row" role="row">
-        <span class="name" role="rowheader">{{ game.name }}</span>
-        {% for platform in platforms %}
-          {% set game_id = game.id %}
-          {% set available = (game.id, platform) in availability %}
-          {% include "_cell.html" %}
-        {% endfor %}
-      </div>
+<div class="matrix" role="table" aria-label="Games by platform">
+  <div class="matrix-head" role="row">
+    <span class="corner" role="columnheader">Game</span>
+    {% for platform in platforms %}
+      <span class="column" role="columnheader">{{ platform }}</span>
     {% endfor %}
   </div>
-{% else %}
+
+  {#- The entry row is a row of the grid rather than a card above it, so a checkbox sits
+      directly beneath the column it means and there is no translating between the
+      form's layout and the catalogue's.
+
+      It is re-rendered with every add, which is what clears it: a checkbox cannot stay
+      ticked from a previous entry and silently attach that platform to the next game. -#}
+  <form class="add" role="row"
+        hx-post="{{ url_for('add_game') }}"
+        hx-target="#catalogue">
+    <span class="name entry" role="cell">
+      <input name="name" type="text" placeholder="Game name" aria-label="Game name"
+             autocomplete="off" autofocus>
+      <button type="submit">Add</button>
+    </span>
+    {% for platform in platforms %}
+      <span class="cell entry" role="cell" data-platform="{{ platform }}">
+        <label>
+          <input type="checkbox" name="platform" value="{{ platform }}">
+          <span class="cell-label">{{ platform }}</span>
+        </label>
+      </span>
+    {% endfor %}
+  </form>
+
+  {% for game in games %}
+    <div class="row" role="row">
+      <span class="name" role="rowheader">{{ game.name }}</span>
+      {% for platform in platforms %}
+        {% set game_id = game.id %}
+        {% set available = (game.id, platform) in availability %}
+        {% include "_cell.html" %}
+      {% endfor %}
+    </div>
+  {% endfor %}
+</div>
+
+{% if not games %}
   <p class="empty">No games yet — add one above.</p>
 {% endif %}

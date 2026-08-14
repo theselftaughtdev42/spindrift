@@ -29,15 +29,26 @@ def create_app(database_path):
     @app.post("/games")
     def add_game():
         name = request.form["name"].strip()
+        platforms = request.form.getlist("platform")
+        # Same closed set the toggle endpoint enforces. Checked before the game is
+        # written so a request carrying a bad value leaves nothing behind at all.
+        if any(platform not in PLATFORMS for platform in platforms):
+            abort(400)
         if not name:
             return render_template("_catalogue.html", **catalogue())
 
         connection = db.get_connection()
         try:
-            connection.execute("INSERT INTO games (name) VALUES (?)", (name,))
+            cursor = connection.execute("INSERT INTO games (name) VALUES (?)", (name,))
         except sqlite3.IntegrityError:
             error = f"{name} is already in the catalogue."
             return render_template("_catalogue.html", error=error, **catalogue())
+        # The game and its availabilities are one write: a commit between them could
+        # leave a game that momentarily claims to be playable nowhere.
+        connection.executemany(
+            "INSERT INTO game_platforms (game_id, platform) VALUES (?, ?)",
+            [(cursor.lastrowid, platform) for platform in platforms],
+        )
         connection.commit()
         return render_template("_catalogue.html", **catalogue())
 

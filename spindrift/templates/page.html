@@ -19,14 +19,9 @@
       That change wasn’t saved — the server didn’t respond.
     </p>
 
-    <form class="add"
-          hx-post="{{ url_for('add_game') }}"
-          hx-target="#catalogue"
-          hx-on::after-request="this.reset(); this.querySelector('input[name=name]').focus()">
-      <input name="name" type="text" placeholder="Game name" autocomplete="off" autofocus>
-      <button type="submit">Add</button>
-    </form>
-
+    {#- The add form lives inside the fragment, as the grid's first row. It is swapped
+        away and re-rendered on every add, so clearing it is the server's job rather
+        than a client-side reset that could be skipped. -#}
     <div id="catalogue">
       {% include "_catalogue.html" %}
     </div>
