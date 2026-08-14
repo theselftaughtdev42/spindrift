@@ -1,1 +1,10 @@
 .scratch
+.venv
+__pycache__/
+.pytest_cache/
+
+# The catalogue database and its WAL / shared-memory sidecars. Every toggle rewrites
+# these, so committing them would leave the working tree permanently dirty.
+catalogue.sqlite3
+catalogue.sqlite3-wal
+catalogue.sqlite3-shm

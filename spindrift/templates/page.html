@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spindrift</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}">
+    <script src="{{ url_for('static', filename='htmx.min.js') }}" defer></script>
+  </head>
+  <body>
+    <h1>Spindrift</h1>
+
+    <form class="add"
+          hx-post="{{ url_for('add_game') }}"
+          hx-target="#catalogue"
+          hx-on::after-request="this.reset(); this.querySelector('input[name=name]').focus()">
+      <input name="name" type="text" placeholder="Game name" autocomplete="off" autofocus>
+      <button type="submit">Add</button>
+    </form>
+
+    <div id="catalogue">
+      {% include "_catalogue.html" %}
+    </div>
+  </body>
+</html>

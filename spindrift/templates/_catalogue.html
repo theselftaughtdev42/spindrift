@@ -1,0 +1,13 @@
+{% if error %}
+  <p class="error" role="alert">{{ error }}</p>
+{% endif %}
+
+{% if games %}
+  <ul>
+    {% for game in games %}
+      <li>{{ game.name }}</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="empty">No games yet — add one above.</p>
+{% endif %}

@@ -1,7 +1,18 @@
 [project]
 name = "spindrift"
 version = "0.1.0"
-description = "Add your description here"
+description = "A catalogue of games"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "flask>=3.1.3",
+    "waitress>=3.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
