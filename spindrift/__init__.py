@@ -52,6 +52,28 @@ def create_app(database_path):
         connection.commit()
         return render_template("_catalogue.html", **catalogue())
 
+    @app.post("/games/<int:game_id>/name")
+    def rename_game(game_id):
+        name = request.form["name"].strip()
+        # Nothing to rename to. Re-rendering restores the name the field started with,
+        # the same silent revert an empty add gets.
+        if not name:
+            return render_template("_catalogue.html", **catalogue())
+
+        connection = db.get_connection()
+        try:
+            connection.execute(
+                "UPDATE games SET name = ? WHERE id = ?", (name, game_id)
+            )
+        except sqlite3.IntegrityError:
+            error = f"{name} is already in the catalogue."
+            return render_template("_catalogue.html", error=error, **catalogue())
+        connection.commit()
+        # The whole list body rather than the renamed row alone: the error a collision
+        # raises then has exactly one place to appear, shared with the add form's, and
+        # the row lands back in alphabetical order for free.
+        return render_template("_catalogue.html", **catalogue())
+
     @app.post("/games/<int:game_id>/platforms/<platform>")
     def toggle_platform(game_id, platform):
         # The platform set is closed. An unrecognised value names nothing, so it is

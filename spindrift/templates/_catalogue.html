@@ -42,7 +42,16 @@
 
   {% for game in games %}
     <div class="row" role="row">
-      <span class="name" role="rowheader">{{ game.name }}</span>
+      {#- The name is an editable field at rest rather than text that swaps into one on
+          click: there is no second markup shape for the row, no endpoint to fetch it,
+          and the correction costs a click and a keystroke. A lone text input submits on
+          Enter without a button asking to be pressed. -#}
+      <form class="name rename" role="rowheader"
+            hx-post="{{ url_for('rename_game', game_id=game.id) }}"
+            hx-target="#catalogue">
+        <input name="name" type="text" value="{{ game.name }}"
+               aria-label="Rename {{ game.name }}" autocomplete="off">
+      </form>
       {% for platform in platforms %}
         {% set game_id = game.id %}
         {% set available = (game.id, platform) in availability %}
