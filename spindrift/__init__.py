@@ -1,3 +1,4 @@
+import os
 import sqlite3
 
 from flask import Flask, abort, render_template, request
@@ -18,6 +19,17 @@ def create_app(database_path):
     # Every template that renders any part of the matrix needs the column order, so it
     # is a global rather than an argument threaded through each render_template call.
     app.jinja_env.globals["platforms"] = PLATFORMS
+
+    # The prefix a game's name is appended to for a web search — a whole storefront or
+    # search engine's query URL, ending wherever the term goes. Unset is the normal
+    # case and means the catalogue renders exactly as it did before this existed: no
+    # search control anywhere, rather than one pointing nowhere.
+    #
+    # Empty string is treated as unset, because `GAME_SEARCH_URL=` in a shell profile or
+    # a compose file reads as turning the feature off, not as searching the empty prefix.
+    # Read once here, so the toggle is a property of a running server and flipping it is
+    # a restart.
+    app.config["GAME_SEARCH_URL"] = os.environ.get("GAME_SEARCH_URL") or None
 
     db.migrate(app.config["DATABASE_PATH"])
     app.teardown_appcontext(db.close_connection)

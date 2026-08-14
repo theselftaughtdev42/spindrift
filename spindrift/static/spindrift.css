@@ -231,8 +231,13 @@ h1 {
 }
 
 /* The rename field carries the cell's own padding instead, so its text sits on the same
-   left edge as the "Game" header above it. */
+   left edge as the "Game" header above it.
+
+   The gap is what separates the field from the search link when there is one, and it
+   collapses to nothing when there isn't: a catalogue with no `GAME_SEARCH_URL` set is
+   laid out exactly as it was before the link existed. */
 .name.rename {
+  gap: 0.15rem;
   padding: 0.15rem 0.1rem;
 }
 
@@ -260,6 +265,38 @@ h1 {
   background: var(--surface);
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* Sized and shaped like the delete control at the other end of the row, because both are
+   the same kind of thing: a single square affordance attached to a game rather than to a
+   platform. It shares the name cell with the field, mirroring the entry row above, where
+   the Add button sits beside the name it acts on.
+
+   Quietened with opacity rather than colour: the glyph is an emoji and paints in its own
+   palette, so `color` would leave it just as loud as the game names beside it. */
+.search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  border-radius: 0.375rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  text-decoration: none;
+  opacity: 0.55;
+}
+
+.search:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  opacity: 1;
+}
+
+.search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  opacity: 1;
 }
 
 /* Each cell is tinted by its column, so a column stays identifiable by sight once the
@@ -554,6 +591,16 @@ h1 {
   .add input[type="text"],
   .add button {
     min-height: 2.75rem;
+  }
+
+  /* Thumb-sized like every other target on the card. It stays on the name's line,
+     between the field and the delete control, which is the one place on the card that
+     is not a chip — a search link among the platform chips would read as a ninth
+     platform. */
+  .search {
+    width: 2.75rem;
+    min-height: 2.75rem;
+    font-size: 1rem;
   }
 
   /* The name field earns its border here instead of waiting to be pointed at. Slice 4

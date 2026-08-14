@@ -51,6 +51,25 @@
             hx-target="#catalogue">
         <input name="name" type="text" value="{{ game.name }}"
                aria-label="Rename {{ game.name }}" autocomplete="off">
+        {#- Only when a search prefix was configured. Without one there is no sensible
+            destination, so the control is absent rather than present and inert.
+
+            An anchor rather than a button: it goes somewhere, so it should offer
+            everything a link offers — middle-click, copy the address, open in a
+            background tab. `noopener` because the page it opens is a third party's.
+
+            The name is URL-encoded, or an ampersand in a title would end the search
+            term and start a query parameter of the storefront's own. -#}
+        {% if config.GAME_SEARCH_URL %}
+          <a class="search"
+             href="{{ config.GAME_SEARCH_URL }}{{ game.name | urlencode }}"
+             target="_blank" rel="noopener noreferrer"
+             aria-label="Search the web for {{ game.name }}">
+            {#- The glyph is decoration: it is hidden from the accessibility tree so the
+                link is announced by its label alone, not as "magnifying glass". -#}
+            <span aria-hidden="true">🔍</span>
+          </a>
+        {% endif %}
       </form>
       {% for platform in platforms %}
         {% set game_id = game.id %}
