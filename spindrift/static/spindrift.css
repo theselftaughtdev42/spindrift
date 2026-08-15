@@ -217,6 +217,14 @@ h1 {
   letter-spacing: 0.02em;
 }
 
+/* Untinted at rest — a header wearing ten colours would compete with the grid it labels —
+   but it carries the same lift as its cells, so a highlighted column is highlighted all
+   the way up to the name of the platform. `0%` resolves to plain `--surface`, which is
+   what the rule above already said. */
+.column {
+  background: color-mix(in srgb, var(--tint) var(--column-lift, 0%), var(--surface));
+}
+
 /* Turned on its side, so a column's width is set by the tap target beneath it rather than
    by the length of the platform's name. Horizontal labels are not something this layout
    can afford: ten columns each wide enough for "Emulator" need well past 800px of page,
@@ -317,17 +325,49 @@ h1 {
 }
 
 /* Each cell is tinted by its column, so a column stays identifiable by sight once the
-   header has scrolled past. */
-.cell[data-platform="Steam"] { --tint: var(--steam); --tint-ink: var(--steam-ink); }
-.cell[data-platform="Xbox"] { --tint: var(--xbox); --tint-ink: var(--xbox-ink); }
-.cell[data-platform="Xbox 360"] { --tint: var(--xbox360); --tint-ink: var(--xbox360-ink); }
-.cell[data-platform="Xbox One"] { --tint: var(--xboxone); --tint-ink: var(--xboxone-ink); }
-.cell[data-platform="PS1"] { --tint: var(--ps1); --tint-ink: var(--ps1-ink); }
-.cell[data-platform="PS2"] { --tint: var(--ps2); --tint-ink: var(--ps2-ink); }
-.cell[data-platform="PS3"] { --tint: var(--ps3); --tint-ink: var(--ps3-ink); }
-.cell[data-platform="PS4"] { --tint: var(--ps4); --tint-ink: var(--ps4-ink); }
-.cell[data-platform="Switch"] { --tint: var(--switch); --tint-ink: var(--switch-ink); }
-.cell[data-platform="Emulator"] { --tint: var(--emulator); --tint-ink: var(--emulator-ink); }
+   header has scrolled past. Matched on the attribute alone rather than on `.cell`, so the
+   column's heading picks up its own tint from the same line. */
+[data-platform="Steam"] { --tint: var(--steam); --tint-ink: var(--steam-ink); }
+[data-platform="Xbox"] { --tint: var(--xbox); --tint-ink: var(--xbox-ink); }
+[data-platform="Xbox 360"] { --tint: var(--xbox360); --tint-ink: var(--xbox360-ink); }
+[data-platform="Xbox One"] { --tint: var(--xboxone); --tint-ink: var(--xboxone-ink); }
+[data-platform="PS1"] { --tint: var(--ps1); --tint-ink: var(--ps1-ink); }
+[data-platform="PS2"] { --tint: var(--ps2); --tint-ink: var(--ps2-ink); }
+[data-platform="PS3"] { --tint: var(--ps3); --tint-ink: var(--ps3-ink); }
+[data-platform="PS4"] { --tint: var(--ps4); --tint-ink: var(--ps4-ink); }
+[data-platform="Switch"] { --tint: var(--switch); --tint-ink: var(--switch-ink); }
+[data-platform="Emulator"] { --tint: var(--emulator); --tint-ink: var(--emulator-ink); }
+
+/* Pointing at any one cell lifts the tint of every cell in its column and of the heading
+   above them, which is what makes a column readable as a column in a grid that has no
+   column element to highlight — each row is a grid of its own, so the cells of one column
+   are not siblings and nothing but a match on the platform's name relates them.
+   `--column-lift` is that lift: a percentage each tinted surface adds to its own resting
+   strength, declared here once and consumed by the three rules below.
+
+   A pointer-only affordance, hence the query: there is no hovering a column on a phone,
+   and on a phone there are no columns either. Where `:has()` is unsupported the highlight
+   simply never fires — the grid is exactly what it was before, so no fallback is owed. */
+@media (hover: hover) {
+  /* One line per platform, because CSS cannot carry an attribute's value from the cell
+     being hovered across to the cells that share it. Adding a platform means adding a line
+     here as well as a tint above — the two lists are the same list, so they sit together.
+
+     `:focus-within` alongside `:hover` so tabbing through a row lights the same column a
+     mouse would, and so the highlight follows the keyboard rather than being lost to it. */
+  .matrix:has([data-platform="Steam"]:is(:hover, :focus-within)) [data-platform="Steam"],
+  .matrix:has([data-platform="Xbox"]:is(:hover, :focus-within)) [data-platform="Xbox"],
+  .matrix:has([data-platform="Xbox 360"]:is(:hover, :focus-within)) [data-platform="Xbox 360"],
+  .matrix:has([data-platform="Xbox One"]:is(:hover, :focus-within)) [data-platform="Xbox One"],
+  .matrix:has([data-platform="PS1"]:is(:hover, :focus-within)) [data-platform="PS1"],
+  .matrix:has([data-platform="PS2"]:is(:hover, :focus-within)) [data-platform="PS2"],
+  .matrix:has([data-platform="PS3"]:is(:hover, :focus-within)) [data-platform="PS3"],
+  .matrix:has([data-platform="PS4"]:is(:hover, :focus-within)) [data-platform="PS4"],
+  .matrix:has([data-platform="Switch"]:is(:hover, :focus-within)) [data-platform="Switch"],
+  .matrix:has([data-platform="Emulator"]:is(:hover, :focus-within)) [data-platform="Emulator"] {
+    --column-lift: 15%;
+  }
+}
 
 /* The entry row sits between the sticky header and the catalogue, tinted like the
    header rather than the rows so it reads as chrome, not as a game. */
@@ -339,7 +379,7 @@ h1 {
 
 .cell.entry {
   display: flex;
-  background: color-mix(in srgb, var(--tint) 6%, var(--surface));
+  background: color-mix(in srgb, var(--tint) calc(6% + var(--column-lift, 0%)), var(--surface));
 }
 
 /* The label fills the cell for the same reason the toggle button does on a game row:
@@ -368,7 +408,7 @@ h1 {
   min-height: 2.5rem;
   padding: 0;
   border: none;
-  background: color-mix(in srgb, var(--tint) 10%, var(--raised));
+  background: color-mix(in srgb, var(--tint) calc(10% + var(--column-lift, 0%)), var(--raised));
   cursor: pointer;
 }
 

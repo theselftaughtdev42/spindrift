@@ -5,8 +5,11 @@
 <div class="matrix" role="table" aria-label="Games by platform">
   <div class="matrix-head" role="row">
     <span class="corner" role="columnheader">Game</span>
+    {#- `data-platform` is what ties the header to the column beneath it: it is the handle
+        the tint is looked up by, and the handle the hover highlight matches on, so the
+        heading lights up with the cells it names. -#}
     {% for platform in platforms %}
-      <span class="column" role="columnheader">{{ platform }}</span>
+      <span class="column" role="columnheader" data-platform="{{ platform }}">{{ platform }}</span>
     {% endfor %}
     {#- Unlabelled: the ✕ on each row says what the column is, and a heading here would
         put the word "Delete" at the top of a grid whose subject is platforms. -#}
