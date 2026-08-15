@@ -1,14 +1,25 @@
-{#- One availability: whether `game_id` can be played on `platform`.
+{#- One availability: whether `game_id` can be played on `platform`, and whether that is
+    the way it is meant to be played.
 
-    Rendered both as part of the grid and alone as the toggle endpoint's response, so the
+    Rendered both as part of the grid and alone as the cycle endpoint's response, so the
     two can never disagree about what a set cell looks like. The button fills the cell,
     which is what makes the whole cell the click target rather than an inner control. -#}
 <div class="cell" role="cell" data-platform="{{ platform }}">
+  {#- `aria-pressed` stays the availability alone: an intended cell is an available one,
+      and a two-valued attribute has no third value to spend on the state beyond it. -#}
   <button type="button"
           aria-pressed="{{ 'true' if available else 'false' }}"
-          hx-post="{{ url_for('toggle_platform', game_id=game_id, platform=platform) }}"
+          {% if intended %}data-intended{% endif %}
+          hx-post="{{ url_for('cycle_platform', game_id=game_id, platform=platform) }}"
           hx-target="closest .cell"
           hx-swap="outerHTML">
+    {#- The whole of the intent, on screen: a marker on the one cell in the row that has
+        been decided on, over a grid of otherwise identical filled cells.
+
+        Hidden from the accessibility tree, and nothing spells it out in words in its
+        place, so the intent is a sighted reader's cue only and the button announces
+        itself exactly as it did before this existed. -#}
+    {% if intended %}<span class="intent-marker" aria-hidden="true">&#9654;</span>{% endif %}
     {#- Repeated on every cell so one markup shape serves both layouts: the column header
         names the platform on desktop, this label does it on mobile, where the header is
         gone. -#}

@@ -87,28 +87,75 @@ def create_app(database_path):
         return render_template("_catalogue.html", **catalogue())
 
     @app.post("/games/<int:game_id>/platforms/<platform>")
-    def toggle_platform(game_id, platform):
+    def cycle_platform(game_id, platform):
+        """Advance one cell through: not playable → playable → the way I'll play it.
+
+        Three states on one control rather than a toggle plus a second affordance beside
+        it: the decision is about a platform, so it belongs on the platform, and a 2.75rem
+        cell has no room for two targets. The cost is that clearing an availability the
+        intent sits on takes two clicks rather than one — paid by the one cell per game
+        that carries an intent, which is the cell least likely to be cleared by accident.
+        """
         # The platform set is closed. An unrecognised value names nothing, so it is
         # rejected here rather than stored and rendered as a column that cannot exist.
         if platform not in PLATFORMS:
             abort(404)
 
         connection = db.get_connection()
-        # Deleting first tells us which way the toggle went without a preceding read.
-        removed = connection.execute(
-            "DELETE FROM game_platforms WHERE game_id = ? AND platform = ?",
+        # A read first, unlike the two-state toggle this replaces: which way a third
+        # state goes cannot be inferred from what a blind delete happened to remove.
+        row = connection.execute(
+            "SELECT intended FROM game_platforms WHERE game_id = ? AND platform = ?",
             (game_id, platform),
-        ).rowcount
-        if not removed:
+        ).fetchone()
+
+        demoted = 0
+        if row is None:
             connection.execute(
                 "INSERT INTO game_platforms (game_id, platform) VALUES (?, ?)",
                 (game_id, platform),
             )
+            available, intended = True, False
+        elif not row["intended"]:
+            # Deciding on one platform un-decides the previous one and stops there: the
+            # game stays playable everywhere it was playable a moment ago. Clearing first
+            # is also what keeps the write within the one-intent-per-game index, which
+            # would reject the pair existing together even for the length of a statement.
+            demoted = connection.execute(
+                "UPDATE game_platforms SET intended = 0 WHERE game_id = ? AND intended",
+                (game_id,),
+            ).rowcount
+            connection.execute(
+                "UPDATE game_platforms SET intended = 1"
+                " WHERE game_id = ? AND platform = ?",
+                (game_id, platform),
+            )
+            available, intended = True, True
+        else:
+            connection.execute(
+                "DELETE FROM game_platforms WHERE game_id = ? AND platform = ?",
+                (game_id, platform),
+            )
+            available, intended = False, False
         connection.commit()
+
+        # A moved intent changed two cells, and the request only asked for one back. The
+        # cell that lost it is elsewhere in the row, so the response is widened to the
+        # whole list and htmx is told where to put it — rather than leaving a stale second
+        # marker on screen claiming a decision the database no longer holds.
+        if demoted:
+            return render_template("_catalogue.html", **catalogue()), {
+                "HX-Retarget": "#catalogue",
+                "HX-Reswap": "innerHTML",
+            }
         # The cell's appearance is derived from what was just persisted, never assumed,
         # so the interface cannot show a state that was never stored.
         return render_template(
-            "_cell.html", game_id=game_id, platform=platform, available=not removed
+            "_cell.html",
+            game_id=game_id,
+            platform=platform,
+            available=available,
+            intended=intended,
         )
 
     @app.delete("/games/<int:game_id>")
@@ -123,17 +170,25 @@ def create_app(database_path):
         return render_template("_catalogue.html", **catalogue())
 
     def catalogue():
-        """Everything the grid draws: the games, and which of their cells are set."""
+        """Everything the grid draws: the games, which cells are set, and which is meant."""
         connection = db.get_connection()
         games = connection.execute(
             "SELECT id, name FROM games ORDER BY name COLLATE NOCASE"
         ).fetchall()
         # A set of the availabilities that exist. The grid asks about every game against
         # every platform, so membership of one set beats a query per cell.
-        availability = {
-            (row["game_id"], row["platform"])
-            for row in connection.execute("SELECT game_id, platform FROM game_platforms")
-        }
-        return {"games": games, "availability": availability}
+        availability = set()
+        # The one intended platform per game, by game. A game absent from it is a game
+        # not yet decided on, which is most of them and the state every game starts in.
+        # Both come off the same read: an intent is an availability wearing a flag, so
+        # asking for them separately would be reading the same rows twice.
+        intents = {}
+        for row in connection.execute(
+            "SELECT game_id, platform, intended FROM game_platforms"
+        ):
+            availability.add((row["game_id"], row["platform"]))
+            if row["intended"]:
+                intents[row["game_id"]] = row["platform"]
+        return {"games": games, "availability": availability, "intents": intents}
 
     return app

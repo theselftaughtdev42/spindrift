@@ -82,6 +82,9 @@
       {% for platform in platforms %}
         {% set game_id = game.id %}
         {% set available = (game.id, platform) in availability %}
+        {#- At most one cell in the row can answer true: the intent is one platform per
+            game, held to that by the database rather than by this comparison. -#}
+        {% set intended = intents.get(game.id) == platform %}
         {% include "_cell.html" %}
       {% endfor %}
       {#- Deliberately last and outside the tinted block of toggles: this is the one

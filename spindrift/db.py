@@ -20,6 +20,22 @@ MIGRATIONS = [
         PRIMARY KEY (game_id, platform)
     );
     """,
+    # The intent — "this is the way I mean to play it" — is a flag on an availability
+    # rather than a column on the game, and that placement is the whole design. An intent
+    # cannot name a platform the game is not playable on, because there is no row to
+    # carry the flag; deleting the game or untick-ing the platform takes the intent with
+    # it; and the flag is layered over the availabilities rather than replacing them, so
+    # deciding costs the other routes nothing. Every game starts undecided.
+    #
+    # The partial index is what makes "a decision" singular: one intended row per game,
+    # enforced where it cannot be forgotten. It is partial rather than a plain unique
+    # index over (game_id, intended) because a game has many rows that are *not*
+    # intended, and only the intended ones are the ones that must be unique.
+    """
+    ALTER TABLE game_platforms ADD COLUMN intended INTEGER NOT NULL DEFAULT 0;
+    CREATE UNIQUE INDEX game_platforms_one_intent
+        ON game_platforms (game_id) WHERE intended;
+    """,
 ]
 
 
