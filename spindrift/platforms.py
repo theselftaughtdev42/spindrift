@@ -5,15 +5,20 @@
 # source edit plus a restart. The order is display order. The granularity is deliberately
 # uneven — PlayStation is split by generation because the generation changes the decision.
 #
-# "Xbox" is the coarse backward-compatible entry it has always been, and every game
-# already ticked under it means exactly what it meant before: playable on the Xbox by
-# whatever generation's disc or licence, backward compatibility included. "Xbox One" is
-# narrower and additive — the titles worth calling out as that generation's. Renaming the
-# older column would have rewritten the meaning of rows already stored, so it keeps its
-# name and the new one sits beside it.
+# Xbox is the exception to that, and deliberately so. "Xbox" is the coarse
+# backward-compatible entry it has always been: playable on the Xbox by whatever
+# generation's disc or licence, backward compatibility included. It is not the 2001
+# console, and every game already ticked under it still means what it meant when it was
+# ticked. "Xbox 360" and "Xbox One" are narrower and purely additive, for the titles worth
+# calling out as a generation's own. So the three overlap by design, and a game can sit
+# under the coarse entry and a named generation at once.
+#
+# The alternative — renaming the stored "Xbox" rows to the generation they mostly are —
+# was considered and rejected: it would rewrite what rows already in the database claim.
 PLATFORMS = [
     "Steam",
     "Xbox",
+    "Xbox 360",
     "Xbox One",
     "PS1",
     "PS2",

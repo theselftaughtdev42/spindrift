@@ -49,7 +49,12 @@
       <form class="name rename" role="rowheader"
             hx-post="{{ url_for('rename_game', game_id=game.id) }}"
             hx-target="#catalogue">
+        {#- The field clips its value with an ellipsis when the name is longer than the
+            column, which the page's width is chosen to make rare rather than impossible —
+            a narrow window can still do it. `title` is what makes a clipped name
+            recoverable without clicking into the field and scrolling it. -#}
         <input name="name" type="text" value="{{ game.name }}"
+               title="{{ game.name }}"
                aria-label="Rename {{ game.name }}" autocomplete="off">
         {#- Only when a search prefix was configured. Without one there is no sensible
             destination, so the control is absent rather than present and inert.

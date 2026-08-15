@@ -12,8 +12,10 @@
   /* Platform tints, assigned by family rather than per platform. PS1–PS4 are one blue
      ramp running light to dark, which is what makes the four PlayStation generations
      read as a single region of the grid with internal structure rather than four
-     unrelated hues taking up half its width. Xbox and Xbox One are a two-step green ramp
-     on the same principle, running the same direction: older lighter, newer darker.
+     unrelated hues taking up half its width. The three Xbox entries are a green ramp on
+     the same principle, spaced like the blue one. It runs by specificity rather than by
+     age, because that is what separates these three: the coarse backward-compatible entry
+     takes the lightest step, and the two named generations sit darker beneath it.
      Steam is deliberately desaturated so it stays distinct from the ramp it sits beside.
 
      Each tint is paired with the ink that stays legible on it, because the reflowed
@@ -24,7 +26,9 @@
   --steam-ink: #ffffff;
   --xbox: #4a9b3f;
   --xbox-ink: #16181d;
-  --xboxone: #2f6b28;
+  --xbox360: #35762c;
+  --xbox360-ink: #ffffff;
+  --xboxone: #275c20;
   --xboxone-ink: #ffffff;
   --ps1: #a8c6ee;
   --ps1-ink: #16181d;
@@ -59,6 +63,8 @@
     --steam-ink: #14161a;
     --xbox: #5cbb4c;
     --xbox-ink: #14161a;
+    --xbox360: #3f9433;
+    --xbox360-ink: #14161a;
     --xboxone: #2d7526;
     --xboxone-ink: #e8eaef;
     --ps1: #c2d9f5;
@@ -80,10 +86,15 @@
   box-sizing: border-box;
 }
 
+/* Wider than the ~48rem measure a page of prose wants, because there is no prose here to
+   measure: one heading and a grid whose widest column holds names, not sentences. The ten
+   platform columns are fixed, so everything this cap gives goes to the name column and
+   nothing else moves. 60rem is enough for the longest name in a real catalogue to sit
+   unclipped with room over; past that the page stops reading as a document. */
 body {
   margin: 0 auto;
   padding: 2rem 1rem 4rem;
-  max-width: 48rem;
+  max-width: 60rem;
   background: var(--surface);
   color: var(--ink);
   font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -140,7 +151,7 @@ h1 {
 
      The trailing column is the delete control's own, rather than somewhere inside the name
      cell, so that it sits as far from the toggles as the row allows. */
-  --columns: minmax(8rem, 1fr) repeat(9, 2.75rem) 3.5rem;
+  --columns: minmax(8rem, 1fr) repeat(10, 2.75rem) 3.5rem;
 
   display: flex;
   flex-direction: column;
@@ -208,11 +219,12 @@ h1 {
 
 /* Turned on its side, so a column's width is set by the tap target beneath it rather than
    by the length of the platform's name. Horizontal labels are not something this layout
-   can afford: nine columns each wide enough for "Emulator" need past 800px of page, which
-   is wider than the 700px at which the matrix reflows, so between those two widths there
-   would be nothing to render but a sideways scrollbar. They also cost the name column more
-   than half its width at the page's own maximum. Height is the axis with room going spare,
-   and unlike width it stays constant however many platforms are added later.
+   can afford: ten columns each wide enough for "Emulator" need well past 800px of page,
+   which is wider than the 700px at which the matrix reflows, so between those two widths
+   there would be nothing to render but a sideways scrollbar. They also cost the name column
+   most of its width at the page's own maximum. Height is the axis with room going spare,
+   and unlike width it stays constant however many platforms are added later — which is
+   what has let this rule survive two of them.
 
    `rotate(180deg)` on top of `vertical-rl` is what makes a label read bottom-to-top, the
    direction a matrix header conventionally runs. `sideways-lr` states that in a single
@@ -225,7 +237,7 @@ h1 {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   /* Flush to the bottom of the header, so labels of different lengths start on one line
-     with "Game" rather than floating at nine different heights. */
+     with "Game" rather than floating at ten different heights. */
   justify-content: flex-start;
   padding-block: 0.25rem;
   padding-inline: 0.5rem;
@@ -308,6 +320,7 @@ h1 {
    header has scrolled past. */
 .cell[data-platform="Steam"] { --tint: var(--steam); --tint-ink: var(--steam-ink); }
 .cell[data-platform="Xbox"] { --tint: var(--xbox); --tint-ink: var(--xbox-ink); }
+.cell[data-platform="Xbox 360"] { --tint: var(--xbox360); --tint-ink: var(--xbox360-ink); }
 .cell[data-platform="Xbox One"] { --tint: var(--xboxone); --tint-ink: var(--xboxone-ink); }
 .cell[data-platform="PS1"] { --tint: var(--ps1); --tint-ink: var(--ps1-ink); }
 .cell[data-platform="PS2"] { --tint: var(--ps2); --tint-ink: var(--ps2-ink); }
@@ -368,7 +381,7 @@ h1 {
   outline-offset: -3px;
 }
 
-/* Deleting is unrecoverable and the nine controls beside it are not, so the delete
+/* Deleting is unrecoverable and the ten controls beside it are not, so the delete
    control is given every separation the row can offer: the last column, a gutter of
    empty space between it and Emulator, the page's background rather than a row's, and
    no platform tint. It should not read as one more toggle. */
@@ -437,10 +450,10 @@ h1 {
   font-weight: 600;
 }
 
-/* A name column plus nine tinted columns cannot fit a phone: the cells come out around
+/* A name column plus ten tinted columns cannot fit a phone: the cells come out under
    30px wide, below a comfortable tap target and with no room for a label saying what is
    being tapped. Below this width the matrix stops being a matrix and becomes one card
-   per game — the name on its own line, its nine platforms as labelled chips beneath it.
+   per game — the name on its own line, its ten platforms as labelled chips beneath it.
 
    Nothing about the markup or the endpoints changes; the grid is redefined and the
    labels already sitting in every cell are revealed. This is what the grid-plus-ARIA
@@ -469,12 +482,13 @@ h1 {
   .add,
   .row {
     display: grid;
-    /* Three chips to a line. Nine across is precisely what did not fit, and three divides
-       the platforms into equal lines with no lone chip stranded on a line of its own —
-       which four, the count this held when there were eight platforms, no longer does.
-       Three also leaves every chip wider than its longest label, "Emulator" and "Xbox One"
-       tied at eight characters. */
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Four chips to a line. Ten across is precisely what did not fit, and ten divides into
+       no line length that both fits and fills: five chips to a line is even but too narrow
+       for the labels, and three leaves a single chip stranded on a line of its own. Four
+       gives two full lines and a pair, and a pair reads as a deliberate short line in a way
+       a lone chip does not. It also keeps every chip wider than its longest label —
+       "Emulator", "Xbox One" and "Xbox 360" all tie at eight characters. */
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1px;
     margin-bottom: 0.75rem;
     border: 1px solid var(--line);
