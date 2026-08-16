@@ -1,29 +1,29 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Spindrift</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}">
-    <script src="{{ url_for('static', filename='htmx.min.js') }}" defer></script>
-  </head>
-  {#- A failed toggle must not look identical to a successful one, which is what it
-      would do if the cell simply never changed. htmx's error events bubble to the body,
-      so one handler covers every request on the page. -#}
-  <body hx-on::before-request="document.getElementById('failure').hidden = true"
+{% extends "layout.html" %}
+
+{% block head %}
+  <script src="{{ url_for('static', filename='htmx.min.js') }}" defer></script>
+{% endblock %}
+
+{#- A failed toggle must not look identical to a successful one, which is what it
+    would do if the cell simply never changed. htmx's error events bubble to the body,
+    so one handler covers every request on the page. -#}
+{% block body_attributes %}hx-on::before-request="document.getElementById('failure').hidden = true"
         hx-on::response-error="document.getElementById('failure').hidden = false"
-        hx-on::send-error="document.getElementById('failure').hidden = false">
-    <h1>Spindrift</h1>
+        hx-on::send-error="document.getElementById('failure').hidden = false"{% endblock %}
 
-    <p id="failure" class="failure" role="alert" hidden>
-      That change wasn’t saved — the server didn’t respond.
-    </p>
+{% block nav %}
+  <a class="nav" href="{{ url_for('by_platform') }}">By platform &rarr;</a>
+{% endblock %}
 
-    {#- The add form lives inside the fragment, as the grid's first row. It is swapped
-        away and re-rendered on every add, so clearing it is the server's job rather
-        than a client-side reset that could be skipped. -#}
-    <div id="catalogue">
-      {% include "_catalogue.html" %}
-    </div>
-  </body>
-</html>
+{% block content %}
+  <p id="failure" class="failure" role="alert" hidden>
+    That change wasn’t saved — the server didn’t respond.
+  </p>
+
+  {#- The add form lives inside the fragment, as the grid's first row. It is swapped
+      away and re-rendered on every add, so clearing it is the server's job rather
+      than a client-side reset that could be skipped. -#}
+  <div id="catalogue">
+    {% include "_catalogue.html" %}
+  </div>
+{% endblock %}

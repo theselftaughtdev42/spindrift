@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block title %}By platform — Spindrift{% endblock %}
+
+{% block nav %}
+  <a class="nav" href="{{ url_for('page') }}">&larr; Catalogue</a>
+{% endblock %}
+
+{% block content %}
+  {#- A real `<table>`, where the catalogue is a grid wearing table roles. The catalogue
+      had to be a grid because it reflows into cards on a phone; two columns of text do
+      not reflow into anything, they just get narrower. So this page can use the element
+      that actually means what it is, and gets its header, its scopes and its row groups
+      for nothing. -#}
+  {% if groups %}
+    <p class="lede">Where each decided game is going to be played.</p>
+
+    <table class="plan">
+      <thead>
+        <tr>
+          <th scope="col">Platform</th>
+          <th scope="col">Game</th>
+        </tr>
+      </thead>
+      {#- One `<tbody>` per platform rather than one for the whole table: the groups are
+          what this page is, and a row group is the markup for a group of rows. -#}
+      {% for platform, names in groups %}
+        <tbody>
+          {% for name in names %}
+            <tr>
+              {#- Written once and spanning its games, so the platform reads as a heading
+                  over them rather than as a word repeated down the column. `data-platform`
+                  is the same handle the matrix tints its cells by, so a platform is the
+                  same colour on both pages. -#}
+              {% if loop.first %}
+                <th scope="rowgroup" rowspan="{{ names | length }}"
+                    data-platform="{{ platform }}">{{ platform }}</th>
+              {% endif %}
+              <td>{{ name }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      {% endfor %}
+    </table>
+  {% else %}
+    {#- The empty state carries the instructions, because deciding is a second click on a
+        cell that already does something on the first — the one part of this app that is
+        not visible in the catalogue just by looking at it. -#}
+    <p class="empty">
+      Nothing decided yet. In the catalogue, click a platform once to say a game can be
+      played that way, and again to say that’s the way you’ll play it.
+    </p>
+  {% endif %}
+{% endblock %}

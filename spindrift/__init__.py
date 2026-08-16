@@ -38,6 +38,37 @@ def create_app(database_path):
     def page():
         return render_template("page.html", **catalogue())
 
+    @app.get("/by-platform")
+    def by_platform():
+        """The decisions, gathered under the platform each one names.
+
+        The catalogue answers "where could I play this" a row at a time. This answers
+        "what am I playing on the Switch" — which the grid can only be read sideways for
+        on a desktop, and not at all on a phone, where the reflow trades the columns away
+        for cards. Decided games only: an undecided game has no answer to give here.
+        """
+        connection = db.get_connection()
+        decisions = connection.execute(
+            "SELECT game_platforms.platform, games.name"
+            " FROM game_platforms JOIN games ON games.id = game_platforms.game_id"
+            " WHERE game_platforms.intended"
+            " ORDER BY games.name COLLATE NOCASE"
+        ).fetchall()
+
+        games = {}
+        for decision in decisions:
+            games.setdefault(decision["platform"], []).append(decision["name"])
+        # Walking PLATFORMS rather than the rows does two things at once: the groups come
+        # out in the same order as the grid's columns, and a platform nothing has been
+        # decided on is simply absent — ten headings over eight empty spaces would be a
+        # page mostly about what has not been decided.
+        groups = [
+            (platform, games[platform])
+            for platform in PLATFORMS
+            if platform in games
+        ]
+        return render_template("by_platform.html", groups=groups)
+
     @app.post("/games")
     def add_game():
         name = request.form["name"].strip()

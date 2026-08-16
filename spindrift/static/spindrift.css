@@ -100,10 +100,43 @@ body {
   font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* The heading and the link to the other page share one line, at opposite ends of the
+   measure. Centred rather than aligned on the baseline, because the link takes vertical
+   padding to reach a thumb-sized target and baseline alignment would hang that padding
+   below the heading rather than around it. */
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
 h1 {
-  margin: 0 0 1.5rem;
+  margin: 0;
   font-size: 1.5rem;
   letter-spacing: -0.01em;
+}
+
+/* Underlined only on hover: at rest the accent colour and its position already say link,
+   and the masthead is quieter for it. */
+.nav {
+  flex: none;
+  padding: 0.6rem 0;
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav:hover {
+  text-decoration: underline;
+}
+
+.nav:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 0.25rem;
 }
 
 .add input[type="text"] {
@@ -500,6 +533,69 @@ h1 {
   clip-path: inset(50%);
   overflow: hidden;
   white-space: nowrap;
+}
+
+.lede {
+  margin: 0 0 1rem;
+  color: var(--ink-muted);
+}
+
+/* Framed like the matrix — same border, same radius, same raised fill — because it is the
+   same catalogue read a different way, and the two pages should look like one app.
+   `separate` borders rather than `collapse`: a collapsed table's borders are drawn outside
+   the element's own box and the rounded corners clip nothing, so the frame comes out
+   square at the corners and the tinted first cell overruns it. */
+.plan {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  background: var(--raised);
+  text-align: left;
+}
+
+.plan th,
+.plan td {
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+}
+
+.plan thead th {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* The platform column takes exactly the width of the longest platform name and no more,
+   which is what `1%` against `nowrap` buys: the column cannot fit the content, so it
+   settles at the content's own width and the games take everything left over. Spelling a
+   width out instead would be a guess that goes wrong the moment a longer platform is
+   added.
+
+   Tinted with the same variables the grid's cells use, so the Switch is the same red on
+   both pages and a platform is recognisable here before its name is read. */
+.plan tbody th {
+  width: 1%;
+  background: var(--tint);
+  color: var(--tint-ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Rules between the games of a group, and between one group and the next — the second
+   crossing the tinted column as well, because a group boundary is the more important of
+   the two and stopping short of the platform would make it the fainter. */
+.plan tbody tr + tr > td {
+  border-top: 1px solid var(--line);
+}
+
+.plan tbody + tbody > tr:first-child > * {
+  border-top: 1px solid var(--line);
 }
 
 .empty {

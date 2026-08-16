@@ -1,0 +1,27 @@
+{#- The shell both pages share: the head, the masthead, and the link between them.
+
+    Extracted when the second page arrived, and holding exactly what the two have in
+    common. Anything only the catalogue needs — htmx, the handlers that watch it, the
+    banner they raise — is a block it fills in, so the by-platform page does not carry a
+    script it never calls. -#}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Spindrift{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}">
+    {% block head %}{% endblock %}
+  </head>
+  <body {% block body_attributes %}{% endblock %}>
+    {#- The heading names the app on both pages and the link beside it names the other
+        one, so which page you are on is told by the link you are being offered rather
+        than by a title you have to read. -#}
+    <header class="masthead">
+      <h1>Spindrift</h1>
+      {% block nav %}{% endblock %}
+    </header>
+
+    {% block content %}{% endblock %}
+  </body>
+</html>
