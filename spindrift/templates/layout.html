@@ -5,7 +5,12 @@
     banner they raise — is a block it fills in, so the by-platform page does not carry a
     script it never calls. -#}
 <!doctype html>
-<html lang="en">
+{#- How many platform columns there are is a fact about `PLATFORMS`, and the stylesheet
+    needs it twice: to lay out that many tracks, and to work out how wide the page has to
+    be to hold them. Passing it as a custom property is what keeps the number in one
+    place — retiring a platform used to leave the grid still reserving a track for it, as
+    an empty band of colour off the right-hand end of every row. -#}
+<html lang="en" style="--platform-count: {{ platforms | length }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
