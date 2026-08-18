@@ -18,7 +18,11 @@
      green ramp on the same principle, spaced like the blue one. It runs by specificity rather than by
      age, because that is what separates these three: the coarse backward-compatible entry
      takes the lightest step, and the two named generations sit darker beneath it.
-     Steam is deliberately desaturated so it stays distinct from the ramp it sits beside.
+     Steam and GoG are the two PC storefronts and share a ramp of their own, desaturated
+     so it stays distinct from the saturated PlayStation blues it sits beside — the
+     distance here is saturation rather than hue, because two more steps of blue would
+     read as four PlayStations. It runs light to dark like the others, Steam keeping the
+     step it has always had and GoG taking a darker one beneath it.
 
      Each tint is paired with the ink that stays legible on it, because the reflowed
      layout prints a platform's name on top of its own colour — a light tint takes the
@@ -26,6 +30,8 @@
      tint and forgetting its ink is not possible at a glance. */
   --steam: #59688c;
   --steam-ink: #ffffff;
+  --gog: #3c4763;
+  --gog-ink: #ffffff;
   --xbox: #4a9b3f;
   --xbox-ink: #16181d;
   --xbox360: #35762c;
@@ -42,8 +48,8 @@
   --emulator-ink: #ffffff;
 
   /* Status tints, on the same paired-ink principle as the platforms above and drawn from
-     what the grid has not already spent. Eight platform tints have taken a green ramp, a
-     blue ramp, a red, a purple and a desaturated blue-grey; what is left unclaimed is
+     what the grid has not already spent. Nine platform tints have taken a green ramp, a
+     blue ramp, a red, a purple and a desaturated blue-grey ramp; what is left unclaimed is
      essentially orange, yellow, teal and grey, and these are those four.
 
      The pairs that have to be tellable apart at a glance are Playing against 100% — the
@@ -86,6 +92,8 @@
        bright enough to need dark text on it. */
     --steam: #8593bb;
     --steam-ink: #14161a;
+    --gog: #5b6893;
+    --gog-ink: #e8eaef;
     --xbox: #5cbb4c;
     --xbox-ink: #14161a;
     --xbox360: #3f9433;
@@ -147,7 +155,14 @@
    67.5px word, so it is 5.75rem instead. The column's job is to show the status, and a
    status column that clips the status is not doing it. What that costs is 8px of page: the
    grid's maximum goes from roughly 54rem to 60rem and its minimum to 674px, still inside
-   the 700px at which the whole thing reflows into cards.
+   the width at which the whole thing reflows into cards.
+
+   Both numbers move with the length of `PLATFORMS`: a platform added is another `--cell`
+   plus its gap on the minimum as well as on the maximum, and the minimum is the one with
+   somewhere to arrive. Nine platforms put it at 717px, which is why the reflow happens at
+   720px rather than the 700px it did at eight. That breakpoint is a consequence of this
+   sum rather than an independent judgement — a tenth platform moves it again, and the two
+   have to be read together.
 
    It is deliberately not paid for out of `--name-max`. That number is a judgement made
    against real names, and reducing it would start clipping the ones it was chosen to
@@ -159,8 +174,8 @@ body {
   --name-max: 26rem;
   --page-padding: 1rem;
   --catalogue-width: calc(
-    var(--name-max) + var(--platform-count, 8) * var(--cell) + var(--status-column) +
-      var(--remove-column) + (var(--platform-count, 8) + 4) * 1px +
+    var(--name-max) + var(--platform-count, 9) * var(--cell) + var(--status-column) +
+      var(--remove-column) + (var(--platform-count, 9) + 4) * 1px +
       2 * var(--page-padding)
   );
 
@@ -268,11 +283,11 @@ h1 {
      before it: past the platforms, because it is not about a platform, and before delete,
      because delete's separation from everything else is the point of where it sits.
 
-     At the page's minimum this comes to 674px against the 700px at which the matrix reflows
-     into cards, so the new column fits inside the slack that was already there. The name
+     At the page's minimum this comes to 717px against the 720px at which the matrix
+     reflows into cards, so the columns fit inside the slack there is. The name
      column is the flexible track and absorbs the squeeze down to its own 8rem floor. */
   --columns:
-    minmax(8rem, 1fr) repeat(var(--platform-count, 8), var(--cell))
+    minmax(8rem, 1fr) repeat(var(--platform-count, 9), var(--cell))
     var(--status-column) var(--remove-column);
 
   display: flex;
@@ -359,7 +374,7 @@ h1 {
 /* Turned on its side, so a column's width is set by the tap target beneath it rather than
    by the length of the platform's name. Horizontal labels are not something this layout
    can afford: a column apiece wide enough for "Emulator" needs well past 800px of page,
-   which is wider than the 700px at which the matrix reflows, so between those two widths
+   which is wider than the 720px at which the matrix reflows, so between those two widths
    there would be nothing to render but a sideways scrollbar. They also cost the name column
    most of its width at the page's own maximum. Height is the axis with room going spare,
    and unlike width it stays constant however many platforms are added later — which is
@@ -459,6 +474,7 @@ h1 {
    header has scrolled past. Matched on the attribute alone rather than on `.cell`, so the
    column's heading picks up its own tint from the same line. */
 [data-platform="Steam"] { --tint: var(--steam); --tint-ink: var(--steam-ink); }
+[data-platform="GoG"] { --tint: var(--gog); --tint-ink: var(--gog-ink); }
 [data-platform="Xbox"] { --tint: var(--xbox); --tint-ink: var(--xbox-ink); }
 [data-platform="Xbox 360"] { --tint: var(--xbox360); --tint-ink: var(--xbox360-ink); }
 [data-platform="Xbox One"] { --tint: var(--xboxone); --tint-ink: var(--xboxone-ink); }
@@ -485,6 +501,7 @@ h1 {
      `:focus-within` alongside `:hover` so tabbing through a row lights the same column a
      mouse would, and so the highlight follows the keyboard rather than being lost to it. */
   .matrix:has([data-platform="Steam"]:is(:hover, :focus-within)) [data-platform="Steam"],
+  .matrix:has([data-platform="GoG"]:is(:hover, :focus-within)) [data-platform="GoG"],
   .matrix:has([data-platform="Xbox"]:is(:hover, :focus-within)) [data-platform="Xbox"],
   .matrix:has([data-platform="Xbox 360"]:is(:hover, :focus-within)) [data-platform="Xbox 360"],
   .matrix:has([data-platform="Xbox One"]:is(:hover, :focus-within)) [data-platform="Xbox One"],
@@ -893,9 +910,12 @@ h1 {
    choice in place of a `<table>` bought.
 
    The breakpoint is in `em` so it follows the reader's own font size — the layout runs
-   out of room when the text gets bigger, not when the screen gets smaller. 43.75em is
-   700px at a default 16px root. */
-@media (max-width: 43.75em) {
+   out of room when the text gets bigger, not when the screen gets smaller. 45em is 720px
+   at a default 16px root, and 720px is where it is because the grid's own minimum is 717px
+   at nine platforms — the cards have to take over before the columns stop fitting, or the
+   page grows a sideways scrollbar in the band between the two. It was 700px while there
+   were eight. */
+@media (max-width: 45em) {
   /* The frame belongs to the rows now: each is a card of its own rather than a band of
      one shared grid. */
   .matrix {
@@ -915,16 +935,20 @@ h1 {
   .add,
   .row {
     display: grid;
-    /* Four chips to a line, and a constant rather than the platform count divided by
+    /* Three chips to a line, and a constant rather than the platform count divided by
        something: the number that matters here is how wide a chip has to be to hold its
-       label and take a thumb, and on a 320px screen four is what that allows. Five is too
-       narrow for the labels — "Emulator", "Xbox One" and "Xbox 360" tie at eight characters
-       — and three wastes a phone's width on three fat chips and more lines of them.
+       label and take a thumb, and on a 320px screen three or four are what that allows.
+       Five is too narrow for the labels — "Emulator", "Xbox One" and "Xbox 360" tie at
+       eight characters.
 
-       Four also divides the list as it stands into two full lines. It need not: a last line
-       short by a chip or two reads as a deliberate short line, and only a single chip
-       stranded alone would look like a mistake. */
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+       Which of three and four it is comes from the length of the list. This was four while
+       there were eight platforms, dividing them into two full lines; at nine, four strands
+       a single chip alone on a third line, which is the one shape that reads as a mistake
+       rather than as a deliberate short line. Three costs nothing to fix it: nine chips
+       come out as three full lines, the same three that four would have taken, with the
+       labels given room they were short of at eight characters. A last line short by a
+       chip or two is fine — it is the line of one that is not. */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1px;
     margin-bottom: 0.75rem;
     border: 1px solid var(--line);
