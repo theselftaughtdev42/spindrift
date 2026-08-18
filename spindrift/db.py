@@ -36,6 +36,27 @@ MIGRATIONS = [
     CREATE UNIQUE INDEX game_platforms_one_intent
         ON game_platforms (game_id) WHERE intended;
     """,
+    # The outcome — "this is what became of it" — is a column on the game, and that
+    # placement is as deliberate as the intent's is above. The argument there was that an
+    # intent inherently names a platform, so it belongs on the row that names one. The
+    # same argument puts status here: "finished" is a fact about the game, and the intent
+    # beside it already records where. On the availability it would make every status
+    # change a second platform decision, and would let the two disagree — a game recorded
+    # as finished on a platform it was never meant to be played on.
+    #
+    # Nullable, with no default and no backfill. Absence is how this schema already says
+    # "not yet": no availability means not playable, no intent means undecided, and now no
+    # status means nothing has been recorded. A `NOT NULL DEFAULT` would say instead that
+    # every game already in the catalogue is known to be unstarted, which is not something
+    # anyone has told it.
+    #
+    # The set of values is closed but is not spelled out here as a CHECK: it lives in the
+    # statuses module beside the platform list, enforced on the write path exactly the way
+    # the platform set is, so there is one place a value is admitted from rather than two
+    # that can drift.
+    """
+    ALTER TABLE games ADD COLUMN status TEXT;
+    """,
 ]
 
 

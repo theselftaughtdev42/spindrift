@@ -40,6 +40,33 @@
   --switch-ink: #ffffff;
   --emulator: #7d4bbf;
   --emulator-ink: #ffffff;
+
+  /* Status tints, on the same paired-ink principle as the platforms above and drawn from
+     what the grid has not already spent. Eight platform tints have taken a green ramp, a
+     blue ramp, a red, a purple and a desaturated blue-grey; what is left unclaimed is
+     essentially orange, yellow, teal and grey, and these are those four.
+
+     The pairs that have to be tellable apart at a glance are Playing against 100% — the
+     two a cataloguer looks for — and Finished against 100%, which is the distinction the
+     column exists to make. Hue alone does not carry that: an earlier amber-and-gold pairing
+     was two names for one colour at column width. So these separate on all three axes at
+     once. Playing is teal, the only cool tint here and the one furthest from the rest.
+     Finished is a burnt orange, dark and saturated. 100% is a pale bright gold, some thirty
+     points of lightness above it and taking the opposite ink — so even read as two grey
+     smudges in peripheral vision, one is dark with light text and the other light with
+     dark.
+
+     Abandoned is grey, which is the one assignment that needs no argument: it is the
+     absence of a colour for the state that is the absence of an outcome. It is also the
+     only one that never has to compete, since nothing else in the column is neutral. */
+  --status-playing: #0e7f80;
+  --status-playing-ink: #ffffff;
+  --status-finished: #b4560e;
+  --status-finished-ink: #ffffff;
+  --status-100: #e9c74a;
+  --status-100-ink: #16181d;
+  --status-abandoned: #9ba1ab;
+  --status-abandoned-ink: #16181d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -73,6 +100,21 @@
     --switch-ink: #14161a;
     --emulator: #a173e0;
     --emulator-ink: #14161a;
+
+    /* Lifted like the platform tints, and for the same reason — but the lightness gap
+       between Finished and 100% is the thing doing the work here, so it is preserved
+       rather than closed up by lifting both to the same brightness. Abandoned is the one
+       tint that is not lifted: it is dropped instead, because the state it names is the
+       one that should sit back, and against a dark page sitting back means going darker.
+       That is also why it keeps the light ink the others give up. */
+    --status-playing: #35b3b0;
+    --status-playing-ink: #14161a;
+    --status-finished: #d97524;
+    --status-finished-ink: #14161a;
+    --status-100: #f3d868;
+    --status-100-ink: #14161a;
+    --status-abandoned: #5b616d;
+    --status-abandoned-ink: #e8eaef;
   }
 }
 
@@ -93,18 +135,33 @@
    column given every spare pixel turns into. Names past it clip with an ellipsis and keep
    their `title`, the same as they always did.
 
-   The gaps are `--platform-count + 1` of them — one fewer than there are columns — and the
-   border adds its two pixels, which is the `+ 3`. The page's own side padding is in the sum
-   as well, because `box-sizing` is `border-box` here too: without it the padding would eat
-   into the measure and the name column would come out exactly 2rem short of its maximum. */
+   The gaps are one fewer than there are columns — `--platform-count` of them plus the three
+   between the name, the status and the delete columns — and the border adds its two pixels,
+   which together are the `+ 4`. The page's own side padding is in the sum as well, because
+   `box-sizing` is `border-box` here too: without it the padding would eat into the measure
+   and the name column would come out exactly 2rem short of its maximum.
+
+   `--status-column` is the width the longest of the five labels needs, plus its arrow and
+   the padding around both — "Abandoned", which is 67.5px of semibold 12px system-ui. The
+   ticket that asked for this column estimated 5.25rem; measured, that leaves 60px for a
+   67.5px word, so it is 5.75rem instead. The column's job is to show the status, and a
+   status column that clips the status is not doing it. What that costs is 8px of page: the
+   grid's maximum goes from roughly 54rem to 60rem and its minimum to 674px, still inside
+   the 700px at which the whole thing reflows into cards.
+
+   It is deliberately not paid for out of `--name-max`. That number is a judgement made
+   against real names, and reducing it would start clipping the ones it was chosen to
+   hold — trading a clipped word in a new column for clipped names in the oldest one. */
 body {
   --cell: 2.75rem;
+  --status-column: 5.75rem;
   --remove-column: 3.5rem;
   --name-max: 26rem;
   --page-padding: 1rem;
   --catalogue-width: calc(
-    var(--name-max) + var(--platform-count, 8) * var(--cell) + var(--remove-column) +
-      (var(--platform-count, 8) + 3) * 1px + 2 * var(--page-padding)
+    var(--name-max) + var(--platform-count, 8) * var(--cell) + var(--status-column) +
+      var(--remove-column) + (var(--platform-count, 8) + 4) * 1px +
+      2 * var(--page-padding)
   );
 
   margin: 0 auto;
@@ -207,10 +264,16 @@ h1 {
      is the whole of the slack the grid has to give it.
 
      The trailing column is the delete control's own, rather than somewhere inside the name
-     cell, so that it sits as far from the toggles as the row allows. */
+     cell, so that it sits as far from the toggles as the row allows. Status takes the one
+     before it: past the platforms, because it is not about a platform, and before delete,
+     because delete's separation from everything else is the point of where it sits.
+
+     At the page's minimum this comes to 674px against the 700px at which the matrix reflows
+     into cards, so the new column fits inside the slack that was already there. The name
+     column is the flexible track and absorbs the squeeze down to its own 8rem floor. */
   --columns:
     minmax(8rem, 1fr) repeat(var(--platform-count, 8), var(--cell))
-    var(--remove-column);
+    var(--status-column) var(--remove-column);
 
   display: flex;
   flex-direction: column;
@@ -239,6 +302,7 @@ h1 {
 
 .corner,
 .column,
+.head-status,
 .name {
   display: flex;
   align-items: center;
@@ -268,12 +332,19 @@ h1 {
 }
 
 .corner,
-.column {
+.column,
+.head-status {
   background: var(--surface);
   color: var(--ink-muted);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+/* Bottom-aligned with "Game" and the feet of the rotated platform labels, so the header
+   reads along one line however its cells are set. */
+.head-status {
+  align-items: flex-end;
 }
 
 /* Untinted at rest — a header wearing every column's colour would compete with the grid it
@@ -542,6 +613,159 @@ h1 {
   outline-offset: -2px;
 }
 
+/* The status a game carries, resolved into the tint that draws it and the ink that stays
+   legible on that tint — the same pairing the platform tints use, looked up the same way.
+
+   Matched on the attribute rather than on a class, and not only because it is the idiom
+   already in the file: a status is a value, and `.status-100%` is not a class name CSS can
+   express — the `%` ends the identifier. An attribute selector holds any value the closed
+   set can contain, including that one.
+
+   Set on the row rather than on the cell so both consumers can reach it: the cell paints
+   itself with it, and the row reads which status it is to decide whether to recede. A game
+   with nothing recorded carries no attribute at all, so it matches none of these and falls
+   through to the resting fill below. */
+.row[data-status="playing"],
+.plan tr[data-status="playing"] {
+  --status: var(--status-playing);
+  --status-ink: var(--status-playing-ink);
+}
+
+.row[data-status="finished"],
+.plan tr[data-status="finished"] {
+  --status: var(--status-finished);
+  --status-ink: var(--status-finished-ink);
+}
+
+.row[data-status="100%"],
+.plan tr[data-status="100%"] {
+  --status: var(--status-100);
+  --status-ink: var(--status-100-ink);
+}
+
+.row[data-status="abandoned"],
+.plan tr[data-status="abandoned"] {
+  --status: var(--status-abandoned);
+  --status-ink: var(--status-abandoned-ink);
+}
+
+/* The colour is confined to this one cell, and that is the decision rather than a detail.
+   A row already carries up to eight platform tints; a status band running underneath them
+   would put two colour languages in the same space and neither would be readable. Kept to
+   its own column, the statuses read down the right-hand edge as a single ribbon that says
+   how much of the catalogue is done and which one game is being played now.
+
+   The fallbacks are what an unrecorded game gets: the row's own fill and the muted ink,
+   which is to say it looks like the rest of the row and claims nothing. */
+.matrix .status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.2rem;
+  background: var(--status, var(--raised));
+  color: var(--status-ink, var(--ink-muted));
+}
+
+/* Chrome, like the name cell beside it on the entry row: the add form has no game to have
+   an outcome yet, so this column's place is held and nothing more. */
+.matrix .status.entry {
+  background: var(--surface);
+}
+
+/* The chevron the control loses to `appearance: none` below, drawn back on. Native select
+   arrows are painted by the platform in the platform's own colour and take about 20px of a
+   column that has 92 to spend — this one is a character, inherits the cell's ink, and so
+   stays legible on every tint in both colour schemes for nothing.
+
+   Laid over the select rather than set beside it, which is the difference between an arrow
+   and a dead spot: a sibling in the flex row would sit outside the select's own box, so a
+   click on the most dropdown-looking part of the cell would land on the cell and do
+   nothing. Positioned, the select still spans the full width and the arrow floats on top of
+   its right-hand end, where `pointer-events: none` lets the click fall through to the
+   control underneath. The select's `padding-right` is what keeps the label from running
+   under it.
+
+   Only on a game's row: the entry row's cell is a placeholder holding a column open, and an
+   arrow there would advertise a control that is not present. */
+.row .status::after {
+  content: "\25BE";
+  position: absolute;
+  top: 50%;
+  right: 0.2rem;
+  transform: translateY(-50%);
+  font-size: 0.65rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Transparent and borderless, so what is seen is the cell's own tint and the control is the
+   cell rather than a box sitting inside one — the same thing the toggle button does with
+   the cells to its left.
+
+   The type is a size down from the row's, at the size the column headers use: the column
+   was measured against "Abandoned" at this size, so the two numbers belong together and
+   neither moves without the other.
+
+   The right-hand padding is the room the arrow above needs; the label stops before it
+   rather than running underneath. `min-width: 0` is what lets a flex item shrink below its
+   content, without which the select would push the cell wider than its track — and
+   `text-overflow` is what that shrinking then looks like. It should never fire at the sizes
+   above; it is the graceful answer if a reader's own font size takes the label past the
+   width, which is the one input this file cannot measure in advance. */
+.status select {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  min-height: 2.25rem;
+  padding: 0.2rem 0.75rem 0.2rem 0.15rem;
+  text-overflow: ellipsis;
+  border: none;
+  border-radius: 0.375rem;
+  background: none;
+  color: currentColor;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The menu itself is not the cell and must not inherit the cell's colours: an option list
+   painted in the tint over the tint is a list that cannot be read. It is put back onto the
+   page's own surface and ink, which is what a native menu would have used. */
+.status option {
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.status select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Done is done: a game that has been finished, completed or given up on steps back so that
+   the ones still ahead stand out. Dimming rather than hiding — the catalogue stays the whole
+   catalogue, and a row you can still read is a row you can still change your mind about.
+   With a largely retro collection this fires on a great many rows the moment backfilling
+   starts, which is exactly when the remaining games most need to be findable.
+
+   Everything except the status cell: the dimming is about clutter and the colour is about
+   identification, so the mark saying which of the three states this is stays at full
+   strength on a row that has otherwise receded. Opacity cannot be undone by a child, so the
+   exception has to be made here, on the children, rather than on the row. */
+.row:is([data-status="finished"], [data-status="100%"], [data-status="abandoned"])
+  > :not(.status) {
+  opacity: 0.5;
+}
+
+/* Restored while the row is being worked in, because a receded row is still a row that
+   gets renamed, retoggled and deleted — and a focus ring at half strength is a focus ring
+   that has been half lost. Focus only, not hover: the grid already spends hover on lighting
+   a platform column, and a second thing happening on every pass of the mouse across 116
+   rows would be movement rather than feedback. */
+.row:focus-within > :not(.status) {
+  opacity: 1;
+}
+
 /* Present in the markup on every cell, but hidden here: at these widths the column
    header already names the platform. The mobile slice reveals it, where there is no
    header. It stays in the accessibility tree either way, which is what gives the
@@ -608,6 +832,29 @@ h1 {
   color: var(--tint-ink);
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* The outcome, read-only, painted from the same variables the matrix uses — so a finished
+   game is the same colour on both pages and neither has to be learned separately. Read-only
+   because there is one place a status is set, and a second control for it would only raise
+   the question of which page is authoritative.
+
+   Sized to its contents like the platform column above, so the game names keep the width. */
+.plan td.status {
+  width: 1%;
+  background: var(--status);
+  color: var(--status-ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The same recession the matrix gives a finished row, and with the same exception: the
+   status keeps its colour, so a row that has stepped back is still identifiable as the
+   thing it stepped back for. The platform heading is a `th` spanning the whole group and is
+   not any one row's to dim. */
+.plan tr:is([data-status="finished"], [data-status="100%"], [data-status="abandoned"])
+  > td:not(.status) {
+  opacity: 0.55;
 }
 
 /* Rules between the games of a group, and between one group and the next — the second
@@ -718,8 +965,20 @@ h1 {
     padding: 0 0.25rem 0 0.75rem;
   }
 
-  /* The desktop grid needs this column's place held or its neighbours slide out of
-     alignment. Cards have no column to align to, so the placeholder goes. */
+  /* A line of its own, the full width of the card, beneath the chips. It gets there by
+     document order plus a full-row span rather than by being placed: the name and the
+     delete control are both pinned to row 1, so auto-placement fills the chips in beneath
+     them and this — the next thing in the markup, and too wide for any gap left over —
+     starts a fresh line under the lot. Which means the card the cataloguer already knows is
+     not rearranged: the name and delete are exactly where they were. */
+  .matrix .status {
+    grid-column: 1 / -1;
+    padding: 0.25rem;
+  }
+
+  /* The desktop grid needs these columns' places held or their neighbours slide out of
+     alignment. Cards have no column to align to, so the placeholders go. */
+  .matrix .status.entry,
   .remove.entry {
     display: none;
   }
@@ -806,10 +1065,13 @@ h1 {
     }
   }
 
-  /* Typing targets get the same thumb-sized minimum as the chips they sit above. */
+  /* Typing targets get the same thumb-sized minimum as the chips they sit above, and so
+     does the status control — it is a full-width line on this layout, and a full-width line
+     that is not thumb-high is the one target on the card that misses. */
   .rename input,
   .add input[type="text"],
-  .add button {
+  .add button,
+  .status select {
     min-height: 2.75rem;
   }
 

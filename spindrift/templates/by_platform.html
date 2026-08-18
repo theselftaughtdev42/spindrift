@@ -13,30 +13,41 @@
       that actually means what it is, and gets its header, its scopes and its row groups
       for nothing. -#}
   {% if groups %}
-    <p class="lede">Where each decided game is going to be played.</p>
+    {#- Future tense until this page showed outcomes, which a finished game contradicts:
+        it is not going to be played, it was. The wording now covers both, because the page
+        now holds both. -#}
+    <p class="lede">Where each decided game is meant to be played, and how far it got.</p>
 
     <table class="plan">
       <thead>
         <tr>
           <th scope="col">Platform</th>
           <th scope="col">Game</th>
+          <th scope="col">Status</th>
         </tr>
       </thead>
       {#- One `<tbody>` per platform rather than one for the whole table: the groups are
           what this page is, and a row group is the markup for a group of rows. -#}
-      {% for platform, names in groups %}
+      {% for platform, games in groups %}
         <tbody>
-          {% for name in names %}
-            <tr>
+          {#- `data-status` carries the tint and the dimming here exactly as it does in the
+              matrix, so a finished game looks finished on both pages. Read-only: there is
+              one place a status is changed, and it is the catalogue. -#}
+          {% for game in games %}
+            <tr {% if game.status %}data-status="{{ game.status }}"{% endif %}>
               {#- Written once and spanning its games, so the platform reads as a heading
                   over them rather than as a word repeated down the column. `data-platform`
                   is the same handle the matrix tints its cells by, so a platform is the
                   same colour on both pages. -#}
               {% if loop.first %}
-                <th scope="rowgroup" rowspan="{{ names | length }}"
+                <th scope="rowgroup" rowspan="{{ games | length }}"
                     data-platform="{{ platform }}">{{ platform }}</th>
               {% endif %}
-              <td>{{ name }}</td>
+              <td>{{ game.name }}</td>
+              {#- The em dash for a game nothing has been recorded about, the same mark the
+                  catalogue's control shows for it, so the two pages say "not started" the
+                  same way. -#}
+              <td class="status">{{ game.status | capitalize if game.status else "—" }}</td>
             </tr>
           {% endfor %}
         </tbody>

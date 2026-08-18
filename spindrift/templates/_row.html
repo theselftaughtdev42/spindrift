@@ -1,0 +1,108 @@
+{#- One game, as a row of the grid: its name, its availabilities, what became of it, and
+    the control that removes it.
+
+    Extracted when status arrived, because status is the first fact whose consequences are
+    contained by a single row — it retints one cell and dims or undims the rest, and reaches
+    nothing above it or below. Rendered both inside the whole catalogue and alone as the
+    answer to the two endpoints that change one game in place, so the two can never disagree
+    about what a row looks like.
+
+    Add, rename and delete still answer with the whole list: each changes the list's
+    membership or its order, so there is no single row for them to swap.
+
+    `data-status` is the handle everything to do with the outcome hangs off — the tint the
+    status cell wears and the dimming the rest of the row takes. It is absent rather than
+    empty when nothing has been recorded, so "no status" is something CSS can ask about by
+    the attribute simply not matching. -#}
+<div class="row" role="row" {% if game.status %}data-status="{{ game.status }}"{% endif %}>
+  {#- The name is an editable field at rest rather than text that swaps into one on
+      click: there is no second markup shape for the row, no endpoint to fetch it,
+      and the correction costs a click and a keystroke. A lone text input submits on
+      Enter without a button asking to be pressed. -#}
+  <form class="name rename" role="rowheader"
+        hx-post="{{ url_for('rename_game', game_id=game.id) }}"
+        hx-target="#catalogue">
+    {#- The field clips its value with an ellipsis when the name is longer than the
+        column, which the page's width is chosen to make rare rather than impossible —
+        a narrow window can still do it. `title` is what makes a clipped name
+        recoverable without clicking into the field and scrolling it. -#}
+    <input name="name" type="text" value="{{ game.name }}"
+           title="{{ game.name }}"
+           aria-label="Rename {{ game.name }}" autocomplete="off">
+    {#- Only when a search prefix was configured. Without one there is no sensible
+        destination, so the control is absent rather than present and inert.
+
+        An anchor rather than a button: it goes somewhere, so it should offer
+        everything a link offers — middle-click, copy the address, open in a
+        background tab. `noopener` because the page it opens is a third party's.
+
+        The name is URL-encoded, or an ampersand in a title would end the search
+        term and start a query parameter of the storefront's own. -#}
+    {% if config.GAME_SEARCH_URL %}
+      <a class="search"
+         href="{{ config.GAME_SEARCH_URL }}{{ game.name | urlencode }}"
+         target="_blank" rel="noopener noreferrer"
+         aria-label="Search the web for {{ game.name }}">
+        {#- The glyph is decoration: it is hidden from the accessibility tree so the
+            link is announced by its label alone, not as "magnifying glass". -#}
+        <span aria-hidden="true">🔍</span>
+      </a>
+    {% endif %}
+  </form>
+  {% for platform in platforms %}
+    {% set game_id = game.id %}
+    {% set available = (game.id, platform) in availability %}
+    {#- At most one cell in the row can answer true: the intent is one platform per
+        game, held to that by the database rather than by this comparison. -#}
+    {% set intended = intents.get(game.id) == platform %}
+    {% include "_cell.html" %}
+  {% endfor %}
+  {#- The outcome, at the end of the platforms and before delete. Outside the tinted block
+      of toggles because it is not a fact about a platform — the intent among those cells
+      already records where, and this records what happened. Delete keeps the trailing
+      column it was given for its own separation. -#}
+  <span class="status" role="cell">
+    {#- A select rather than another cycling button. Five states is far too many to cycle
+        blind, and the cell beside it already carries an apology for the two clicks its
+        third state costs.
+
+        The accessible name says which game, because a column of otherwise identical
+        dropdowns is a column a screen reader cannot tell apart.
+
+        The `id` is what puts focus back on this control after the row is swapped out from
+        under it: htmx restores focus to an element carrying the same id in the new markup,
+        and without one a session spent backfilling loses the keyboard on every change. -#}
+    <select id="status-{{ game.id }}" name="status"
+            aria-label="Status of {{ game.name }}"
+            hx-post="{{ url_for('set_status', game_id=game.id) }}"
+            hx-target="closest .row"
+            hx-swap="outerHTML">
+      {#- Absence first, and selected when nothing has been recorded: it is where every
+          game starts and the only state the catalogue can put one in without being told.
+          The em dash stands for it rather than a word, because naming it would make it
+          sound like something that was decided. Choosing it again is how a status is
+          cleared — a misclick is recoverable, and a game meant for a second run goes back
+          to the backlog. -#}
+      <option value="" {% if not game.status %}selected{% endif %}>&mdash;</option>
+      {#- Labels are the stored words with a sentence's capital on them, so what is read
+          here and what is in the database are the same vocabulary. -#}
+      {% for status in statuses %}
+        <option value="{{ status }}"
+                {% if game.status == status %}selected{% endif %}>{{ status | capitalize }}</option>
+      {% endfor %}
+    </select>
+  </span>
+  {#- Deliberately last and outside the tinted block of toggles: this is the one
+      control on the row that destroys data, and with no backup or undo behind it,
+      reaching it by accident instead of Emulator has to be hard. -#}
+  <span class="remove" role="cell">
+    {#- The question names the game and says what it costs: this dialog is the
+        entire safety net, and one that says nothing is one people learn to dismiss
+        without reading. -#}
+    <button type="button"
+            aria-label="Delete {{ game.name }}"
+            hx-delete="{{ url_for('delete_game', game_id=game.id) }}"
+            hx-target="#catalogue"
+            hx-confirm="Delete {{ game.name }}? This cannot be undone.">&times;</button>
+  </span>
+</div>

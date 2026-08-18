@@ -11,6 +11,11 @@
     {% for platform in platforms %}
       <span class="column" role="columnheader" data-platform="{{ platform }}">{{ platform }}</span>
     {% endfor %}
+    {#- Labelled and horizontal, unlike the platform headings beside it. Those are turned
+        on their side because a 2.75rem column cannot hold a word; this column is wide
+        enough to be named the ordinary way round, and a heading that has room to read
+        normally should. -#}
+    <span class="head-status" role="columnheader">Status</span>
     {#- Unlabelled: the ✕ on each row says what the column is, and a heading here would
         put the word "Delete" at the top of a grid whose subject is platforms. -#}
     <span class="column remove" role="columnheader"></span>
@@ -38,69 +43,16 @@
         </label>
       </span>
     {% endfor %}
-    {#- Empty: rows contribute their cells straight to the grid, so the entry row needs
-        the delete column's place held or its neighbours slide out of alignment. -#}
+    {#- Both empty, for the same reason: rows contribute their cells straight to the grid,
+        so the entry row needs these columns' places held or its neighbours slide out of
+        alignment. A status control here would also be asking, of a game not yet in the
+        catalogue, what became of it. -#}
+    <span class="status entry" role="cell"></span>
     <span class="remove entry" role="cell"></span>
   </form>
 
   {% for game in games %}
-    <div class="row" role="row">
-      {#- The name is an editable field at rest rather than text that swaps into one on
-          click: there is no second markup shape for the row, no endpoint to fetch it,
-          and the correction costs a click and a keystroke. A lone text input submits on
-          Enter without a button asking to be pressed. -#}
-      <form class="name rename" role="rowheader"
-            hx-post="{{ url_for('rename_game', game_id=game.id) }}"
-            hx-target="#catalogue">
-        {#- The field clips its value with an ellipsis when the name is longer than the
-            column, which the page's width is chosen to make rare rather than impossible —
-            a narrow window can still do it. `title` is what makes a clipped name
-            recoverable without clicking into the field and scrolling it. -#}
-        <input name="name" type="text" value="{{ game.name }}"
-               title="{{ game.name }}"
-               aria-label="Rename {{ game.name }}" autocomplete="off">
-        {#- Only when a search prefix was configured. Without one there is no sensible
-            destination, so the control is absent rather than present and inert.
-
-            An anchor rather than a button: it goes somewhere, so it should offer
-            everything a link offers — middle-click, copy the address, open in a
-            background tab. `noopener` because the page it opens is a third party's.
-
-            The name is URL-encoded, or an ampersand in a title would end the search
-            term and start a query parameter of the storefront's own. -#}
-        {% if config.GAME_SEARCH_URL %}
-          <a class="search"
-             href="{{ config.GAME_SEARCH_URL }}{{ game.name | urlencode }}"
-             target="_blank" rel="noopener noreferrer"
-             aria-label="Search the web for {{ game.name }}">
-            {#- The glyph is decoration: it is hidden from the accessibility tree so the
-                link is announced by its label alone, not as "magnifying glass". -#}
-            <span aria-hidden="true">🔍</span>
-          </a>
-        {% endif %}
-      </form>
-      {% for platform in platforms %}
-        {% set game_id = game.id %}
-        {% set available = (game.id, platform) in availability %}
-        {#- At most one cell in the row can answer true: the intent is one platform per
-            game, held to that by the database rather than by this comparison. -#}
-        {% set intended = intents.get(game.id) == platform %}
-        {% include "_cell.html" %}
-      {% endfor %}
-      {#- Deliberately last and outside the tinted block of toggles: this is the one
-          control on the row that destroys data, and with no backup or undo behind it,
-          reaching it by accident instead of Emulator has to be hard. -#}
-      <span class="remove" role="cell">
-        {#- The question names the game and says what it costs: this dialog is the
-            entire safety net, and one that says nothing is one people learn to dismiss
-            without reading. -#}
-        <button type="button"
-                aria-label="Delete {{ game.name }}"
-                hx-delete="{{ url_for('delete_game', game_id=game.id) }}"
-                hx-target="#catalogue"
-                hx-confirm="Delete {{ game.name }}? This cannot be undone.">&times;</button>
-      </span>
-    </div>
+    {% include "_row.html" %}
   {% endfor %}
 </div>
 

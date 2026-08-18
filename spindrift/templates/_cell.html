@@ -1,17 +1,27 @@
 {#- One availability: whether `game_id` can be played on `platform`, and whether that is
     the way it is meant to be played.
 
-    Rendered both as part of the grid and alone as the cycle endpoint's response, so the
-    two can never disagree about what a set cell looks like. The button fills the cell,
-    which is what makes the whole cell the click target rather than an inner control. -#}
+    Always rendered as part of a row, and the row is what the cycle endpoint answers with:
+    a click here can change two cells, because deciding on one platform un-decides another,
+    and the cell that loses its marker is always another cell in this same row. Swapping the
+    row covers both outcomes with one response rather than a special case.
+
+    The button fills the cell, which is what makes the whole cell the click target rather
+    than an inner control. -#}
 <div class="cell" role="cell" data-platform="{{ platform }}">
-  {#- `aria-pressed` stays the availability alone: an intended cell is an available one,
+  {#- The `id` is what survives the swap: htmx restores focus to an element carrying the
+      same id in the replacement markup, so cycling a cell with the keyboard leaves the
+      keyboard on that cell rather than back at the top of the document. The platform's
+      space becomes a hyphen, because an id may not contain one.
+
+      `aria-pressed` stays the availability alone: an intended cell is an available one,
       and a two-valued attribute has no third value to spend on the state beyond it. -#}
   <button type="button"
+          id="cell-{{ game_id }}-{{ platform | replace(' ', '-') }}"
           aria-pressed="{{ 'true' if available else 'false' }}"
           {% if intended %}data-intended{% endif %}
           hx-post="{{ url_for('cycle_platform', game_id=game_id, platform=platform) }}"
-          hx-target="closest .cell"
+          hx-target="closest .row"
           hx-swap="outerHTML">
     {#- The whole of the intent, on screen: a marker on the one cell in the row that has
         been decided on, over a grid of otherwise identical filled cells.
