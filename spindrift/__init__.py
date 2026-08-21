@@ -1,7 +1,7 @@
 import os
 import sqlite3
 
-from flask import Flask, abort, render_template, request
+from flask import Flask, abort, make_response, render_template, request
 
 from spindrift import db
 from spindrift.platforms import PLATFORMS
@@ -106,10 +106,10 @@ def create_app(database_path):
     @app.post("/games/<int:game_id>/name")
     def rename_game(game_id):
         name = request.form["name"].strip()
-        # Nothing to rename to. Re-rendering restores the name the field started with,
-        # the same silent revert an empty add gets.
+        # Nothing to rename to. The row comes back carrying the name it still has, which
+        # is the same silent revert an empty add gets.
         if not name:
-            return render_template("_catalogue.html", **catalogue())
+            return render_template("_row.html", **game_row(game_id))
 
         connection = db.get_connection()
         try:
@@ -117,13 +117,26 @@ def create_app(database_path):
                 "UPDATE games SET name = ? WHERE id = ?", (name, game_id)
             )
         except sqlite3.IntegrityError:
-            error = f"{name} is already in the catalogue."
-            return render_template("_catalogue.html", error=error, **catalogue())
+            # The one outcome of a rename that reaches past the row: the banner lives
+            # above the grid, shared with the add form's, so this answer has to be the
+            # whole list and has to say so in its headers.
+            return retargeted_catalogue(f"{name} is already in the catalogue.")
         connection.commit()
-        # The whole list body rather than the renamed row alone: the error a collision
-        # raises then has exactly one place to appear, shared with the add form's, and
-        # the row lands back in alphabetical order for free.
-        return render_template("_catalogue.html", **catalogue())
+        # One row, like the two endpoints below and unlike the three that change the
+        # list's membership. This used to answer with the whole list, which bought the
+        # error somewhere to appear and put the row back in alphabetical order for free;
+        # what it cost was everything else on the page being rebuilt around a one-word
+        # change. That cost stopped being affordable when the field started saving on
+        # blur: the entry form is rebuilt with it, and its `autofocus` then pulls the
+        # page back to the top of the catalogue on every save. Worse, a rename saved by
+        # clicking into the next game's name field would destroy the field just clicked
+        # into, half-typed.
+        #
+        # What it gives up is the re-sort: a renamed game keeps its place until the list
+        # is next drawn whole, by an add, a delete or a reload. That is the right trade
+        # now rather than a merely acceptable one — a save on every blur that reordered
+        # the catalogue would move rows out from under the pointer as a matter of course.
+        return render_template("_row.html", **game_row(game_id))
 
     @app.post("/games/<int:game_id>/platforms/<platform>")
     def cycle_platform(game_id, platform):
@@ -234,6 +247,27 @@ def create_app(database_path):
         connection.commit()
         # The whole list body, because a deletion closes a gap: every row below it moves.
         return render_template("_catalogue.html", **catalogue())
+
+    def retargeted_catalogue(error):
+        """The whole list, answering a request that asked for a single row.
+
+        Only the rename uses this, and only when the name it was given is already taken.
+        The response has to carry its own target because it does not match the one the
+        request declared: the row asked for a row back, and this is the page-level banner
+        plus everything under it.
+
+        The pair of headers is the same pair the cycle endpoint used to need before there
+        was a row partial to answer with. There it was papering over a missing shape and
+        went as soon as one existed. Here the two shapes are real — a rename either
+        changes one row or raises a banner that belongs to the page — so the retarget is
+        saying something true about this particular answer.
+        """
+        response = make_response(
+            render_template("_catalogue.html", error=error, **catalogue())
+        )
+        response.headers["HX-Retarget"] = "#catalogue"
+        response.headers["HX-Reswap"] = "innerHTML"
+        return response
 
     def catalogue():
         """Everything the grid draws: the games, which cells are set, and which is meant."""

@@ -7,8 +7,9 @@
     answer to the two endpoints that change one game in place, so the two can never disagree
     about what a row looks like.
 
-    Add, rename and delete still answer with the whole list: each changes the list's
-    membership or its order, so there is no single row for them to swap.
+    Add and delete still answer with the whole list: each changes its membership, so
+    there is no single row for them to swap. Rename joined the endpoints that answer with
+    one — see the endpoint for why, and for what that costs.
 
     `data-status` is the handle everything to do with the outcome hangs off — the tint the
     status cell wears and the dimming the rest of the row takes. It is absent rather than
@@ -30,16 +31,43 @@
      {% if not intents.get(game.id) %}data-undecided{% endif %}>
   {#- The name is an editable field at rest rather than text that swaps into one on
       click: there is no second markup shape for the row, no endpoint to fetch it,
-      and the correction costs a click and a keystroke. A lone text input submits on
-      Enter without a button asking to be pressed. -#}
+      and the correction costs a click and a keystroke.
+
+      Two triggers, because there are two ways a person finishes editing a field and only
+      one of them is Enter. A lone text input submits on Enter without a button asking to
+      be pressed, which is the `submit` here; clicking or tabbing away is the other, and
+      it used to throw the edit away silently — the worst of the three things a save can
+      do, since the field goes on showing the typed name that was not kept.
+
+      `blur` rather than the `focusout` that would bubble to this form on its own: the
+      form holds the search link as well, and a focusout from that would post the name
+      over again on the way out to a storefront. `from:` attaches the listener to the
+      input itself, which is what makes an event that does not bubble usable here.
+
+      `changed` is what keeps that from being a request per glance: htmx remembers the
+      value the field had when it was drawn and fires only if what is being left behind
+      differs from it. Tabbing through a row costs nothing, which matters because tabbing
+      through rows is how the grid is crossed with a keyboard.
+
+      The row is the target, and that is inseparable from saving on blur: at the whole
+      list this used to swap, every blur would rebuild the entry form — pulling the page
+      back to its `autofocus` — and destroy any field already clicked into. -#}
   <form class="name rename" role="rowheader"
         hx-post="{{ url_for('rename_game', game_id=game.id) }}"
-        hx-target="#catalogue">
-    {#- The field clips its value with an ellipsis when the name is longer than the
+        hx-trigger="submit, blur changed from:find input"
+        hx-target="closest .row"
+        hx-swap="outerHTML">
+    {#- The `id` is what keeps the keyboard here when the row is swapped out from under
+        it: htmx restores focus to an element carrying the same id in the replacement
+        markup, so a rename committed with Enter leaves the caret in the field it was
+        typed into, exactly as the cells and the status select beside it do. The blur
+        trigger has no focus to keep — that is what blur means — so this is for Enter.
+
+        The field clips its value with an ellipsis when the name is longer than the
         column, which the page's width is chosen to make rare rather than impossible —
         a narrow window can still do it. `title` is what makes a clipped name
         recoverable without clicking into the field and scrolling it. -#}
-    <input name="name" type="text" value="{{ game.name }}"
+    <input id="name-{{ game.id }}" name="name" type="text" value="{{ game.name }}"
            title="{{ game.name }}"
            aria-label="Rename {{ game.name }}" autocomplete="off">
     {#- Only when a search prefix was configured. Without one there is no sensible
