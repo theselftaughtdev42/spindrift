@@ -1,0 +1,106 @@
+{% extends "layout.html" %}
+
+{#- Where the catalogue's search control points, and the list of places it could point.
+
+    Plain forms, no htmx, no script — so the layout's head block stays empty here exactly
+    as it does on the by-platform page. The machinery the catalogue carries is paid for by
+    a problem this page does not have: rows toggled in quick succession, where rebuilding
+    the page costs flicker, the scroll position and the focused control. This is a handful
+    of rows, touched about as often as a mood changes.
+
+    HTML forbids one form inside another, which is what shapes the markup below: the radios
+    and the delete buttons are all in the one form, and the deletes reach their own endpoint
+    with `formaction` rather than by being wrapped in forms of their own. The add form is
+    genuinely separate, sits after the list, and is the only text field on the page. -#}
+{% block title %}Settings — Spindrift{% endblock %}
+
+{% block nav %}
+  <a class="nav" href="{{ url_for('page') }}">&larr; Catalogue</a>
+{% endblock %}
+
+{% block content %}
+  <p class="lede">
+    Where the search button beside each game goes. Only one at a time.
+  </p>
+
+  {#- The same banner class the catalogue uses for a duplicate name, in the same place
+      relative to what it is about: above the thing the message concerns. It is the reason
+      the add path renders rather than redirects — see the endpoint. -#}
+  {% if error %}
+    <p class="error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  {% if search_urls %}
+    <form class="search-urls" method="post"
+          action="{{ url_for('set_active_search_url') }}">
+      {#- A group, named, because a bare stack of radios has nothing to announce itself as
+          and the heading above it belongs to the page rather than to the control. -#}
+      <fieldset>
+        <legend>Search with</legend>
+
+        {#- Absence first, and checked when nothing is active. A radio group cannot be
+            emptied once a choice is made, so "off" has to be a choice within it — the same
+            move the status control makes with its leading em dash, and for the same reason.
+            Spelled out in words rather than a dash because a radio has the room, and
+            because what it turns off is a control on another page entirely.
+
+            Choosing it costs the saved list nothing: the addresses stay, and turning the
+            button back on is picking one of them again. -#}
+        <label class="search-url off">
+          <input type="radio" name="active" value=""
+                 {% if not active_search_url %}checked{% endif %}>
+          <span class="host">No search button</span>
+        </label>
+
+        {% for search_url in search_urls %}
+          {#- The host over the address, and both: the host is what the entry is called and
+              is all that needs reading to tell two apart, and the address underneath is the
+              only record of the entry there is, since these cannot be edited. Derived from
+              the URL rather than stored beside it, so the two can never disagree. -#}
+          <div class="search-url">
+            <label>
+              <input type="radio" name="active" value="{{ search_url.id }}"
+                     {% if search_url.active %}checked{% endif %}>
+              <span class="host">{{ search_host(search_url.url) }}</span>
+              <span class="url">{{ search_url.url }}</span>
+            </label>
+            {#- Inside the same form as the radios, reaching a different endpoint. No
+                confirmation, unlike the catalogue's delete: that one destroys a game and
+                everything decided about it, where the worst this can cost is retyping an
+                address. Discarding an unsaved radio change on the way is deliberate —
+                the click asked for a deletion, not for a selection. -#}
+            <button type="submit" class="remove-url"
+                    formaction="{{ url_for('delete_search_url', url_id=search_url.id) }}"
+                    aria-label="Delete {{ search_url.url }}">&times;</button>
+          </div>
+        {% endfor %}
+      </fieldset>
+
+      {#- An explicit save rather than a radio that submits on change. This page has no
+          script to submit with, and the button is also what makes the choice reversible
+          before it reaches the catalogue. -#}
+      <button type="submit" class="save">Save</button>
+    </form>
+  {% else %}
+    {#- The dashed empty state the other pages use. No radio group is drawn at all: with
+        nothing saved there is nothing that could be active, so an "off" choice on its own
+        would be a control offering one option. -#}
+    <p class="empty">No search URLs yet — add one below.</p>
+  {% endif %}
+
+  <form class="add-url" method="post" action="{{ url_for('add_search_url') }}">
+    <label for="url">Add a URL</label>
+    {#- The placeholder shows the shape rather than describing it, `{}` included, because
+        the one rule this field has is that the marker must be somewhere in the address.
+        `autofocus` only after a rejection, so arriving to switch destinations does not
+        scroll past the list to a field nobody asked for. -#}
+    <input id="url" name="url" type="text" value="{{ draft or '' }}"
+           placeholder="https://example.com/search?q={}"
+           autocomplete="off" spellcheck="false"
+           {% if error %}autofocus{% endif %}>
+    <button type="submit">Add</button>
+    <p class="hint">
+      Put <code>{}</code> where the game’s name should go.
+    </p>
+  </form>
+{% endblock %}

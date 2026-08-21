@@ -1,11 +1,47 @@
-import os
 import sqlite3
+from urllib.parse import urlsplit
 
-from flask import Flask, abort, make_response, render_template, request
+from flask import (
+    Flask,
+    abort,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from spindrift import db
 from spindrift.platforms import PLATFORMS
 from spindrift.statuses import STATUSES
+
+# The placeholder a saved search URL has to contain: the spot the game's name is written
+# into. Mandatory rather than appended-when-absent, so a mistyped `{nme}` is refused on
+# the spot instead of quietly degrading into a URL with a game's name stuck on the end.
+SEARCH_PLACEHOLDER = "{}"
+
+# The only schemes a saved URL may use. The value lands in an `href` on every row of the
+# catalogue, which is the sharp reason — `javascript:` there would run on a click — but
+# the plain one is that a search destination which is not a web address is not a search
+# destination.
+SEARCH_SCHEMES = ("http", "https")
+
+
+def search_host(url):
+    """What a saved search URL is called — derived every time, never stored.
+
+    An entry carries no name of its own. The settings page reads this over the address
+    itself and the catalogue's button announces it, and because it is computed from the
+    URL there is no second field to keep in step: nothing can go on calling an entry
+    "Steam" after the address stopped pointing there.
+
+    `www.` comes off because it distinguishes nothing — no two entries differ by it alone
+    and mean different sites. The URL itself is the fallback for anything `urlsplit` finds
+    no host in, which the write path already refuses; it is here so this has an answer
+    rather than a `None` for every caller to handle.
+    """
+    host = urlsplit(url).hostname or url
+    return host.removeprefix("www.")
 
 
 def create_app(database_path):
@@ -24,19 +60,41 @@ def create_app(database_path):
     # different endpoints and none of them should have to remember to pass this.
     app.jinja_env.globals["statuses"] = STATUSES
 
-    # The prefix a game's name is appended to for a web search — a whole storefront or
-    # search engine's query URL, ending wherever the term goes. Unset is the normal
-    # case and means the catalogue renders exactly as it did before this existed: no
-    # search control anywhere, rather than one pointing nowhere.
-    #
-    # Empty string is treated as unset, because `GAME_SEARCH_URL=` in a shell profile or
-    # a compose file reads as turning the feature off, not as searching the empty prefix.
-    # Read once here, so the toggle is a property of a running server and flipping it is
-    # a restart.
-    app.config["GAME_SEARCH_URL"] = os.environ.get("GAME_SEARCH_URL") or None
+    # Only the settings page needs this, and it needs it once per row; the catalogue is
+    # served the active one ready-made by the context processor below.
+    app.jinja_env.globals["search_host"] = search_host
 
     db.migrate(app.config["DATABASE_PATH"])
     app.teardown_appcontext(db.close_connection)
+
+    # Where the row's search control points. It is rendered from four endpoints, which is
+    # the same argument that makes `platforms` and `statuses` globals above — none of them
+    # should have to remember to pass this. A context processor rather than a global
+    # because the answer comes out of the database and can differ from one request to the
+    # next, where those two are fixed for the life of the process.
+    #
+    # This is what replaced a `GAME_SEARCH_URL` environment variable read once at startup.
+    # That made the destination a property of a running server, so changing it was a
+    # restart and only one could ever be known — the wrong shape for something switched by
+    # mood rather than by deployment. There is no fallback to it and no override by it: the
+    # database is the only place this is configured, so there is one answer rather than two
+    # that can disagree.
+    #
+    # One small SELECT per response rather than per row: the whole catalogue renders in a
+    # single template context, so the include inside the loop reads what this returned once.
+    @app.context_processor
+    def active_search_link():
+        row = (
+            db.get_connection()
+            .execute("SELECT url FROM search_urls WHERE active")
+            .fetchone()
+        )
+        # Both `None` when nothing is active, which is what the row partial asks about:
+        # no active URL means no search control at all, rather than one pointing nowhere.
+        return {
+            "active_search_url": row["url"] if row else None,
+            "active_search_host": search_host(row["url"]) if row else None,
+        }
 
     @app.get("/")
     def page():
@@ -247,6 +305,136 @@ def create_app(database_path):
         connection.commit()
         # The whole list body, because a deletion closes a gap: every row below it moves.
         return render_template("_catalogue.html", **catalogue())
+
+    @app.get("/settings")
+    def settings():
+        """The catalogue's configuration: where its search control points.
+
+        A page rather than a control in the masthead. The switching this exists for happens
+        by mood over a session — a storefront while shopping, a wiki while deciding — not
+        game by game, so a configuration widget parked permanently over the grid would be
+        answering a question nobody is asking while looking at it.
+
+        No htmx here, and no script at all. The machinery on the catalogue is paid for by a
+        problem this page does not have: 116 rows toggled in quick succession, where a
+        whole-page rebuild costs flicker, scroll position and the focused control. This is
+        five rows touched about as often as a mood changes, so it is plain forms, and the
+        layout's script block stays empty exactly as the by-platform page leaves it.
+        """
+        return render_template("settings.html", **saved_search_urls())
+
+    @app.post("/settings/urls")
+    def add_search_url():
+        url = request.form["url"].strip()
+        # Nothing typed: the page comes back as it was. The same silent revert an empty
+        # game name gets, and for the same reason — there is no mistake here to report.
+        if not url:
+            return redirect(url_for("settings"))
+        # Both checks before the write, so a request carrying a bad URL leaves nothing
+        # behind at all — the rule the platform and status sets are enforced by.
+        if SEARCH_PLACEHOLDER not in url:
+            return rejected_search_url(
+                url,
+                f"That URL needs {SEARCH_PLACEHOLDER} in it, where the game's name goes.",
+            )
+        if urlsplit(url).scheme not in SEARCH_SCHEMES:
+            return rejected_search_url(
+                url, "That URL needs to start with http:// or https://."
+            )
+
+        connection = db.get_connection()
+        try:
+            connection.execute("INSERT INTO search_urls (url) VALUES (?)", (url,))
+        except sqlite3.IntegrityError:
+            # The unique index, reported the way a duplicate game name is: the banner over
+            # the list, and the address still in the field to be corrected rather than
+            # retyped.
+            return rejected_search_url(url, "That URL is already saved.")
+        connection.commit()
+        # Saved, not selected. Turning the search button on is the one thing this page does
+        # that changes the catalogue, so it is asked for by choosing and saving rather than
+        # arriving as a side effect of writing down an address to try later.
+        return redirect(url_for("settings"))
+
+    @app.post("/settings/urls/<int:url_id>/delete")
+    def delete_search_url(url_id):
+        connection = db.get_connection()
+        # No row check and no confirmation. A URL already gone is the outcome asked for —
+        # `delete_game`'s reasoning — and unlike a game there is nothing irreplaceable
+        # behind this button: the cost of a misclick is retyping an address.
+        #
+        # If this was the active one the flag goes with it, leaving nothing active, which
+        # is the state that means the catalogue shows no search control. That is why the
+        # flag sits on the row: there is no pointer left over to find and clear.
+        connection.execute("DELETE FROM search_urls WHERE id = ?", (url_id,))
+        connection.commit()
+        return redirect(url_for("settings"))
+
+    @app.post("/settings/active")
+    def set_active_search_url():
+        """Point the catalogue's search control somewhere, or nowhere.
+
+        The empty value is not an id and is not a failure: it is the first radio, and it is
+        how the control is turned off. Absence is the off switch here exactly as it is for a
+        status or an intent, so there is no second boolean beside the selection that could
+        disagree with it about whether the feature is on — and switching off costs the saved
+        list nothing.
+        """
+        active = request.form["active"]
+        connection = db.get_connection()
+        if active:
+            # A page drawn before another device deleted this URL. Clearing the flag and
+            # then failing to set it would turn the search control off as the side effect
+            # of a request that asked to point it somewhere, so nothing is changed at all
+            # and the reload shows what is actually there.
+            chosen = connection.execute(
+                "SELECT id FROM search_urls WHERE id = ?", (active,)
+            ).fetchone()
+            if chosen is None:
+                return redirect(url_for("settings"))
+        # Cleared first, then set, never both at once: the partial index allows one active
+        # row in the table and would reject the pair existing together even for the length
+        # of a statement. The same two steps deciding on a platform takes, for the same
+        # reason.
+        connection.execute("UPDATE search_urls SET active = 0 WHERE active")
+        if active:
+            connection.execute(
+                "UPDATE search_urls SET active = 1 WHERE id = ?", (active,)
+            )
+        connection.commit()
+        return redirect(url_for("settings"))
+
+    def rejected_search_url(url, error):
+        """The settings page again, carrying the reason and what was typed.
+
+        Rendered rather than redirected to, and the one place this page departs from
+        post-then-redirect. Carrying a message through a redirect means either a session —
+        which this app does not have, and which would mean a secret to generate, store and
+        keep out of git — or putting the message in the address, where it survives a
+        bookmark and reappears on a reload. Neither is worth it for one line of text.
+
+        What it costs is that a reload re-submits, which for a URL that was refused means
+        being told the same thing a second time. The paths that succeed all redirect, so
+        the reload that actually matters — the one after something was written — is the one
+        that stays safe.
+        """
+        return render_template(
+            "settings.html", error=error, draft=url, **saved_search_urls()
+        )
+
+    def saved_search_urls():
+        """The list the settings page draws, oldest first.
+
+        By id rather than by host or by URL: the order a radio group is read in should not
+        change under a person because they added an entry, and insertion order is the one
+        ordering nothing can rearrange. There are only ever a handful of these.
+        """
+        connection = db.get_connection()
+        return {
+            "search_urls": connection.execute(
+                "SELECT id, url, active FROM search_urls ORDER BY id"
+            ).fetchall()
+        }
 
     def retargeted_catalogue(error):
         """The whole list, answering a request that asked for a single row.

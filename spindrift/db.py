@@ -57,6 +57,38 @@ MIGRATIONS = [
     """
     ALTER TABLE games ADD COLUMN status TEXT;
     """,
+    # Where the catalogue's search control points, as a list rather than a single value.
+    # This replaces a GAME_SEARCH_URL environment variable read once at startup, which got
+    # two things wrong at once: changing the destination was a restart, and only one
+    # destination could be known at a time. Both are the wrong shape for something switched
+    # by mood — Steam while shopping, HowLongToBeat while deciding — rather than by
+    # deployment.
+    #
+    # `active` is a flag on the row, not a pointer stored somewhere else, and that is the
+    # same argument the intent flag makes two migrations above. A pointer can name a row
+    # that has been deleted; a flag cannot. So deleting the active URL simply leaves
+    # nothing active — which is already the state that means "no search button" — and
+    # there is no cascade to write and no dangling id to guard.
+    #
+    # The partial index is what makes "active" singular, on the same principle as
+    # game_platforms_one_intent. It is keyed on nothing but the flag itself, because the
+    # scope of "at most one" here is the whole table rather than one game's rows.
+    #
+    # Nothing constrains the URL's shape here. The mandatory `{}` placeholder and the
+    # http(s) scheme are enforced on the write path, beside where the platform and status
+    # sets are enforced, so there is one place a value is admitted from rather than two
+    # that can drift. The uniqueness of the URL is the exception and lives here for the
+    # reason games_name_unique does: it is the only constraint the database can hold that
+    # a request cannot talk its way around.
+    """
+    CREATE TABLE search_urls (
+        id INTEGER PRIMARY KEY,
+        url TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE UNIQUE INDEX search_urls_url_unique ON search_urls (url COLLATE NOCASE);
+    CREATE UNIQUE INDEX search_urls_one_active ON search_urls (active) WHERE active;
+    """,
 ]
 
 

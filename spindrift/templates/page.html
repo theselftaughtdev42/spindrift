@@ -11,8 +11,18 @@
         hx-on::response-error="document.getElementById('failure').hidden = false"
         hx-on::send-error="document.getElementById('failure').hidden = false"{% endblock %}
 
+{#- Two links now rather than one, so they are wrapped: the masthead spreads its children
+    to opposite ends of the measure, and a bare pair would put the heading, one link and the
+    other link at three points across the page. The wrapper keeps them together as the one
+    thing they are — everywhere else you can go from here.
+
+    The catalogue is the hub and the other two pages each link back to it alone, so this is
+    the only masthead that holds a set. -#}
 {% block nav %}
-  <a class="nav" href="{{ url_for('by_platform') }}">By platform &rarr;</a>
+  <span class="nav-links">
+    <a class="nav" href="{{ url_for('by_platform') }}">By platform</a>
+    <a class="nav" href="{{ url_for('settings') }}">Settings</a>
+  </span>
 {% endblock %}
 
 {% block content %}

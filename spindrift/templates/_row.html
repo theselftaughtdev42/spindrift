@@ -70,20 +70,32 @@
     <input id="name-{{ game.id }}" name="name" type="text" value="{{ game.name }}"
            title="{{ game.name }}"
            aria-label="Rename {{ game.name }}" autocomplete="off">
-    {#- Only when a search prefix was configured. Without one there is no sensible
-        destination, so the control is absent rather than present and inert.
+    {#- Only when a saved search URL is the active one. With none there is no sensible
+        destination, so the control is absent rather than present and inert — which is
+        also how the feature is turned off: the settings page offers "no search button"
+        as the first choice in the list, and choosing it leaves nothing active here.
 
         An anchor rather than a button: it goes somewhere, so it should offer
         everything a link offers — middle-click, copy the address, open in a
         background tab. `noopener` because the page it opens is a third party's.
 
-        The name is URL-encoded, or an ampersand in a title would end the search
-        term and start a query parameter of the storefront's own. -#}
-    {% if config.GAME_SEARCH_URL %}
+        The name is substituted into the URL's `{}` rather than appended to it, which is
+        what lets a destination carry query parameters after the search term. The `replace`
+        filter rather than Python's `format`, and this is not a stylistic choice: a URL is
+        full of characters `format` reads as fields of its own, and `?q={}&kind={game}`
+        would raise rather than search.
+
+        The name is URL-encoded on the way in, or an ampersand in a title would end the
+        search term and start a query parameter of the storefront's own.
+
+        The host names the destination in the label — derived from the URL rather than
+        stored beside it, so it cannot go on saying one site's name after the address
+        started pointing at another. -#}
+    {% if active_search_url %}
       <a class="search"
-         href="{{ config.GAME_SEARCH_URL }}{{ game.name | urlencode }}"
+         href="{{ active_search_url | replace('{}', game.name | urlencode) }}"
          target="_blank" rel="noopener noreferrer"
-         aria-label="Search the web for {{ game.name }}">
+         aria-label="Search {{ active_search_host }} for {{ game.name }}">
         {#- The glyph is decoration: it is hidden from the accessibility tree so the
             link is announced by its label alone, not as "magnifying glass". -#}
         <span aria-hidden="true">🔍</span>

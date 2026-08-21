@@ -1275,3 +1275,242 @@ h1 {
     border-color: var(--line);
   }
 }
+
+/* The settings page.
+
+   Everything here is outside the mobile media query above, because none of it needs a
+   second layout: this page is a stack of full-width rows at every width, and the only
+   size that matters is whether a tap target is thumb-sized — which is answered once,
+   below, rather than twice. */
+
+/* The pair of masthead links, held together at the right-hand end. The masthead spreads
+   its children across the measure, so without this the heading and the two links would sit
+   at three points across the page rather than at two. */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* Narrower than the measure the catalogue sets. `body` is as wide as eleven platform
+   columns plus a name, which is right for a grid and far too wide for a list of addresses:
+   a radio at the left edge and its address running to the right of a 67rem page is a line
+   the eye has to travel rather than read. */
+.search-urls,
+.add-url {
+  max-width: 44rem;
+}
+
+/* Framed like the matrix and the plan table — same border, radius and raised fill — so
+   the three pages read as one app. The fieldset's own border and padding are cleared
+   because the frame is drawn here; what the element is kept for is the grouping and the
+   legend, which is what a stack of radios needs to announce itself as one control. */
+.search-urls fieldset {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--raised);
+}
+
+/* Sat on the frame's top edge rather than inside it, which is what the padding and the
+   background are for: a legend punches a gap in the border it sits on, and a transparent
+   one would leave the words floating in that gap. */
+.search-urls legend {
+  margin-left: 0.75rem;
+  padding: 0 0.5rem;
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.search-url {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+}
+
+/* Rules between entries and none above the first, the same way the plan table separates
+   its rows. */
+.search-url + .search-url {
+  border-top: 1px solid var(--line);
+}
+
+/* The off choice is separated from the addresses by a rule of its own, because it is not
+   one of them: it is the state where none is chosen, and running it into the list would
+   make it read as a site called "No search button". */
+.search-urls .off {
+  border-bottom: 1px solid var(--line);
+}
+
+/* The whole entry is the target, not just the radio — a 1rem circle is a poor thing to
+   ask a finger for, and the label already covers the host and the address beside it. */
+.search-url label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.search-url input[type="radio"] {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+}
+
+/* The host and the address are stacked, and the stack is what can shrink: `min-width: 0`
+   on both this and the label above is what lets a long address ellipsise rather than push
+   the delete button off the end of the row. */
+.search-url .host {
+  min-width: 0;
+  font-weight: 600;
+}
+
+.search-url .url {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The address wraps onto a line of its own beneath the host, indented past the radio so it
+   reads as that entry's detail rather than as a second column. The off choice has no
+   address and keeps the single line the flex above gives it. */
+.search-url:not(.off) label {
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.search-url:not(.off) .url {
+  flex-basis: 100%;
+  margin-left: 1.85rem;
+}
+
+/* The same quiet ✕ the catalogue's rows carry, and quiet for the same reason: it is the
+   one control here that destroys something, so it should not compete with the choice the
+   page is actually about. */
+.remove-url {
+  flex: none;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.375rem;
+  background: none;
+  color: var(--ink-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.remove-url:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.remove-url:focus-visible,
+.search-url input[type="radio"]:focus-visible,
+.save:focus-visible,
+.add-url input:focus-visible,
+.add-url button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The one thing on this page that changes the catalogue, so it is the one thing painted in
+   the accent. */
+.save {
+  margin-top: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-url {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+/* Above the field rather than beside it, and spanning the row, so the field and its button
+   sit on a line of their own. */
+.add-url label {
+  flex-basis: 100%;
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.add-url input {
+  flex: 1;
+  min-width: 12rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 0.375rem;
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+/* Outlined rather than filled: adding an address to the list is not what changes the
+   catalogue, and painting it like Save would say it was. */
+.add-url button {
+  flex: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.375rem;
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-url button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Under the field, spanning the row, because it is about what goes in the field. The
+   placeholder shows the shape and this says what the shape means — a placeholder vanishes
+   the moment anything is typed, which is exactly when the rule starts mattering. */
+.hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+}
+
+.hint code {
+  padding: 0.05em 0.3em;
+  border-radius: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 0.9em;
+}
+
+/* Thumb-sized targets, the same minimum the catalogue's controls take on a phone. Applied
+   at every width rather than inside a media query: there is nothing about a wide window
+   that makes a small target better, and this page has room for the height everywhere. */
+.remove-url,
+.save,
+.add-url input,
+.add-url button {
+  min-height: 2.75rem;
+}
