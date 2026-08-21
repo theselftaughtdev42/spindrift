@@ -6,6 +6,8 @@ PLATFORMS = [
     "Xbox One",
     "PS1",
     "PS2",
+    "PSP",
+    "PS Vita",
     "Switch",
     "Emulator",
 ]

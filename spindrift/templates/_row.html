@@ -13,8 +13,21 @@
     `data-status` is the handle everything to do with the outcome hangs off — the tint the
     status cell wears and the dimming the rest of the row takes. It is absent rather than
     empty when nothing has been recorded, so "no status" is something CSS can ask about by
-    the attribute simply not matching. -#}
-<div class="row" role="row" {% if game.status %}data-status="{{ game.status }}"{% endif %}>
+    the attribute simply not matching.
+
+    `data-undecided` is the same shape of handle for the other axis: it is here when no
+    cell in this row is the intended one, which is the state every game starts in and the
+    one the filter above the grid isolates. Valueless and absent rather than a `true`/`false`
+    pair, for the same reason — the question CSS asks is whether the attribute is there.
+
+    It is derived here rather than sent by the endpoints as a class, and that is what makes
+    the filter need no wiring at all: deciding on a platform answers with this row
+    re-rendered from the database, the fresh copy arrives without the attribute, and it
+    drops out of a filtered page on arrival. The same is true in reverse when an intent is
+    cleared. Both paths already re-read `intents`, so both get the right answer for free. -#}
+<div class="row" role="row"
+     {% if game.status %}data-status="{{ game.status }}"{% endif %}
+     {% if not intents.get(game.id) %}data-undecided{% endif %}>
   {#- The name is an editable field at rest rather than text that swaps into one on
       click: there is no second markup shape for the row, no endpoint to fetch it,
       and the correction costs a click and a keystroke. A lone text input submits on
