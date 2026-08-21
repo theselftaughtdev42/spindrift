@@ -19,6 +19,14 @@
   <p id="failure" class="failure" role="alert" hidden>
     That change wasn’t saved — the server didn’t respond.
   </p>
+  <div class="filter">
+    <label>
+      {#- Unlabelled in the markup beyond the words beside it: the text is the label, so
+          the control announces itself as "Undecided only, checkbox" with no help. -#}
+      <input type="checkbox">
+      <span>Undecided only</span>
+    </label>
+  </div>
 
   {#- The add form lives inside the fragment, as the grid's first row. It is swapped
       away and re-rendered on every add, so clearing it is the server's job rather
@@ -26,4 +34,5 @@
   <div id="catalogue">
     {% include "_catalogue.html" %}
   </div>
+  <p class="all-decided">Every game has a platform chosen.</p>
 {% endblock %}

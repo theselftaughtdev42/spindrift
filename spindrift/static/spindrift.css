@@ -893,6 +893,130 @@ h1 {
   text-align: center;
 }
 
+/* The undecided filter, and everything it does to the page.
+
+   All of it is inside the `@supports` gate, the control included, because without `:has()`
+   there is no way to read a checkbox's state from an ancestor and the box would tick and
+   filter nothing. A control that lies about what it did is worse than one that is not
+   offered, so where the selector is unsupported the whole thing is simply absent — the
+   catalogue is exactly the catalogue it was before this existed. That is the same call the
+   entry chips make on mobile, and the opposite of the one the column highlight makes,
+   which can be missing without anybody being told a falsehood.
+
+   Hidden as well when there are no games at all: an empty catalogue has nothing to filter,
+   and a control offering to narrow "no games" to fewer is noise over the top of the line
+   that says to add one. */
+.filter {
+  display: none;
+}
+
+.all-decided {
+  display: none;
+}
+
+@supports selector(:has(*)) {
+  /* Its own line above the grid, right-aligned to sit over the end of the row rather than
+     over the names — this narrows what is below it, so it belongs at the edge the
+     narrowing is about rather than at the start of the reading order of the games. */
+  .filter {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+  }
+
+  body:not(:has(.row)) .filter {
+    display: none;
+  }
+
+  /* A pill, and at rest a quiet one: this is a control the catalogue is usually not
+     using, so at rest it reads as an offer rather than as a state the page is in. */
+  .filter label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--raised);
+    color: var(--ink-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* Filled when it is on, in the accent — which is what the stripe on an undecided row
+     is drawn in too, so the control and the rows it isolates are the same colour, and
+     turning it on is visibly the same subject as the marks it leaves behind.
+
+     This is the one state that has to carry across a room: a filtered catalogue is a
+     partial catalogue, and a reader who forgets the filter is on is a reader who thinks
+     games have gone missing. Hence a fill rather than a border change. */
+  .filter label:has(input:checked) {
+    border-color: transparent;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* The native box goes once the pill can show the state itself — filled is ticked, the
+     same substitution the entry chips make at phone widths. The input stays in the markup
+     because it is what holds the state, what a screen reader announces, and what the
+     selectors here are reading. */
+  .filter input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  /* Focus has to be drawn by the pill, since the thing actually focused is now a pixel
+     wide and clipped. Offset outward so the ring sits on the page's own background rather
+     than inside the accent fill it would otherwise be invisible against. */
+  .filter label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* The filter itself: everything that has been decided on steps out of the document's
+     flow, leaving the grid holding only the games still waiting for an answer. `display`
+     rather than `visibility` or opacity, so the rows below close up and the remaining
+     handful sit together under the header instead of scattered down a page of gaps.
+
+     Matched on the row's absence of `data-undecided` rather than on a class the server
+     applies, which is what lets a swapped row take itself out: deciding on a platform
+     answers with that row re-rendered, the fresh copy arrives without the attribute, and
+     it vanishes from a filtered page the moment it stops belonging there. Nothing has to
+     tell the filter that anything changed. */
+  body:has(.filter input:checked) .row:not([data-undecided]) {
+    display: none;
+  }
+
+  /* The stripe is redundant while the filter is on — every row on screen is an undecided
+     one, and a mark that appears beside all of them marks nothing. It comes back with the
+     rest of the catalogue when the filter goes off. */
+  body:has(.filter input:checked) .row[data-undecided] .name {
+    box-shadow: none;
+  }
+
+  /* Shown only when the filter is on, the catalogue holds games, and none of them is
+     undecided. All three are needed. Without the first it would appear on a fully decided
+     catalogue that nobody is filtering, which is not a question anyone asked; without the
+     second it would appear on an empty one — the box stays ticked after the last game is
+     deleted — and "every game has a platform chosen" printed over "no games yet" is a
+     sentence about a catalogue that does not exist. */
+  body:has(.row):has(.filter input:checked):not(:has(.row[data-undecided])) .all-decided {
+    display: block;
+    margin: 1rem 0 0;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+}
+
 .error,
 .failure {
   margin: 0 0 1rem;
