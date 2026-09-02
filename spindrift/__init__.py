@@ -96,6 +96,14 @@ def create_app(database_path):
             "active_search_host": search_host(row["url"]) if row else None,
         }
 
+    # A liveness probe the container's HEALTHCHECK hits. The SELECT is the point: it makes
+    # a green check mean the app is up *and* the database is reachable — the failure worth
+    # catching when the data lives on a mounted volume that could be absent or locked.
+    @app.get("/health")
+    def health():
+        db.get_connection().execute("SELECT 1")
+        return "ok", 200
+
     @app.get("/")
     def page():
         return render_template("page.html", **catalogue())
