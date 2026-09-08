@@ -1499,3 +1499,13 @@ h1 {
 .add-url button {
   min-height: 2.75rem;
 }
+
+/* The build the shell names at the foot of every page. Muted and a size down, so it sits
+   below the measure as a label rather than content — read when a deploy is being checked
+   and ignored the rest of the time. Its top margin keeps it clear of whatever page ends
+   above it; the body's own bottom padding gives it room beneath. */
+.version {
+  margin-top: 2.5rem;
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+}

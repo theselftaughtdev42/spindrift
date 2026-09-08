@@ -14,6 +14,7 @@ from flask import (
 from spindrift import db
 from spindrift.platforms import PLATFORMS
 from spindrift.statuses import STATUSES
+from spindrift.version import resolve_version
 
 # The placeholder a saved search URL has to contain: the spot the game's name is written
 # into. Mandatory rather than appended-when-absent, so a mistyped `{nme}` is refused on
@@ -52,6 +53,11 @@ def create_app(database_path):
     """
     app = Flask(__name__)
     app.config["DATABASE_PATH"] = str(database_path)
+    # Resolved once here rather than per request: which build this is cannot change under a
+    # running process, so re-reading the environment or the pyproject file on every hit
+    # would be asking a question that already has its final answer. `/version` reads this,
+    # and the footer the shell draws on every page reads it as a global, below.
+    app.config["VERSION"] = resolve_version()
 
     # Every template that renders any part of the matrix needs the column order, so it
     # is a global rather than an argument threaded through each render_template call.
@@ -63,6 +69,11 @@ def create_app(database_path):
     # Only the settings page needs this, and it needs it once per row; the catalogue is
     # served the active one ready-made by the context processor below.
     app.jinja_env.globals["search_host"] = search_host
+
+    # The running build, named in the shell's footer on every page. A global rather than a
+    # value threaded through each render_template call for the same reason PLATFORMS is: it
+    # is fixed for the life of the process and every page wants it.
+    app.jinja_env.globals["version"] = app.config["VERSION"]
 
     db.migrate(app.config["DATABASE_PATH"])
     app.teardown_appcontext(db.close_connection)
@@ -103,6 +114,16 @@ def create_app(database_path):
     def health():
         db.get_connection().execute("SELECT 1")
         return "ok", 200
+
+    # Which build is up, sat beside /health on purpose: health says the app is running,
+    # this says which app. It is the outside answer to "did the deploy take" — a rollback
+    # pins an older image tag, and this is how a script or a person confirms the container
+    # that came back is the one they asked for. Plain text because it is read over curl and
+    # by whatever watches the rollout, not drawn on a page; and it touches no database, so
+    # it stays cheap enough to poll as hard as a deploy loop likes.
+    @app.get("/version")
+    def version():
+        return app.config["VERSION"], 200, {"Content-Type": "text/plain; charset=utf-8"}
 
     @app.get("/")
     def page():

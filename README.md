@@ -21,7 +21,22 @@ uv run pytest
 ## Container
 
 The image is published to `ghcr.io/theselftaughtdev42/spindrift:latest` on every merge to
-`main` (also tagged `sha-<short>` for rollback). It's built for `linux/amd64`.
+`main` (also tagged `sha-<short>`). It's built for `linux/amd64`.
+
+### Releases
+
+A release is a `v*` git tag. Cut one with `make release VERSION=0.2.0`, which bumps
+`pyproject.toml`, tags `v0.2.0`, and pushes it; the publish workflow then builds the
+matching image, tagged `0.2.0` and `0.2` (and signed like the rest). `latest` keeps
+tracking `main` — a release is a fixed point, so pin a version for anything you want to be
+able to roll back to:
+
+- `…/spindrift:0.2.0` — that exact release, forever.
+- `…/spindrift:0.2` — the newest patch on the `0.2` line.
+- `…/spindrift:latest` — the rolling `main` build, for staying current.
+
+Rolling back is re-running the pinned tag you want. Confirm which build is actually up
+with `GET /version` (see below).
 
 Run contract for the orchestration layer:
 
@@ -31,6 +46,9 @@ Run contract for the orchestration layer:
   Mount a named volume at `/data`; it's created and migrated on first boot.
 - **Health:** `GET /health` returns `200 ok` when the app is up and the database is
   reachable. The image's `HEALTHCHECK` already polls it.
+- **Version:** `GET /version` returns the release the running image was built from, as
+  plain text (e.g. `0.2.0`) — the outside check that a deploy or rollback landed the build
+  you asked for. It reads nothing and touches no database, so it's safe to poll.
 
 ```
 docker run -d --name spindrift \
