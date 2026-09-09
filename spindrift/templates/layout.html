@@ -28,5 +28,13 @@
     </header>
 
     {% block content %}{% endblock %}
+
+    {#- The build the page was served by, named once at the foot of the shell both pages
+        share. It is here for the same reason /version exists — to say which release is
+        running — but for a person on a phone rather than a script over curl: the app is
+        pulled as a moving tag, so "which one is on this device right now" is a question
+        the interface itself should be able to answer without opening a terminal. Quiet
+        enough to ignore until it is the thing you came to check. -#}
+    <footer class="version">Spindrift {{ version }}</footer>
   </body>
 </html>

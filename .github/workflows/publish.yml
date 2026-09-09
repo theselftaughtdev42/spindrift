@@ -2,9 +2,17 @@ name: Publish image
 
 # Build and push the container image to GHCR on every merge to main, plus a manual
 # trigger for re-runs.
+#
+# A `v*` tag push is the other way in, and the one that cuts a release. The semver lines
+# in the metadata step below only have a tag to read on this event — on a branch push
+# they resolve to nothing — so pushing `v0.2.0` is what turns those dormant patterns into
+# the `0.2.0` and `0.2` image tags you pin and roll back to. Merges to main keep moving
+# `latest`; tags never do, so a release is a fixed point that a rolling `latest` cannot
+# slide out from under.
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 env:
@@ -72,6 +80,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Bake the release into the image so a running container can be asked what it
+          # is. `meta.version` is the semver on a tag build (`0.2.0`) and the moving name
+          # on a main build (`latest`) — both are the honest answer to "which build is
+          # this", which is exactly what a rollback needs to confirm from the outside.
+          build-args: |
+            SPINDRIFT_VERSION=${{ steps.meta.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
