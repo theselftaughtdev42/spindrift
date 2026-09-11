@@ -23,7 +23,7 @@ release:
 	@test -n "$(VERSION)" || { echo "VERSION is required, e.g. make release VERSION=0.2.0"; exit 1; }
 	@git diff --quiet && git diff --cached --quiet || { echo "working tree is dirty; commit or stash first"; exit 1; }
 	uv version $(VERSION)
-	git add pyproject.toml
+	git add pyproject.toml uv.lock
 	git commit -m "release $(VERSION)"
 	git tag -a v$(VERSION) -m "v$(VERSION)"
 	git push origin HEAD
