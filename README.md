@@ -20,23 +20,22 @@ uv run pytest
 
 ## Container
 
-The image is published to `ghcr.io/theselftaughtdev42/spindrift:latest` on every merge to
-`main` (also tagged `sha-<short>`). It's built for `linux/amd64`.
+The image is published to `ghcr.io/theselftaughtdev42/spindrift` for `linux/amd64`, and
+only when a release is cut — see below. Pushes to `main` don't publish; they build on the
+pull request beforehand purely to prove the image still builds.
 
 ### Releases
 
 A release is a `v*` git tag. Cut one with `make release VERSION=0.2.0`, which bumps
-`pyproject.toml`, tags `v0.2.0`, and pushes it; the publish workflow then builds the
-matching image, tagged `0.2.0` and `0.2` (and signed like the rest). `latest` keeps
-tracking `main` — a release is a fixed point, so pin a version for anything you want to be
-able to roll back to:
+`pyproject.toml`, tags `v0.2.0`, and pushes it; the publish workflow then builds one image
+and tags it three ways:
 
 - `…/spindrift:0.2.0` — that exact release, forever.
 - `…/spindrift:0.2` — the newest patch on the `0.2` line.
-- `…/spindrift:latest` — the rolling `main` build, for staying current.
+- `…/spindrift:latest` — the newest release, for staying current.
 
-Rolling back is re-running the pinned tag you want. Confirm which build is actually up
-with `GET /version` (see below).
+Pin a version for anything you want to be able to roll back to; rolling back is re-running
+the pinned tag you want. Confirm which build is actually up with `GET /version` (see below).
 
 Run contract for the orchestration layer:
 
