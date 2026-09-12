@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import date
 from urllib.parse import urlsplit
 
 from flask import (
@@ -11,21 +12,11 @@ from flask import (
     url_for,
 )
 
-from spindrift import db
+from spindrift import db, deployment, snapshot
 from spindrift.platforms import PLATFORMS
+from spindrift.search_urls import search_url_problem
 from spindrift.statuses import STATUSES
 from spindrift.version import resolve_version
-
-# The placeholder a saved search URL has to contain: the spot the game's name is written
-# into. Mandatory rather than appended-when-absent, so a mistyped `{nme}` is refused on
-# the spot instead of quietly degrading into a URL with a game's name stuck on the end.
-SEARCH_PLACEHOLDER = "{}"
-
-# The only schemes a saved URL may use. The value lands in an `href` on every row of the
-# catalogue, which is the sharp reason — `javascript:` there would run on a click — but
-# the plain one is that a search destination which is not a web address is not a search
-# destination.
-SEARCH_SCHEMES = ("http", "https")
 
 
 def search_host(url):
@@ -337,7 +328,10 @@ def create_app(database_path):
 
     @app.get("/settings")
     def settings():
-        """The catalogue's configuration: where its search control points.
+        """The deployment's configuration and its whole state.
+
+        Where the catalogue's search control points, and below that the export, import and
+        reset of everything the deployment holds.
 
         A page rather than a control in the masthead. The switching this exists for happens
         by mood over a session — a storefront while shopping, a wiki while deciding — not
@@ -359,17 +353,12 @@ def create_app(database_path):
         # game name gets, and for the same reason — there is no mistake here to report.
         if not url:
             return redirect(url_for("settings"))
-        # Both checks before the write, so a request carrying a bad URL leaves nothing
-        # behind at all — the rule the platform and status sets are enforced by.
-        if SEARCH_PLACEHOLDER not in url:
-            return rejected_search_url(
-                url,
-                f"That URL needs {SEARCH_PLACEHOLDER} in it, where the game's name goes.",
-            )
-        if urlsplit(url).scheme not in SEARCH_SCHEMES:
-            return rejected_search_url(
-                url, "That URL needs to start with http:// or https://."
-            )
+        # Checked before the write, so a request carrying a bad URL leaves nothing behind
+        # at all — the rule the platform and status sets are enforced by. The same check an
+        # imported snapshot's URLs go through.
+        problem = search_url_problem(url)
+        if problem:
+            return rejected_search_url(url, problem)
 
         connection = db.get_connection()
         try:
@@ -432,6 +421,77 @@ def create_app(database_path):
             )
         connection.commit()
         return redirect(url_for("settings"))
+
+    @app.get("/settings/export")
+    def export_snapshot():
+        """Download a snapshot of the deployment's entire state.
+
+        A plain GET with no side effects, so a link reaches it. Sent as an attachment so the
+        browser saves it rather than showing it, named with the server's local date so
+        several snapshots can be told apart.
+        """
+        filename = f"spindrift-{date.today().isoformat()}.json"
+        return (
+            deployment.export(db.get_connection()),
+            200,
+            {
+                "Content-Type": "application/json; charset=utf-8",
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
+        )
+
+    @app.post("/settings/import")
+    def import_snapshot():
+        """Replace the deployment's entire state with an uploaded snapshot.
+
+        Every step that can refuse runs before anything is deleted, in the order the
+        request is worth reading in: the confirmation first, so an unconfirmed import does
+        not even look at the file; then whether there is a file; then the whole snapshot,
+        validated. Only then does the replacement run, in one transaction, and a constraint
+        the snapshot breaks there rolls it back whole.
+        """
+        if not request.form.get("confirm"):
+            return refused(
+                "Tick the box to confirm an import replaces everything."
+                " Nothing was imported."
+            )
+        upload = request.files.get("snapshot")
+        data = upload.read() if upload else b""
+        if not data:
+            return refused("Choose a snapshot file to import. Nothing was imported.")
+        try:
+            parsed = snapshot.parse(data)
+        except snapshot.SnapshotError as error:
+            return refused(str(error))
+        try:
+            deployment.replace(db.get_connection(), parsed)
+        except sqlite3.IntegrityError:
+            # A duplicate name or URL, a second active URL or a platform listed twice —
+            # the rules the database's indexes hold, and which the models leave to them.
+            return refused(
+                f"Import failed — that snapshot breaks one of the catalogue's rules, such"
+                f" as two games with the same name. {snapshot.UNCHANGED}"
+            )
+        return redirect(url_for("settings"))
+
+    @app.post("/settings/reset")
+    def reset_deployment():
+        """Delete every game and every search URL, once the confirmation is ticked."""
+        if not request.form.get("confirm"):
+            return refused(
+                "Tick the box to confirm a reset deletes everything. Nothing was deleted."
+            )
+        deployment.reset(db.get_connection())
+        return redirect(url_for("settings"))
+
+    def refused(error):
+        """The settings page again, carrying why an import or reset did nothing.
+
+        Rendered rather than redirected to, for the reason `rejected_search_url` gives. No
+        draft is passed, which is what keeps the add field from taking focus and scrolling
+        the page away from the banner.
+        """
+        return render_template("settings.html", error=error, **saved_search_urls())
 
     def rejected_search_url(url, error):
         """The settings page again, carrying the reason and what was typed.
