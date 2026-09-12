@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
 
-{#- Where the catalogue's search control points, and the list of places it could point.
+{#- The deployment's configuration and its whole state: where the catalogue's search
+    control points and the list of places it could point, then export, import and reset of
+    everything the deployment holds.
 
     Plain forms, no htmx, no script — so the layout's head block stays empty here exactly
     as it does on the by-platform page. The machinery the catalogue carries is paid for by
@@ -20,7 +22,8 @@
 
 {% block content %}
   <p class="lede">
-    Where the search button beside each game goes. Only one at a time.
+    Where the search button beside each game goes, one at a time — and below that, export,
+    import or reset everything this deployment holds.
   </p>
 
   {#- The same banner class the catalogue uses for a duplicate name, in the same place
@@ -92,15 +95,65 @@
     <label for="url">Add a URL</label>
     {#- The placeholder shows the shape rather than describing it, `{}` included, because
         the one rule this field has is that the marker must be somewhere in the address.
-        `autofocus` only after a rejection, so arriving to switch destinations does not
-        scroll past the list to a field nobody asked for. -#}
+        `autofocus` only after this field's own rejection — keyed on the draft rather than
+        on the error, because an import or reset shares the banner and a refused one must
+        not scroll the page away from its message to a field nobody asked for. -#}
     <input id="url" name="url" type="text" value="{{ draft or '' }}"
            placeholder="https://example.com/search?q={}"
            autocomplete="off" spellcheck="false"
-           {% if error %}autofocus{% endif %}>
+           {% if draft %}autofocus{% endif %}>
     <button type="submit">Add</button>
     <p class="hint">
       Put <code>{}</code> where the game’s name should go.
     </p>
+  </form>
+
+  {#- The deployment's whole state, below the search control because it is used far less
+      often. Three separate forms rather than one, because each does something different
+      and two of them destroy data: a button reaching the wrong endpoint here would cost a
+      catalogue, not an address.
+
+      Export is a plain link, because it is a read with no side effects and the file
+      arrives as a download on any device without script. -#}
+  <section class="deployment">
+    <h2>Export</h2>
+    <p class="hint">
+      Download a snapshot: every game, where it’s playable, what became of it, and every
+      search URL, in one file.
+    </p>
+    <a class="deployment-action" href="{{ url_for('export_snapshot') }}">Export snapshot</a>
+  </section>
+
+  {#- The confirmation is a checkbox and nothing more — no second page, no dialog, no typed
+      phrase. `required` spares a round trip that would lose the chosen file, but it is a
+      convenience: the endpoint refuses an unticked request on its own, before it reads the
+      file. -#}
+  <form class="deployment" method="post" action="{{ url_for('import_snapshot') }}"
+        enctype="multipart/form-data">
+    <h2>Import</h2>
+    <p class="hint">
+      Replace everything here with a snapshot. Nothing already here survives, and there’s no
+      undo — export first if you might want it back.
+    </p>
+    <input type="file" name="snapshot" accept=".json,application/json"
+           aria-label="Snapshot file" required>
+    <label class="confirm">
+      <input type="checkbox" name="confirm" value="yes" required>
+      I understand this replaces everything
+    </label>
+    <button type="submit" class="deployment-action danger">Import</button>
+  </form>
+
+  <form class="deployment" method="post" action="{{ url_for('reset_deployment') }}">
+    <h2>Reset</h2>
+    <p class="hint">
+      Delete every game and every search URL, leaving an empty catalogue. There’s no undo —
+      export first if you might want it back.
+    </p>
+    <label class="confirm">
+      <input type="checkbox" name="confirm" value="yes" required>
+      I understand this deletes everything
+    </label>
+    <button type="submit" class="deployment-action danger">Reset</button>
   </form>
 {% endblock %}
