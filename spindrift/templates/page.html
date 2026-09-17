@@ -45,4 +45,54 @@
     {% include "_catalogue.html" %}
   </div>
   <p class="all-decided">Every game has a platform chosen.</p>
+
+  {#- Asks every `hx-confirm` on the page in place of the browser's own confirm, which
+      can't be styled and on some browsers offers to silence the page's dialogs — the one
+      safety net in front of a delete, switched off by a checkbox.
+
+      A native `<dialog>` opened modally, so the focus trap, Escape and the inert page
+      behind it come from the browser rather than from script. Cancel takes the focus
+      when it opens: Enter pressed out of habit should keep the game, not lose it. -#}
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-dialog-title"
+          aria-describedby="confirm-dialog-question">
+    <form method="dialog" class="confirm-dialog-body">
+      <h2 id="confirm-dialog-title">Delete game</h2>
+      <p id="confirm-dialog-question"></p>
+      <div class="confirm-dialog-actions">
+        <button type="submit" value="cancel" class="sd-button sd-button--ghost" autofocus>Cancel</button>
+        <button type="submit" value="confirm" class="sd-button sd-button--ghost sd-button--danger">Delete</button>
+      </div>
+    </form>
+  </dialog>
+  <script>
+    (() => {
+      const dialog = document.getElementById("confirm-dialog");
+      const question = document.getElementById("confirm-dialog-question");
+      let pending = null;
+
+      document.body.addEventListener("htmx:confirm", (event) => {
+        // htmx raises this before every request; only the ones asking a question are ours.
+        if (!event.detail.question) return;
+        event.preventDefault();
+        pending = event.detail;
+        question.textContent = event.detail.question;
+        // Escape closes without setting this, so a "confirm" left over from the last
+        // delete would otherwise go on to delete the next game.
+        dialog.returnValue = "";
+        dialog.showModal();
+      });
+
+      // The form fills the dialog, so a click landing on the dialog itself is on the
+      // backdrop around it.
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+
+      dialog.addEventListener("close", () => {
+        // `true` skips the confirm step, or this handler would ask the question again.
+        if (dialog.returnValue === "confirm" && pending) pending.issueRequest(true);
+        pending = null;
+      });
+    })();
+  </script>
 {% endblock %}
