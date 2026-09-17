@@ -15,6 +15,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Spindrift{% endblock %}</title>
+    {#- The theme first: it holds the design's tokens and base components, and the app's
+        own stylesheet is written entirely in terms of them. -#}
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='spindrift-mark.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}">
     {% block head %}{% endblock %}
   </head>
@@ -23,7 +27,15 @@
         one, so which page you are on is told by the link you are being offered rather
         than by a title you have to read. -#}
     <header class="masthead">
-      <h1>Spindrift</h1>
+      {#- The mark beside a live heading rather than the lockup SVG as an image. The lockup's
+          wordmark is SVG text in the pixel font, and an SVG loaded as an image can't reach
+          the page's web fonts, so the word would fall back to a system monospace. The
+          heading uses the same font and the same offset shadow, so it draws the lockup
+          itself. The mark is decoration, and the heading's text is its name. -#}
+      <h1 class="logo">
+        <img src="{{ url_for('static', filename='spindrift-mark.svg') }}" alt="" width="40" height="40">
+        Spindrift
+      </h1>
       {% block nav %}{% endblock %}
     </header>
 

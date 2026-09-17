@@ -1,3 +1,4 @@
+{% from "_status.html" import badge_class %}
 {#- One game, as a row of the grid: its name, its availabilities, what became of it, and
     the control that removes it.
 
@@ -125,7 +126,7 @@
         The `id` is what puts focus back on this control after the row is swapped out from
         under it: htmx restores focus to an element carrying the same id in the new markup,
         and without one a session spent backfilling loses the keyboard on every change. -#}
-    <select id="status-{{ game.id }}" name="status"
+    <select id="status-{{ game.id }}" name="status" class="{{ badge_class(game.status) }}"
             aria-label="Status of {{ game.name }}"
             hx-post="{{ url_for('set_status', game_id=game.id) }}"
             hx-target="closest .row"

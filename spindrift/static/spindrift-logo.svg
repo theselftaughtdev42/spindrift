@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="132" viewBox="-12 -12 620 132" role="img" aria-label="Spindrift">
+  <!-- Wordmark needs the Press Start 2P font loaded; convert text to outlines for use outside the app. -->
+  <g shape-rendering="crispEdges">
+    <path d="M6 6 H102 V102 H6 V30 H78 V78 H30 V54 H54" fill="none" stroke="#2f6b1a" stroke-width="12" stroke-linecap="square" transform="translate(6 6)"/>
+    <path d="M6 6 H102 V102 H6 V30 H78 V78 H30 V54 H54" fill="none" stroke="#9bff5a" stroke-width="12" stroke-linecap="square"/>
+  </g>
+  <g font-family="'Press Start 2P', monospace" font-size="44">
+    <text x="153" y="79" fill="#2f6b1a">SPINDRIFT</text>
+    <text x="148" y="74" fill="#9bff5a">SPINDRIFT</text>
+  </g>
+</svg>

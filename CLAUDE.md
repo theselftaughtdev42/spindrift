@@ -1,5 +1,7 @@
 # Spindrift
 
+For all UI/styling work, follow design/DESIGN.md and use tokens from spindrift/static/theme.css (source of truth: design/tokens.json). Never hard-code colours, fonts or spacing.
+
 ## Agent skills
 
 ### Issue tracker

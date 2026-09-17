@@ -82,7 +82,7 @@
       {#- An explicit save rather than a radio that submits on change. This page has no
           script to submit with, and the button is also what makes the choice reversible
           before it reaches the catalogue. -#}
-      <button type="submit" class="save">Save</button>
+      <button type="submit" class="sd-button save">Save</button>
     </form>
   {% else %}
     {#- The dashed empty state the other pages use. No radio group is drawn at all: with
@@ -100,9 +100,9 @@
         not scroll the page away from its message to a field nobody asked for. -#}
     <input id="url" name="url" type="text" value="{{ draft or '' }}"
            placeholder="https://example.com/search?q={}"
-           autocomplete="off" spellcheck="false"
+           class="sd-input" autocomplete="off" spellcheck="false"
            {% if draft %}autofocus{% endif %}>
-    <button type="submit">Add</button>
+    <button type="submit" class="sd-button sd-button--ghost">Add</button>
     <p class="hint">
       Put <code>{}</code> where the game’s name should go.
     </p>
@@ -121,7 +121,7 @@
       Download a snapshot: every game, where it’s playable, what became of it, and every
       search URL, in one file.
     </p>
-    <a class="deployment-action" href="{{ url_for('export_snapshot') }}">Export snapshot</a>
+    <a class="sd-button sd-button--ghost deployment-action" href="{{ url_for('export_snapshot') }}">Export snapshot</a>
   </section>
 
   {#- The confirmation is a checkbox and nothing more — no second page, no dialog, no typed
@@ -141,7 +141,7 @@
       <input type="checkbox" name="confirm" value="yes" required>
       I understand this replaces everything
     </label>
-    <button type="submit" class="deployment-action danger">Import</button>
+    <button type="submit" class="sd-button sd-button--ghost sd-button--danger deployment-action">Import</button>
   </form>
 
   <form class="deployment" method="post" action="{{ url_for('reset_deployment') }}">
@@ -154,6 +154,6 @@
       <input type="checkbox" name="confirm" value="yes" required>
       I understand this deletes everything
     </label>
-    <button type="submit" class="deployment-action danger">Reset</button>
+    <button type="submit" class="sd-button sd-button--ghost sd-button--danger deployment-action">Reset</button>
   </form>
 {% endblock %}

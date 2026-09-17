@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_status.html" import badge_class %}
 
 {% block title %}By platform — Spindrift{% endblock %}
 
@@ -47,7 +48,9 @@
               {#- The em dash for a game nothing has been recorded about, the same mark the
                   catalogue's control shows for it, so the two pages say "not started" the
                   same way. -#}
-              <td class="status">{{ game.status | capitalize if game.status else "—" }}</td>
+              <td class="status">
+                <span class="{{ badge_class(game.status) }}">{{ game.status | capitalize if game.status else "—" }}</span>
+              </td>
             </tr>
           {% endfor %}
         </tbody>

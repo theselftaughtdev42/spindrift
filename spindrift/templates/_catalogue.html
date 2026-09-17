@@ -32,8 +32,8 @@
         hx-target="#catalogue">
     <span class="name entry" role="cell">
       <input name="name" type="text" placeholder="Game name" aria-label="Game name"
-             autocomplete="off" autofocus>
-      <button type="submit">Add</button>
+             class="sd-input" autocomplete="off" autofocus>
+      <button type="submit" class="sd-button">Add</button>
     </span>
     {% for platform in platforms %}
       <span class="cell entry" role="cell" data-platform="{{ platform }}">
