@@ -19,3 +19,7 @@ Dockerfile
 .github/
 README.md
 LICENSE
+
+# Build output, if a local run left some behind. The image makes its own.
+spindrift/static/*.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].*
+spindrift/static_manifest.json

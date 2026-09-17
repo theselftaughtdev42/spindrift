@@ -41,6 +41,30 @@ Run contract for the orchestration layer:
 
 - **Port:** the app serves HTTP on `8000`. Publish it to loopback only —
   `127.0.0.1:8000:8000` — and terminate TLS at a reverse proxy in front.
+- **Static:** `/static/` may be served straight off disk by the proxy rather than passed
+  through. The image build gives every static file a second name carrying a digest of its
+  contents — `theme.css` is also served as `theme.<digest>.css` — and the app writes those
+  digested names into the HTML. A name therefore always returns the same bytes, so cache
+  them for as long as you like:
+
+  ```
+  location /static/ {
+      alias /srv/spindrift/static/;
+      expires 1y;
+      add_header Cache-Control "public, immutable";
+  }
+  ```
+
+  Copy `/app/spindrift/static/` out of the image on each deploy, **adding to what is
+  already there rather than replacing it**. Leaving the previous release's digested files
+  in place is what makes the deploy safe in any order: static files and a container can
+  never change in the same instant, and a page served from either side of that gap asks
+  for a name that is still on disk. Sweep the directory later if it ever grows enough to
+  matter, keeping the last release or two.
+
+  Documents are a different matter: the app marks every HTML response `no-cache`, and the
+  proxy must pass that through — a cached page carries the digested names it was built
+  against and would go on asking for them.
 - **Data:** the catalogue lives at `/data/catalogue.sqlite3` (set by `SPINDRIFT_DB`).
   Mount a named volume at `/data`; it's created and migrated on first boot.
 - **Health:** `GET /health` returns `200 ok` when the app is up and the database is

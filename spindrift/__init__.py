@@ -13,6 +13,7 @@ from flask import (
 )
 
 from spindrift import db, deployment, snapshot
+from spindrift import static_manifest as manifest
 from spindrift.platforms import PLATFORMS
 from spindrift.search_urls import search_url_problem
 from spindrift.statuses import STATUSES
@@ -65,6 +66,45 @@ def create_app(database_path):
     # value threaded through each render_template call for the same reason PLATFORMS is: it
     # is fixed for the life of the process and every page wants it.
     app.jinja_env.globals["version"] = app.config["VERSION"]
+
+    # Static URLs are written with the digested name a build gave the file — `theme.css`
+    # goes out as `theme.<digest>.css` — because nginx, not Flask, serves /static/ in the
+    # deployment that matters. It reads those files straight off disk with whatever
+    # `expires` it was configured with, and the app never sees the requests, so it cannot
+    # fix a stale stylesheet by sending a better header. The name in the HTML is the only
+    # lever left. Point at a name that is fixed to its contents and the browser has nothing
+    # to reuse when the contents change, whatever nginx said about the old name.
+    #
+    # A `url_defaults` hook rather than the mapping spelled into each `url_for` in the
+    # templates — there are five call sites today, and the sixth would be the one nobody
+    # remembers, which is exactly the failure this is meant to end.
+    #
+    # With no manifest the filename is passed through untouched, which is every machine
+    # without a build behind it. See `static_manifest` for why that is the development mode
+    # rather than an omission.
+    static_manifest = manifest.load()
+
+    @app.url_defaults
+    def digest_static_filename(endpoint, values):
+        if endpoint == "static":
+            filename = values.get("filename")
+            if filename in static_manifest:
+                values["filename"] = static_manifest[filename]
+
+    # Those digested names are only as fresh as the HTML quoting them: a browser holding
+    # yesterday's page holds yesterday's names with it, and would go on asking for the old
+    # stylesheet by its old address — cached hard and correctly, just from a document that
+    # should have been replaced. So documents are marked never to be reused without asking
+    # first, which is the trade the whole scheme rests on: revalidate one small HTML
+    # response, then take everything it references from cache with no round-trip at all.
+    #
+    # Set here rather than in the nginx config because it is what makes the app correct on
+    # its own, and serving a stale theme should not be one proxy edit away.
+    @app.after_request
+    def revalidate_documents(response):
+        if response.mimetype == "text/html":
+            response.cache_control.no_cache = True
+        return response
 
     db.migrate(app.config["DATABASE_PATH"])
     app.teardown_appcontext(db.close_connection)
