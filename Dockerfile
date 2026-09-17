@@ -6,6 +6,13 @@ COPY . .
 
 RUN uv sync --frozen --no-install-project --no-dev
 
+# Give every static file a second name carrying a digest of its contents, and write the
+# manifest the app reads to find them. nginx serves these off disk in front of the app, so
+# a name fixed to its bytes is the only thing that lets it cache them hard without a theme
+# change taking a release or two to reach anybody. Stdlib only, so it runs on the base
+# image's interpreter and does not wait on the venv.
+RUN python3 spindrift/static_manifest.py
+
 # The release this image was cut from, handed in by the publish workflow — the `v*` tag
 # for a release, the moving name for a main build. It defaults to nothing so a plain
 # `docker build` still works; the app then falls back to the version in pyproject.toml,
