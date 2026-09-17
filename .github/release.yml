@@ -1,0 +1,32 @@
+# Shapes the notes that `--generate-notes` writes when a release is cut. GitHub reads this
+# from the default branch, not from the tag, so a change here applies to the next release
+# whether or not the tag predates it.
+#
+# Entries come from merged *pull requests* only — a commit pushed straight to main is
+# invisible here, notes or no notes. That is the deal: work worth a line in the changelog
+# goes through a PR, and the PR title is the line.
+#
+# Preview before cutting anything, no release created:
+#
+#   make release.notes VERSION=0.5.0
+changelog:
+  exclude:
+    # Real work, just not news: plumbing, lockfiles, CI. Kept out so the page reads as a
+    # list of what changed for someone running Spindrift, not a list of what we typed.
+    labels:
+      - internal
+      - dependencies
+  categories:
+    - title: Features
+      labels: [enhancement]
+    - title: Fixes
+      labels: [bug]
+    - title: Accessibility
+      labels: [accessibility]
+    - title: Documentation
+      labels: [documentation]
+    # First match wins and `*` matches anything, so this stays last — above it, it would
+    # swallow every PR and the categories above would never fire. An unlabelled PR lands
+    # here, which is the signal to go and label it.
+    - title: Other Changes
+      labels: ["*"]
