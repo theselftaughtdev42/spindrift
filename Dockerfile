@@ -4,14 +4,19 @@ FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 WORKDIR /app
 COPY . .
 
-RUN uv sync --frozen --no-install-project --no-dev
-
 # Give every static file a second name carrying a digest of its contents, and write the
 # manifest the app reads to find them. nginx serves these off disk in front of the app, so
 # a name fixed to its bytes is the only thing that lets it cache them hard without a theme
-# change taking a release or two to reach anybody. Stdlib only, so it runs on the base
-# image's interpreter and does not wait on the venv.
+# change taking a release or two to reach anybody.
+#
+# Ahead of the sync, and on the base image's own interpreter, because it needs neither: the
+# script is stdlib only, and running it before the venv exists is what keeps that true. `uv
+# run` here would be the expensive way to say the same thing — it re-resolves the project
+# environment and pulls the dev group back in, undoing the `--no-dev` below and putting
+# pytest in the release image.
 RUN python3 spindrift/static_manifest.py
+
+RUN uv sync --frozen --no-install-project --no-dev
 
 # The release this image was cut from, handed in by the publish workflow — the `v*` tag
 # for a release, the moving name for a main build. It defaults to nothing so a plain
