@@ -1,5 +1,7 @@
 """How a catalogue is built and upgraded, and the rules it goes on enforcing (stories 77-80)."""
 
+import gc
+import os
 import sqlite3
 
 import pytest
@@ -7,6 +9,9 @@ import pytest
 from spindrift import create_app
 from spindrift.db import MIGRATIONS, connect
 from tests.conftest import HTMX, add_game, game_id
+
+# Every open file the process holds, on both this machine and CI.
+OPEN_FILES = "/dev/fd"
 
 
 def half_migrated(catalogue_path, versions):
@@ -168,3 +173,20 @@ def test_deleting_a_game_deletes_its_availabilities(catalogue):
 # editing a migration that deployments have already run.
 def test_the_catalogue_has_five_migrations():
     assert len(MIGRATIONS) == 5
+
+
+def test_a_catalogue_that_cannot_be_opened_leaves_no_connection_behind(tmp_path):
+    """Opening is lazy, so the failure lands after the connection exists but before anyone
+    holds it. Counted as open files, because a leak is only visible as one."""
+    catalogue_path = tmp_path / "catalogue.sqlite3"
+    catalogue_path.write_bytes(b"this is not a catalogue")
+    gc.disable()
+    try:
+        open_files = len(os.listdir(OPEN_FILES))
+        for _ in range(50):
+            with pytest.raises(sqlite3.DatabaseError):
+                connect(catalogue_path)
+
+        assert len(os.listdir(OPEN_FILES)) == open_files
+    finally:
+        gc.enable()
