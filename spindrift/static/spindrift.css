@@ -51,10 +51,23 @@ input[type="file"]::file-selector-button {
 }
 
 .logo {
+  margin: 0;
+}
+
+/* The link takes the layout rather than the heading, so the whole lockup — mark and wordmark
+   together — is the target, and nothing clickable extends past it. */
+.logo a {
   display: flex;
   align-items: center;
   gap: var(--sd-space-3);
-  margin: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Overriding the amber every other link hovers to: the wordmark is the app's own colour, and
+   it should stay that colour. The cursor is enough to say it is a link. */
+.logo a:hover {
+  color: inherit;
 }
 
 .logo img {
@@ -640,6 +653,9 @@ input[type="file"]::file-selector-button {
 @media (max-width: 47em) {
   .logo {
     font-size: var(--sd-text-xl);
+  }
+
+  .logo a {
     gap: var(--sd-space-2);
   }
 
