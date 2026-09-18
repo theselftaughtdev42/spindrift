@@ -21,13 +21,11 @@ from spindrift.version import resolve_version
 
 
 def search_host(url):
-    """What a saved search URL is called: its host, derived rather than stored."""
     host = urlsplit(url).hostname or url
     return host.removeprefix("www.")
 
 
 def create_app(database_path):
-    """Construct an app against a specific database, so each test can use its own."""
     app = Flask(__name__)
     app.config["DATABASE_PATH"] = str(database_path)
     app.config["VERSION"] = resolve_version()
@@ -89,7 +87,6 @@ def create_app(database_path):
 
     @app.get("/by-platform")
     def by_platform():
-        """The decisions, gathered under the platform each one names."""
         connection = db.get_connection()
         decisions = connection.execute(
             "SELECT game_platforms.platform, games.name, games.status"
@@ -101,8 +98,6 @@ def create_app(database_path):
         games = {}
         for decision in decisions:
             games.setdefault(decision["platform"], []).append(decision)
-        # Walking PLATFORMS keeps the grid's column order and drops platforms with nothing
-        # decided on them.
         groups = [
             (platform, games[platform])
             for platform in PLATFORMS
@@ -146,8 +141,6 @@ def create_app(database_path):
                 "UPDATE games SET name = ? WHERE id = ?", (name, game_id)
             )
         except sqlite3.IntegrityError:
-            # The banner lives above the grid, so this answer has to be the whole list and
-            # has to say so in its headers.
             return retargeted_catalogue(f"{name} is already in the catalogue.")
         connection.commit()
         # One row, not the whole list: the field saves on blur, and rebuilding the list would
@@ -202,7 +195,6 @@ def create_app(database_path):
 
     @app.post("/games/<int:game_id>/status")
     def set_status(game_id):
-        """Record what became of a game — or clear the record back to nothing."""
         status = request.form["status"]
         # Closed set, checked before the write. The empty string is not a value but the
         # control's way of saying nothing has been recorded.
@@ -223,12 +215,10 @@ def create_app(database_path):
         # the failure banner over a deletion that did happen.
         connection.execute("DELETE FROM games WHERE id = ?", (game_id,))
         connection.commit()
-        # The whole list body, because a deletion closes a gap: every row below it moves.
         return render_template("_catalogue.html", **catalogue())
 
     @app.get("/settings")
     def settings():
-        """The deployment's configuration and its whole state, in three collapsed groups."""
         return render_template("settings.html", **saved_search_urls())
 
     @app.post("/settings/urls")
@@ -236,7 +226,6 @@ def create_app(database_path):
         url = request.form["url"].strip()
         if not url:
             return redirect(url_for("settings"))
-        # Checked before the write, so a bad URL leaves nothing behind.
         problem = search_url_problem(url)
         if problem:
             return rejected_search_url(url, problem)
@@ -247,14 +236,11 @@ def create_app(database_path):
         except sqlite3.IntegrityError:
             return rejected_search_url(url, "That URL is already saved.")
         connection.commit()
-        # Saved, not selected: pointing the catalogue somewhere is a separate, deliberate choice.
         return redirect(url_for("settings"))
 
     @app.post("/settings/urls/<int:url_id>/delete")
     def delete_search_url(url_id):
         connection = db.get_connection()
-        # No row check and no confirmation: the worst a misclick costs is retyping an
-        # address. Deleting the active URL takes the flag with it, leaving nothing active.
         connection.execute("DELETE FROM search_urls WHERE id = ?", (url_id,))
         connection.commit()
         return redirect(url_for("settings"))
@@ -287,7 +273,6 @@ def create_app(database_path):
 
     @app.get("/settings/export")
     def export_snapshot():
-        """Download a snapshot of the deployment's entire state, as a dated attachment."""
         filename = f"spindrift-{date.today().isoformat()}.json"
         return (
             deployment.export(db.get_connection()),
@@ -324,7 +309,6 @@ def create_app(database_path):
         try:
             deployment.replace(db.get_connection(), parsed)
         except sqlite3.IntegrityError:
-            # A duplicate name or URL, a second active URL, a platform listed twice.
             return refused(
                 "snapshot",
                 f"Import failed — that snapshot breaks one of the catalogue's rules, such"
@@ -334,7 +318,6 @@ def create_app(database_path):
 
     @app.post("/settings/reset")
     def reset_deployment():
-        """Delete every game and every search URL, once the confirmation is ticked."""
         if not request.form.get("confirm"):
             return refused(
                 "reset",
@@ -367,7 +350,6 @@ def create_app(database_path):
         )
 
     def saved_search_urls():
-        """The list the settings page draws, in insertion order so it never rearranges."""
         connection = db.get_connection()
         return {
             "search_urls": connection.execute(
@@ -389,12 +371,10 @@ def create_app(database_path):
         return response
 
     def catalogue():
-        """Everything the grid draws: the games, which cells are set, and which is meant."""
         connection = db.get_connection()
         games = connection.execute(
             "SELECT id, name, status FROM games ORDER BY name COLLATE NOCASE"
         ).fetchall()
-        # Both off one read: an intent is an availability wearing a flag.
         availability = set()
         intents = {}
         for row in connection.execute(

@@ -12,8 +12,6 @@
   <a class="nav" href="{{ url_for('page') }}">&larr; Catalogue</a>
 {% endblock %}
 
-{#- Which group is open on arrival: none, unless an endpoint names the one that refused.
-    Nothing is remembered between visits. -#}
 {% set open_group = open_group|default(none, true) %}
 
 {% block content %}
@@ -21,7 +19,6 @@
     Settings
   </p>
 
-  {#- Above every group rather than inside one, because any of the three can raise it. -#}
   {% if error %}
     <p class="error" role="alert">{{ error }}</p>
   {% endif %}
@@ -64,12 +61,9 @@
             {% endfor %}
           </fieldset>
 
-          {#- An explicit save: this page has no script to submit on change with. -#}
           <button type="submit" class="sd-button save">Save</button>
         </form>
       {% else %}
-        {#- No radio group at all: with nothing saved, an "off" choice on its own would be a
-            control offering one option. -#}
         <p class="empty">No search URLs yet — add one below.</p>
       {% endif %}
 

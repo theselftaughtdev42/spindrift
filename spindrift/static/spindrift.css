@@ -1,6 +1,3 @@
-/* The app's own layout and components, written entirely in the tokens `theme.css` defines.
-   Nothing here names a colour, a font or a spacing value of its own; see design/DESIGN.md.
-   What stays local is the per-platform tint lookup below. */
 [data-platform="Steam"] { --tint: var(--sd-platform-steam); }
 [data-platform="GoG"] { --tint: var(--sd-platform-gog); }
 [data-platform="Xbox"] { --tint: var(--sd-platform-xbox); }
@@ -44,8 +41,6 @@ input[type="file"]::file-selector-button {
   text-transform: uppercase;
 }
 
-/* Centred rather than baseline-aligned: the links take vertical padding to reach a
-   thumb-sized target, which baseline alignment would hang below the heading. */
 .masthead {
   display: flex;
   flex-wrap: wrap;
@@ -179,14 +174,11 @@ input[type="file"]::file-selector-button {
   padding-inline: var(--sd-space-2);
 }
 
-/* The field carries the cell's padding instead, so its text sits on the same left edge as
-   the "Game" header above it. The gap separates it from the search link when there is one. */
 .name.rename {
   gap: var(--sd-space-1);
   padding: var(--sd-space-1);
 }
 
-/* An input dressed as text, so a catalogue at rest reads as a list of names. */
 .rename input {
   flex: 1;
   min-width: 0;
@@ -234,9 +226,6 @@ input[type="file"]::file-selector-button {
   opacity: 1;
 }
 
-/* Pointing at one cell lifts the tint of its whole column, which is what makes a column
-   readable in a grid that has no column element: each row is a grid of its own, so the cells
-   of one column are not siblings. Where `:has()` is missing it simply never fires. */
 @media (hover: hover) {
   /* One line per platform, because CSS cannot carry an attribute's value from the hovered
      cell across to the cells that share it: adding a platform means a line here as well as a
@@ -254,8 +243,6 @@ input[type="file"]::file-selector-button {
   }
 }
 
-/* On the page background like the header rather than on a panel like the rows. The padding is
-   wider than the Add button's hard shadow, so the shadow lands inside the cell. */
 .name.entry {
   gap: var(--sd-space-3);
   padding: var(--sd-space-2);
@@ -287,7 +274,6 @@ input[type="file"]::file-selector-button {
   cursor: pointer;
 }
 
-/* The button fills the cell entirely, which is what makes the whole cell the click target. */
 .cell button {
   display: flex;
   align-items: center;
@@ -325,8 +311,6 @@ input[type="file"]::file-selector-button {
   outline-offset: calc(-1 * var(--sd-space-1) - var(--sd-border-width));
 }
 
-/* Deleting is unrecoverable and the toggles beside it are not, so this gets every separation
-   the row can offer. */
 .remove {
   display: flex;
   align-items: center;
@@ -349,7 +333,6 @@ input[type="file"]::file-selector-button {
   cursor: pointer;
 }
 
-/* Held back until the pointer is on it: a red cross on every row would shout down the grid. */
 .remove button:hover {
   background: var(--sd-surface-raised);
   color: var(--sd-danger);
@@ -359,8 +342,6 @@ input[type="file"]::file-selector-button {
   outline-offset: calc(-1 * var(--sd-border-width));
 }
 
-/* Kept to its own column: a row already carries up to nine platform tints, and a status band
-   running underneath them would put two colour languages in the same space. */
 .sd-badge--none {
   color: var(--sd-text-muted);
   border-color: transparent;
@@ -513,8 +494,6 @@ input[type="file"]::file-selector-button {
   white-space: nowrap;
 }
 
-/* Sized to its contents like the platform column, and its vertical padding trimmed by the
-   badge's own so the label sits on the game name's line. */
 .plan td.status {
   width: 1%;
   padding-block: var(--sd-space-1);
@@ -580,8 +559,6 @@ input[type="file"]::file-selector-button {
     user-select: none;
   }
 
-  /* A fill rather than a border change, because this state has to carry across a room: a
-     reader who forgets the filter is on is one who thinks games have gone missing. */
   .filter label:has(input:checked) {
     border-color: var(--sd-accent);
     background: var(--sd-accent);
@@ -705,20 +682,16 @@ input[type="file"]::file-selector-button {
     grid-column: 1 / -1;
   }
 
-  /* On the name's line rather than among the chips: a phone is where a thumb is least precise. */
   .remove {
     grid-row: 1;
     grid-column: -2 / -1;
     padding: 0 var(--sd-space-1) 0 var(--sd-space-2);
   }
 
-  /* A line of its own beneath the chips, by document order plus a full-row span rather than
-     by being placed, so the card the cataloguer already knows is not rearranged. */
   .matrix .status {
     grid-column: 1 / -1;
   }
 
-  /* Cards have no column to align to, so the desktop placeholders go. */
   .matrix .status.entry,
   .remove.entry {
     display: none;
@@ -752,7 +725,6 @@ input[type="file"]::file-selector-button {
     text-align: center;
   }
 
-  /* A set chip prints its name on its own tint — hence every tint carrying the platform ink. */
   .cell button[aria-pressed="true"] {
     color: var(--sd-platform-ink);
   }
@@ -792,18 +764,12 @@ input[type="file"]::file-selector-button {
   }
 }
 
-/* The settings page. None of it needs the mobile layout above. */
-
-/* Held together at the right-hand end: the masthead spreads its children across the measure,
-   so without this the heading and the two links would sit at three points. */
 .nav-links {
   display: flex;
   align-items: center;
   gap: var(--sd-space-4);
 }
 
-/* Narrower than the measure the catalogue sets, which is right for a grid and far too wide
-   for a list of addresses. Set on the group, so everything inside inherits it. */
 .group {
   max-width: 44rem;
   border: var(--sd-border-width) solid var(--sd-border);
@@ -815,8 +781,6 @@ input[type="file"]::file-selector-button {
   margin-top: var(--sd-space-5);
 }
 
-/* The whole bar is the control: a summary is the disclosure button, and a 44px target
-   spanning the panel is a better thing to hand a finger than a word. */
 .group > summary {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -836,8 +800,6 @@ input[type="file"]::file-selector-button {
   background: var(--sd-surface-raised);
 }
 
-/* Pulled inside the panel: the theme's ring is offset outwards, which on an element filling
-   its parent's box would read as the group's own frame changing colour. */
 .group > summary:focus-visible {
   outline-offset: calc(-1 * var(--sd-border-width) - 3px);
 }
@@ -1016,7 +978,6 @@ input[type="file"]::file-selector-button {
   min-width: 12rem;
 }
 
-/* Outlined rather than filled: adding an address is not what changes the catalogue. */
 .sd-button--ghost:hover {
   background: var(--sd-surface-raised);
   color: var(--sd-primary);

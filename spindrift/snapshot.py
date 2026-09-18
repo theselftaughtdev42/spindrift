@@ -38,7 +38,6 @@ class Game(BaseModel):
     platforms: list[str]
     intended: str | None
 
-    # Stripped as well as checked, so a stray space imports as the name that was meant.
     @field_validator("name")
     @classmethod
     def name_not_blank(cls, name):
@@ -139,8 +138,6 @@ def describe(error):
     where = " › ".join(
         str(part + 1) if isinstance(part, int) else str(part) for part in first["loc"]
     )
-    # The stop goes because the sentence carries on: these messages are whole sentences,
-    # written for the settings page's banner.
     message = first["msg"].removeprefix("Value error, ").rstrip(".")
     more = len(problems) - 1
     extra = f" (and {more} more problem{'s' if more > 1 else ''})" if more else ""

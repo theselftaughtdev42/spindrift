@@ -15,7 +15,6 @@ RUN uv sync --frozen --no-install-project --no-dev
 # The release this image was cut from, handed in by the publish workflow. It defaults to
 # nothing so a plain `docker build` still works, and the app then falls back to pyproject.
 ARG SPINDRIFT_VERSION=
-# The venv on PATH makes `python` the project interpreter; the database lives on a volume.
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     SPINDRIFT_DB=/data/catalogue.sqlite3 \

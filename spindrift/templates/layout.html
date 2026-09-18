@@ -7,7 +7,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Spindrift{% endblock %}</title>
-    {#- The theme first: this app's stylesheet is written entirely in its tokens. -#}
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='spindrift-mark.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}">
@@ -27,7 +26,6 @@
 
     {% block content %}{% endblock %}
 
-    {#- Which release is running, for a person on a phone rather than a script over curl. -#}
     <footer class="version">Spindrift {{ version }}</footer>
   </body>
 </html>

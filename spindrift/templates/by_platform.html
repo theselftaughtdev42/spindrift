@@ -8,8 +8,6 @@
 {% endblock %}
 
 {% block content %}
-  {#- A real `<table>`, where the catalogue is a grid: two columns of text have no reflow
-      to do, so this page can use the element that means what it is. -#}
   {% if groups %}
     <p class="lede">Where each decided game is meant to be played, and how far it got.</p>
 
@@ -40,8 +38,6 @@
       {% endfor %}
     </table>
   {% else %}
-    {#- The empty state carries the instructions, because deciding is a second click on a
-        cell that already does something on the first. -#}
     <p class="empty">
       Nothing decided yet. In the catalogue, click a platform once to say a game can be
       played that way, and again to say that’s the way you’ll play it.

@@ -47,10 +47,6 @@ release:
 	git push origin v$(VERSION)
 	gh release create v$(VERSION) --generate-notes --verify-tag
 
-# What `make release` would publish as notes, without publishing anything. Empty output means
-# no PRs merged since the last release.
-#
-#   make release.notes VERSION=0.5.0
 release.notes:
 	@test -n "$(VERSION)" || { echo "VERSION is required, e.g. make release.notes VERSION=0.5.0"; exit 1; }
 	@gh api repos/$$(gh repo view --json nameWithOwner -q .nameWithOwner)/releases/generate-notes \

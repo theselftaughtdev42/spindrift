@@ -47,7 +47,6 @@ MIGRATIONS = [
 
 
 def connect(database_path):
-    """Open a connection configured for concurrent access from several devices."""
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA journal_mode = WAL")
@@ -57,7 +56,6 @@ def connect(database_path):
 
 
 def get_connection():
-    """The connection for the current request, opened on first use."""
     if "connection" not in g:
         g.connection = connect(current_app.config["DATABASE_PATH"])
     return g.connection
@@ -70,7 +68,6 @@ def close_connection(exception=None):
 
 
 def migrate(database_path):
-    """Bring the database up to the latest schema version."""
     connection = connect(database_path)
     try:
         version = connection.execute("PRAGMA user_version").fetchone()[0]

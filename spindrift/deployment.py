@@ -83,7 +83,6 @@ def replace(connection, snapshot):
 
 
 def reset(connection):
-    """Delete every game and every search URL at once, leaving an empty deployment."""
     with connection:
         clear(connection)
 

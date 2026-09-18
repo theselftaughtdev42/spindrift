@@ -17,7 +17,6 @@ MANIFEST_PATH = Path(__file__).resolve().parent / "static_manifest.json"
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-# Twelve hex characters of SHA-256: collision-proof enough, short enough to read in a URL.
 DIGEST_LENGTH = 12
 
 # What `build` writes, so a second run can tell its own output from the sources.
@@ -47,7 +46,6 @@ def clear(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
 
 
 def build(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
-    """Write a digested copy of every static file, and the manifest naming them."""
     clear(static_dir, manifest_path)
 
     manifest = {}
