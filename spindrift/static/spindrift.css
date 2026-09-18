@@ -64,8 +64,10 @@ input[type="file"]::file-selector-button {
   text-decoration: none;
 }
 
+/* Overriding the amber every other link hovers to: the wordmark is the app's own colour, and
+   it should stay that colour. The cursor is enough to say it is a link. */
 .logo a:hover {
-  color: var(--sd-accent);
+  color: inherit;
 }
 
 .logo img {
