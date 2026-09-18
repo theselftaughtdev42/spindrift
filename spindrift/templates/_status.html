@@ -1,12 +1,9 @@
-{#- The badge a status is drawn with, shared by the catalogue's control and the by-platform
-    table so the same status looks the same on both pages.
+{#- The badge a status is drawn with, shared by the catalogue and the by-platform table.
 
-    The design names four statuses and the catalogue records four, but they aren't the same
-    four, so this is where one vocabulary is translated into the other. Finished and 100%
-    both come to rest as completed, and they have to stay tellable apart, because that
-    distinction is why the column exists. So both are cyan: finished is outlined and 100% is
-    filled. The design's backlog amber isn't used. A game with nothing recorded gets the
-    muted, uncoloured badge, because a colour would claim a state nobody chose. -#}
+    The design's four statuses and the catalogue's four are not the same four, so this is
+    where one vocabulary is translated into the other: finished and 100% both come to rest as
+    completed, and stay tellable apart as the outlined badge and the filled one. Nothing
+    recorded gets the muted badge, because a colour would claim a state nobody chose. -#}
 {% macro badge_class(status) -%}
   sd-badge {{ {
     "playing": "sd-badge--playing",

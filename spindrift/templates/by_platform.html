@@ -8,15 +8,9 @@
 {% endblock %}
 
 {% block content %}
-  {#- A real `<table>`, where the catalogue is a grid wearing table roles. The catalogue
-      had to be a grid because it reflows into cards on a phone; two columns of text do
-      not reflow into anything, they just get narrower. So this page can use the element
-      that actually means what it is, and gets its header, its scopes and its row groups
-      for nothing. -#}
+  {#- A real `<table>`, where the catalogue is a grid wearing table roles: two columns of
+      text have no reflow to do, so this page can use the element that means what it is. -#}
   {% if groups %}
-    {#- Future tense until this page showed outcomes, which a finished game contradicts:
-        it is not going to be played, it was. The wording now covers both, because the page
-        now holds both. -#}
     <p class="lede">Where each decided game is meant to be played, and how far it got.</p>
 
     <table class="plan">
@@ -27,27 +21,21 @@
           <th scope="col">Status</th>
         </tr>
       </thead>
-      {#- One `<tbody>` per platform rather than one for the whole table: the groups are
-          what this page is, and a row group is the markup for a group of rows. -#}
       {% for platform, games in groups %}
         <tbody>
-          {#- `data-status` carries the tint and the dimming here exactly as it does in the
-              matrix, so a finished game looks finished on both pages. Read-only: there is
-              one place a status is changed, and it is the catalogue. -#}
+          {#- Read-only: there is one place a status is changed, and it is the catalogue. -#}
           {% for game in games %}
             <tr {% if game.status %}data-status="{{ game.status }}"{% endif %}>
               {#- Written once and spanning its games, so the platform reads as a heading
-                  over them rather than as a word repeated down the column. `data-platform`
-                  is the same handle the matrix tints its cells by, so a platform is the
-                  same colour on both pages. -#}
+                  over them. `data-platform` is the handle the matrix tints by, so a platform
+                  is the same colour on both pages. -#}
               {% if loop.first %}
                 <th scope="rowgroup" rowspan="{{ games | length }}"
                     data-platform="{{ platform }}">{{ platform }}</th>
               {% endif %}
               <td>{{ game.name }}</td>
-              {#- The em dash for a game nothing has been recorded about, the same mark the
-                  catalogue's control shows for it, so the two pages say "not started" the
-                  same way. -#}
+              {#- The same em dash the catalogue's control shows for a game nothing has
+                  been recorded about. -#}
               <td class="status">
                 <span class="{{ badge_class(game.status) }}">{{ game.status | capitalize if game.status else "—" }}</span>
               </td>
@@ -58,8 +46,7 @@
     </table>
   {% else %}
     {#- The empty state carries the instructions, because deciding is a second click on a
-        cell that already does something on the first — the one part of this app that is
-        not visible in the catalogue just by looking at it. -#}
+        cell that already does something on the first. -#}
     <p class="empty">
       Nothing decided yet. In the catalogue, click a platform once to say a game can be
       played that way, and again to say that’s the way you’ll play it.

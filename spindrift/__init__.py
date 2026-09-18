@@ -21,67 +21,24 @@ from spindrift.version import resolve_version
 
 
 def search_host(url):
-    """What a saved search URL is called — derived every time, never stored.
-
-    An entry carries no name of its own. The settings page reads this over the address
-    itself and the catalogue's button announces it, and because it is computed from the
-    URL there is no second field to keep in step: nothing can go on calling an entry
-    "Steam" after the address stopped pointing there.
-
-    `www.` comes off because it distinguishes nothing — no two entries differ by it alone
-    and mean different sites. The URL itself is the fallback for anything `urlsplit` finds
-    no host in, which the write path already refuses; it is here so this has an answer
-    rather than a `None` for every caller to handle.
-    """
+    """What a saved search URL is called: its host, derived rather than stored."""
     host = urlsplit(url).hostname or url
     return host.removeprefix("www.")
 
 
 def create_app(database_path):
-    """Construct an app against a specific database.
-
-    Taking the path as an argument rather than defining a module-level app is what lets
-    every test run against its own isolated database.
-    """
+    """Construct an app against a specific database, so each test can use its own."""
     app = Flask(__name__)
     app.config["DATABASE_PATH"] = str(database_path)
-    # Resolved once here rather than per request: which build this is cannot change under a
-    # running process, so re-reading the environment or the pyproject file on every hit
-    # would be asking a question that already has its final answer. `/version` reads this,
-    # and the footer the shell draws on every page reads it as a global, below.
     app.config["VERSION"] = resolve_version()
 
-    # Every template that renders any part of the matrix needs the column order, so it
-    # is a global rather than an argument threaded through each render_template call.
     app.jinja_env.globals["platforms"] = PLATFORMS
-    # The same, for the status control's options: the row partial is rendered from three
-    # different endpoints and none of them should have to remember to pass this.
     app.jinja_env.globals["statuses"] = STATUSES
-
-    # Only the settings page needs this, and it needs it once per row; the catalogue is
-    # served the active one ready-made by the context processor below.
     app.jinja_env.globals["search_host"] = search_host
-
-    # The running build, named in the shell's footer on every page. A global rather than a
-    # value threaded through each render_template call for the same reason PLATFORMS is: it
-    # is fixed for the life of the process and every page wants it.
     app.jinja_env.globals["version"] = app.config["VERSION"]
 
-    # Static URLs are written with the digested name a build gave the file — `theme.css`
-    # goes out as `theme.<digest>.css` — because nginx, not Flask, serves /static/ in the
-    # deployment that matters. It reads those files straight off disk with whatever
-    # `expires` it was configured with, and the app never sees the requests, so it cannot
-    # fix a stale stylesheet by sending a better header. The name in the HTML is the only
-    # lever left. Point at a name that is fixed to its contents and the browser has nothing
-    # to reuse when the contents change, whatever nginx said about the old name.
-    #
-    # A `url_defaults` hook rather than the mapping spelled into each `url_for` in the
-    # templates — there are five call sites today, and the sixth would be the one nobody
-    # remembers, which is exactly the failure this is meant to end.
-    #
-    # With no manifest the filename is passed through untouched, which is every machine
-    # without a build behind it. See `static_manifest` for why that is the development mode
-    # rather than an omission.
+    # nginx, not Flask, serves /static/ where it matters, so the digested name written into
+    # the HTML is the app's only cache-busting lever. No manifest means plain names.
     static_manifest = manifest.load()
 
     @app.url_defaults
@@ -91,15 +48,8 @@ def create_app(database_path):
             if filename in static_manifest:
                 values["filename"] = static_manifest[filename]
 
-    # Those digested names are only as fresh as the HTML quoting them: a browser holding
-    # yesterday's page holds yesterday's names with it, and would go on asking for the old
-    # stylesheet by its old address — cached hard and correctly, just from a document that
-    # should have been replaced. So documents are marked never to be reused without asking
-    # first, which is the trade the whole scheme rests on: revalidate one small HTML
-    # response, then take everything it references from cache with no round-trip at all.
-    #
-    # Set here rather than in the nginx config because it is what makes the app correct on
-    # its own, and serving a stale theme should not be one proxy edit away.
+    # Digested names are only as fresh as the HTML quoting them, so documents are always
+    # revalidated: one conditional request, then everything they reference straight from cache.
     @app.after_request
     def revalidate_documents(response):
         if response.mimetype == "text/html":
@@ -109,21 +59,8 @@ def create_app(database_path):
     db.migrate(app.config["DATABASE_PATH"])
     app.teardown_appcontext(db.close_connection)
 
-    # Where the row's search control points. It is rendered from four endpoints, which is
-    # the same argument that makes `platforms` and `statuses` globals above — none of them
-    # should have to remember to pass this. A context processor rather than a global
-    # because the answer comes out of the database and can differ from one request to the
-    # next, where those two are fixed for the life of the process.
-    #
-    # This is what replaced a `GAME_SEARCH_URL` environment variable read once at startup.
-    # That made the destination a property of a running server, so changing it was a
-    # restart and only one could ever be known — the wrong shape for something switched by
-    # mood rather than by deployment. There is no fallback to it and no override by it: the
-    # database is the only place this is configured, so there is one answer rather than two
-    # that can disagree.
-    #
-    # One small SELECT per response rather than per row: the whole catalogue renders in a
-    # single template context, so the include inside the loop reads what this returned once.
+    # Rendered from four endpoints, so not threaded through each call. A context processor
+    # rather than a jinja global because the answer comes out of the database.
     @app.context_processor
     def active_search_link():
         row = (
@@ -131,27 +68,18 @@ def create_app(database_path):
             .execute("SELECT url FROM search_urls WHERE active")
             .fetchone()
         )
-        # Both `None` when nothing is active, which is what the row partial asks about:
-        # no active URL means no search control at all, rather than one pointing nowhere.
         return {
             "active_search_url": row["url"] if row else None,
             "active_search_host": search_host(row["url"]) if row else None,
         }
 
-    # A liveness probe the container's HEALTHCHECK hits. The SELECT is the point: it makes
-    # a green check mean the app is up *and* the database is reachable — the failure worth
-    # catching when the data lives on a mounted volume that could be absent or locked.
+    # The SELECT is the point: a green check then means the database is reachable too, which
+    # is the failure worth catching when the data lives on a mounted volume.
     @app.get("/health")
     def health():
         db.get_connection().execute("SELECT 1")
         return "ok", 200
 
-    # Which build is up, sat beside /health on purpose: health says the app is running,
-    # this says which app. It is the outside answer to "did the deploy take" — a rollback
-    # pins an older image tag, and this is how a script or a person confirms the container
-    # that came back is the one they asked for. Plain text because it is read over curl and
-    # by whatever watches the rollout, not drawn on a page; and it touches no database, so
-    # it stays cheap enough to poll as hard as a deploy loop likes.
     @app.get("/version")
     def version():
         return app.config["VERSION"], 200, {"Content-Type": "text/plain; charset=utf-8"}
@@ -162,13 +90,7 @@ def create_app(database_path):
 
     @app.get("/by-platform")
     def by_platform():
-        """The decisions, gathered under the platform each one names.
-
-        The catalogue answers "where could I play this" a row at a time. This answers
-        "what am I playing on the Switch" — which the grid can only be read sideways for
-        on a desktop, and not at all on a phone, where the reflow trades the columns away
-        for cards. Decided games only: an undecided game has no answer to give here.
-        """
+        """The decisions, gathered under the platform each one names."""
         connection = db.get_connection()
         decisions = connection.execute(
             "SELECT game_platforms.platform, games.name, games.status"
@@ -177,17 +99,11 @@ def create_app(database_path):
             " ORDER BY games.name COLLATE NOCASE"
         ).fetchall()
 
-        # Rows rather than bare names, now that a game brings its outcome here as well as
-        # its name. The page still lists decided games only — a finished one is not dropped
-        # from it, for the same reason the catalogue does not hide one: this is a record of
-        # what was decided, and something that was played is the strongest case of that.
         games = {}
         for decision in decisions:
             games.setdefault(decision["platform"], []).append(decision)
-        # Walking PLATFORMS rather than the rows does two things at once: the groups come
-        # out in the same order as the grid's columns, and a platform nothing has been
-        # decided on is simply absent — ten headings over eight empty spaces would be a
-        # page mostly about what has not been decided.
+        # Walking PLATFORMS keeps the grid's column order and drops platforms with nothing
+        # decided on them.
         groups = [
             (platform, games[platform])
             for platform in PLATFORMS
@@ -199,8 +115,7 @@ def create_app(database_path):
     def add_game():
         name = request.form["name"].strip()
         platforms = request.form.getlist("platform")
-        # Same closed set the toggle endpoint enforces. Checked before the game is
-        # written so a request carrying a bad value leaves nothing behind at all.
+        # Checked before the game is written, so a bad value leaves nothing behind.
         if any(platform not in PLATFORMS for platform in platforms):
             abort(400)
         if not name:
@@ -212,8 +127,7 @@ def create_app(database_path):
         except sqlite3.IntegrityError:
             error = f"{name} is already in the catalogue."
             return render_template("_catalogue.html", error=error, **catalogue())
-        # The game and its availabilities are one write: a commit between them could
-        # leave a game that momentarily claims to be playable nowhere.
+        # One write: a commit between the two could leave a game playable nowhere.
         connection.executemany(
             "INSERT INTO game_platforms (game_id, platform) VALUES (?, ?)",
             [(cursor.lastrowid, platform) for platform in platforms],
@@ -224,8 +138,6 @@ def create_app(database_path):
     @app.post("/games/<int:game_id>/name")
     def rename_game(game_id):
         name = request.form["name"].strip()
-        # Nothing to rename to. The row comes back carrying the name it still has, which
-        # is the same silent revert an empty add gets.
         if not name:
             return render_template("_row.html", **game_row(game_id))
 
@@ -235,45 +147,24 @@ def create_app(database_path):
                 "UPDATE games SET name = ? WHERE id = ?", (name, game_id)
             )
         except sqlite3.IntegrityError:
-            # The one outcome of a rename that reaches past the row: the banner lives
-            # above the grid, shared with the add form's, so this answer has to be the
-            # whole list and has to say so in its headers.
+            # The one rename outcome that reaches past the row: the banner lives above the
+            # grid, so the answer has to be the whole list and say so in its headers.
             return retargeted_catalogue(f"{name} is already in the catalogue.")
         connection.commit()
-        # One row, like the two endpoints below and unlike the three that change the
-        # list's membership. This used to answer with the whole list, which bought the
-        # error somewhere to appear and put the row back in alphabetical order for free;
-        # what it cost was everything else on the page being rebuilt around a one-word
-        # change. That cost stopped being affordable when the field started saving on
-        # blur: the entry form is rebuilt with it, and its `autofocus` then pulls the
-        # page back to the top of the catalogue on every save. Worse, a rename saved by
-        # clicking into the next game's name field would destroy the field just clicked
-        # into, half-typed.
-        #
-        # What it gives up is the re-sort: a renamed game keeps its place until the list
-        # is next drawn whole, by an add, a delete or a reload. That is the right trade
-        # now rather than a merely acceptable one — a save on every blur that reordered
-        # the catalogue would move rows out from under the pointer as a matter of course.
+        # One row rather than the whole list: the field saves on blur, and rebuilding the
+        # list would pull focus back to the entry form and destroy a field just clicked into.
+        # The cost is the re-sort — a renamed game keeps its place until the list is next
+        # drawn whole.
         return render_template("_row.html", **game_row(game_id))
 
     @app.post("/games/<int:game_id>/platforms/<platform>")
     def cycle_platform(game_id, platform):
-        """Advance one cell through: not playable → playable → the way I'll play it.
-
-        Three states on one control rather than a toggle plus a second affordance beside
-        it: the decision is about a platform, so it belongs on the platform, and a 2.75rem
-        cell has no room for two targets. The cost is that clearing an availability the
-        intent sits on takes two clicks rather than one — paid by the one cell per game
-        that carries an intent, which is the cell least likely to be cleared by accident.
-        """
-        # The platform set is closed. An unrecognised value names nothing, so it is
-        # rejected here rather than stored and rendered as a column that cannot exist.
+        """Advance one cell through: not playable → playable → the way I'll play it."""
         if platform not in PLATFORMS:
             abort(404)
 
         connection = db.get_connection()
-        # A read first, unlike the two-state toggle this replaces: which way a third
-        # state goes cannot be inferred from what a blind delete happened to remove.
+        # Read first: which way a third state goes cannot be inferred from a blind delete.
         row = connection.execute(
             "SELECT intended FROM game_platforms WHERE game_id = ? AND platform = ?",
             (game_id, platform),
@@ -286,17 +177,13 @@ def create_app(database_path):
                     (game_id, platform),
                 )
             except sqlite3.IntegrityError:
-                # The foreign key refusing to attach an availability to a game that is not
-                # there — which means another device deleted it after this page was drawn.
-                # Caught so it comes back as the 404 the other paths give, rather than as a
-                # traceback: the same stale-page situation, so the same answer.
+                # The foreign key refusing a game another device has deleted. The same
+                # stale-page situation as the other paths, so the same 404.
                 abort(404)
             available, intended = True, False
         elif not row["intended"]:
-            # Deciding on one platform un-decides the previous one and stops there: the
-            # game stays playable everywhere it was playable a moment ago. Clearing first
-            # is also what keeps the write within the one-intent-per-game index, which
-            # would reject the pair existing together even for the length of a statement.
+            # Deciding here un-decides the previous platform, and clears it first: the
+            # one-intent index rejects the pair even for the length of a statement.
             connection.execute(
                 "UPDATE game_platforms SET intended = 0 WHERE game_id = ? AND intended",
                 (game_id,),
@@ -313,32 +200,16 @@ def create_app(database_path):
             )
         connection.commit()
 
-        # The whole row, always. Deciding on a platform un-decides another, so the click
-        # can change two cells — and the cell that lost its marker is always elsewhere in
-        # this same row, never outside it. Answering with the row covers both cases in one
-        # shape: this used to widen the response to the entire catalogue and tell htmx
-        # where to put it with a pair of retarget headers, purely because there was no row
-        # partial to return. There is one now, so they are gone.
-        #
-        # The row is re-read from the database rather than assembled from what this
-        # handler just decided, so the interface cannot show a state that was never
-        # stored.
+        # The whole row: deciding on a platform un-decides another, and that cell is always
+        # in this same row. Re-read from the database, so nothing is shown that was not stored.
         return render_template("_row.html", **game_row(game_id))
 
     @app.post("/games/<int:game_id>/status")
     def set_status(game_id):
-        """Record what became of a game — or clear the record back to nothing.
-
-        One form field carrying the whole answer, rather than a path segment naming a
-        status the way the cycle endpoint names a platform: clearing has to be expressible,
-        and an empty path segment is not a thing a select can submit.
-        """
+        """Record what became of a game — or clear the record back to nothing."""
         status = request.form["status"]
-        # The status set is closed for the same reason the platform set is: a value
-        # nothing can render is a value the catalogue must not be able to hold. Checked
-        # before the write, so a request carrying a bad one changes nothing at all. The
-        # empty string is the exception and is not a value — it is how the control says
-        # "back to not started", and it is stored as the absence that means exactly that.
+        # Closed set, checked before the write. The empty string is not a value: it is how
+        # the control says "nothing recorded", stored as the absence that means that.
         if status and status not in STATUSES:
             abort(400)
 
@@ -347,20 +218,13 @@ def create_app(database_path):
             "UPDATE games SET status = ? WHERE id = ?", (status or None, game_id)
         )
         connection.commit()
-        # One row, because a status change is contained by one: it tints that row's status
-        # cell and dims or undims the rest of it, and touches nothing above or below.
-        # Measured against the real catalogue, 116 rows render whole in 463 KB and one row
-        # in 3.9 KB, so an afternoon of backfilling costs half a megabyte rather than fifty
-        # — and, which matters more while doing it, the page does not flicker and the
-        # scroll position stays where it was.
         return render_template("_row.html", **game_row(game_id))
 
     @app.delete("/games/<int:game_id>")
     def delete_game(game_id):
         connection = db.get_connection()
-        # No row check: a game already gone is the outcome asked for, and on a second
-        # device holding a stale page a 404 here would raise the failure banner over a
-        # deletion that did in fact happen.
+        # No row check: a game already gone is the outcome asked for, and a 404 would raise
+        # the failure banner over a deletion that did happen.
         connection.execute("DELETE FROM games WHERE id = ?", (game_id,))
         connection.commit()
         # The whole list body, because a deletion closes a gap: every row below it moves.
@@ -368,36 +232,15 @@ def create_app(database_path):
 
     @app.get("/settings")
     def settings():
-        """The deployment's configuration and its whole state.
-
-        Where the catalogue's search control points, the snapshot of everything the
-        deployment holds, and the reset that empties it — three collapsible groups, all shut
-        on arrival, so the save at the top and the reset at the bottom are not two buttons on
-        the same wall. The only thing that opens one is a refusal naming it; see `refused`.
-
-        A page rather than a control in the masthead. The switching this exists for happens
-        by mood over a session — a storefront while shopping, a wiki while deciding — not
-        game by game, so a configuration widget parked permanently over the grid would be
-        answering a question nobody is asking while looking at it.
-
-        No htmx here, and no script at all. The machinery on the catalogue is paid for by a
-        problem this page does not have: 116 rows toggled in quick succession, where a
-        whole-page rebuild costs flicker, scroll position and the focused control. This is
-        five rows touched about as often as a mood changes, so it is plain forms, and the
-        layout's script block stays empty exactly as the by-platform page leaves it.
-        """
+        """The deployment's configuration and its whole state, in three collapsed groups."""
         return render_template("settings.html", **saved_search_urls())
 
     @app.post("/settings/urls")
     def add_search_url():
         url = request.form["url"].strip()
-        # Nothing typed: the page comes back as it was. The same silent revert an empty
-        # game name gets, and for the same reason — there is no mistake here to report.
         if not url:
             return redirect(url_for("settings"))
-        # Checked before the write, so a request carrying a bad URL leaves nothing behind
-        # at all — the rule the platform and status sets are enforced by. The same check an
-        # imported snapshot's URLs go through.
+        # Checked before the write, and the same check an imported snapshot's URLs go through.
         problem = search_url_problem(url)
         if problem:
             return rejected_search_url(url, problem)
@@ -406,26 +249,18 @@ def create_app(database_path):
         try:
             connection.execute("INSERT INTO search_urls (url) VALUES (?)", (url,))
         except sqlite3.IntegrityError:
-            # The unique index, reported the way a duplicate game name is: the banner over
-            # the list, and the address still in the field to be corrected rather than
-            # retyped.
+            # The unique index, with the address left in the field to be corrected.
             return rejected_search_url(url, "That URL is already saved.")
         connection.commit()
-        # Saved, not selected. Turning the search button on is the one thing this page does
-        # that changes the catalogue, so it is asked for by choosing and saving rather than
-        # arriving as a side effect of writing down an address to try later.
+        # Saved, not selected: pointing the catalogue somewhere is a separate, deliberate choice.
         return redirect(url_for("settings"))
 
     @app.post("/settings/urls/<int:url_id>/delete")
     def delete_search_url(url_id):
         connection = db.get_connection()
-        # No row check and no confirmation. A URL already gone is the outcome asked for —
-        # `delete_game`'s reasoning — and unlike a game there is nothing irreplaceable
-        # behind this button: the cost of a misclick is retyping an address.
-        #
-        # If this was the active one the flag goes with it, leaving nothing active, which
-        # is the state that means the catalogue shows no search control. That is why the
-        # flag sits on the row: there is no pointer left over to find and clear.
+        # No row check and no confirmation: the cost of a misclick is retyping an address.
+        # Deleting the active URL takes the flag with it, leaving nothing active — which is
+        # the state that means the catalogue shows no search control.
         connection.execute("DELETE FROM search_urls WHERE id = ?", (url_id,))
         connection.commit()
         return redirect(url_for("settings"))
@@ -434,28 +269,20 @@ def create_app(database_path):
     def set_active_search_url():
         """Point the catalogue's search control somewhere, or nowhere.
 
-        The empty value is not an id and is not a failure: it is the first radio, and it is
-        how the control is turned off. Absence is the off switch here exactly as it is for a
-        status or an intent, so there is no second boolean beside the selection that could
-        disagree with it about whether the feature is on — and switching off costs the saved
-        list nothing.
+        The empty value is not a failure: it is the first radio, and how the control is
+        turned off.
         """
         active = request.form["active"]
         connection = db.get_connection()
         if active:
-            # A page drawn before another device deleted this URL. Clearing the flag and
-            # then failing to set it would turn the search control off as the side effect
-            # of a request that asked to point it somewhere, so nothing is changed at all
-            # and the reload shows what is actually there.
+            # A URL another device deleted. Clearing the flag and then failing to set it
+            # would turn the search control off as a side effect, so nothing is changed.
             chosen = connection.execute(
                 "SELECT id FROM search_urls WHERE id = ?", (active,)
             ).fetchone()
             if chosen is None:
                 return redirect(url_for("settings"))
-        # Cleared first, then set, never both at once: the partial index allows one active
-        # row in the table and would reject the pair existing together even for the length
-        # of a statement. The same two steps deciding on a platform takes, for the same
-        # reason.
+        # Cleared first, then set: the partial index allows only one active row.
         connection.execute("UPDATE search_urls SET active = 0 WHERE active")
         if active:
             connection.execute(
@@ -468,9 +295,7 @@ def create_app(database_path):
     def export_snapshot():
         """Download a snapshot of the deployment's entire state.
 
-        A plain GET with no side effects, so a link reaches it. Sent as an attachment so the
-        browser saves it rather than showing it, named with the server's local date so
-        several snapshots can be told apart.
+        Sent as an attachment, named with today's date so several can be told apart.
         """
         filename = f"spindrift-{date.today().isoformat()}.json"
         return (
@@ -486,11 +311,8 @@ def create_app(database_path):
     def import_snapshot():
         """Replace the deployment's entire state with an uploaded snapshot.
 
-        Every step that can refuse runs before anything is deleted, in the order the
-        request is worth reading in: the confirmation first, so an unconfirmed import does
-        not even look at the file; then whether there is a file; then the whole snapshot,
-        validated. Only then does the replacement run, in one transaction, and a constraint
-        the snapshot breaks there rolls it back whole.
+        Every step that can refuse runs before anything is deleted; the replacement itself
+        is one transaction, so a constraint the snapshot breaks rolls it back whole.
         """
         if not request.form.get("confirm"):
             return refused(
@@ -511,8 +333,7 @@ def create_app(database_path):
         try:
             deployment.replace(db.get_connection(), parsed)
         except sqlite3.IntegrityError:
-            # A duplicate name or URL, a second active URL or a platform listed twice —
-            # the rules the database's indexes hold, and which the models leave to them.
+            # A duplicate name or URL, a second active URL, a platform listed twice.
             return refused(
                 "snapshot",
                 f"Import failed — that snapshot breaks one of the catalogue's rules, such"
@@ -534,14 +355,8 @@ def create_app(database_path):
     def refused(group, error):
         """The settings page again, carrying why an import or reset did nothing.
 
-        Rendered rather than redirected to, for the reason `rejected_search_url` gives. No
-        draft is passed, which is what keeps the add field from taking focus and scrolling
-        the page away from the banner.
-
-        The group is named because the page keeps its three in collapsed `<details>`, and a
-        banner about an import over a shut Snapshot group is a complaint with nothing to act
-        on: whichever one refused is the one the page comes back open at. It is the caller
-        that knows, which is why it is an argument rather than something read off the error.
+        The group is named because the page keeps its three collapsed: whichever one
+        refused is the one it comes back open at.
         """
         return render_template(
             "settings.html", error=error, open_group=group, **saved_search_urls()
@@ -550,21 +365,10 @@ def create_app(database_path):
     def rejected_search_url(url, error):
         """The settings page again, carrying the reason and what was typed.
 
-        Rendered rather than redirected to, and the one place this page departs from
-        post-then-redirect. Carrying a message through a redirect means either a session —
-        which this app does not have, and which would mean a secret to generate, store and
-        keep out of git — or putting the message in the address, where it survives a
-        bookmark and reappears on a reload. Neither is worth it for one line of text.
-
-        What it costs is that a reload re-submits, which for a URL that was refused means
-        being told the same thing a second time. The paths that succeed all redirect, so
-        the reload that actually matters — the one after something was written — is the one
-        that stays safe.
-
-        The search group is named for the same reason `refused` names one: the page's three
-        groups are shut on arrival, and a banner about an address over a shut group — with
-        the field holding the draft inside it, `autofocus` and all — would be a complaint
-        with nothing to act on.
+        Rendered rather than redirected, the one departure from post-then-redirect here:
+        carrying a message through a redirect would need either a session or the message in
+        the address. The cost is that a reload re-submits a refusal; every path that writes
+        redirects.
         """
         return render_template(
             "settings.html",
@@ -575,11 +379,9 @@ def create_app(database_path):
         )
 
     def saved_search_urls():
-        """The list the settings page draws, oldest first.
+        """The list the settings page draws, in insertion order.
 
-        By id rather than by host or by URL: the order a radio group is read in should not
-        change under a person because they added an entry, and insertion order is the one
-        ordering nothing can rearrange. There are only ever a handful of these.
+        Nothing rearranges a radio group under a reader because they added an entry.
         """
         connection = db.get_connection()
         return {
@@ -591,16 +393,8 @@ def create_app(database_path):
     def retargeted_catalogue(error):
         """The whole list, answering a request that asked for a single row.
 
-        Only the rename uses this, and only when the name it was given is already taken.
-        The response has to carry its own target because it does not match the one the
-        request declared: the row asked for a row back, and this is the page-level banner
-        plus everything under it.
-
-        The pair of headers is the same pair the cycle endpoint used to need before there
-        was a row partial to answer with. There it was papering over a missing shape and
-        went as soon as one existed. Here the two shapes are real — a rename either
-        changes one row or raises a banner that belongs to the page — so the retarget is
-        saying something true about this particular answer.
+        Only a rename onto a name already taken needs this: the banner belongs to the page,
+        so the response has to carry its own target.
         """
         response = make_response(
             render_template("_catalogue.html", error=error, **catalogue())
@@ -615,13 +409,9 @@ def create_app(database_path):
         games = connection.execute(
             "SELECT id, name, status FROM games ORDER BY name COLLATE NOCASE"
         ).fetchall()
-        # A set of the availabilities that exist. The grid asks about every game against
-        # every platform, so membership of one set beats a query per cell.
+        # Both off one read: an intent is an availability wearing a flag. A set, because the
+        # grid asks about every game against every platform.
         availability = set()
-        # The one intended platform per game, by game. A game absent from it is a game
-        # not yet decided on, which is most of them and the state every game starts in.
-        # Both come off the same read: an intent is an availability wearing a flag, so
-        # asking for them separately would be reading the same rows twice.
         intents = {}
         for row in connection.execute(
             "SELECT game_id, platform, intended FROM game_platforms"
@@ -632,21 +422,12 @@ def create_app(database_path):
         return {"games": games, "availability": availability, "intents": intents}
 
     def game_row(game_id):
-        """The same thing `catalogue()` returns, narrowed to one game.
+        """What `catalogue()` returns, narrowed to one game.
 
-        The row partial is rendered from inside a whole-catalogue render and on its own as
-        a mutation's response, and it must draw the same either way — so it is given the
-        same names, holding the same shapes, from both directions. Only the query is
-        narrower: one game and its own availabilities rather than every game and all of
-        them.
-
-        Which is why a missing game is a 404 rather than a `None` handed to the template:
-        `catalogue()` cannot produce a row without a game, so neither may this, and the
-        shapes stay the same in both directions. It happens when a second device deleted
-        the game after this page was drawn — `delete_game` chose deliberately not to raise
-        the failure banner in that situation, because the deletion had in fact happened;
-        here the opposite is true. The change being asked for genuinely was not saved, and
-        the banner saying so is the honest answer.
+        The row partial draws the same whether it is rendered inside a whole catalogue or
+        alone, so it is handed the same names holding the same shapes from both directions.
+        A missing game is a 404 rather than a `None` for the template: unlike a delete that
+        finds nothing, the change asked for here genuinely was not saved.
         """
         connection = db.get_connection()
         game = connection.execute(
