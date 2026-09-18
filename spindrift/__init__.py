@@ -370,8 +370,10 @@ def create_app(database_path):
     def settings():
         """The deployment's configuration and its whole state.
 
-        Where the catalogue's search control points, and below that the export, import and
-        reset of everything the deployment holds.
+        Where the catalogue's search control points, the snapshot of everything the
+        deployment holds, and the reset that empties it — three collapsible groups, all shut
+        on arrival, so the save at the top and the reset at the bottom are not two buttons on
+        the same wall. The only thing that opens one is a refusal naming it; see `refused`.
 
         A page rather than a control in the masthead. The switching this exists for happens
         by mood over a session — a storefront while shopping, a wiki while deciding — not
@@ -492,25 +494,29 @@ def create_app(database_path):
         """
         if not request.form.get("confirm"):
             return refused(
+                "snapshot",
                 "Tick the box to confirm an import replaces everything."
-                " Nothing was imported."
+                " Nothing was imported.",
             )
         upload = request.files.get("snapshot")
         data = upload.read() if upload else b""
         if not data:
-            return refused("Choose a snapshot file to import. Nothing was imported.")
+            return refused(
+                "snapshot", "Choose a snapshot file to import. Nothing was imported."
+            )
         try:
             parsed = snapshot.parse(data)
         except snapshot.SnapshotError as error:
-            return refused(str(error))
+            return refused("snapshot", str(error))
         try:
             deployment.replace(db.get_connection(), parsed)
         except sqlite3.IntegrityError:
             # A duplicate name or URL, a second active URL or a platform listed twice —
             # the rules the database's indexes hold, and which the models leave to them.
             return refused(
+                "snapshot",
                 f"Import failed — that snapshot breaks one of the catalogue's rules, such"
-                f" as two games with the same name. {snapshot.UNCHANGED}"
+                f" as two games with the same name. {snapshot.UNCHANGED}",
             )
         return redirect(url_for("settings"))
 
@@ -519,19 +525,27 @@ def create_app(database_path):
         """Delete every game and every search URL, once the confirmation is ticked."""
         if not request.form.get("confirm"):
             return refused(
-                "Tick the box to confirm a reset deletes everything. Nothing was deleted."
+                "reset",
+                "Tick the box to confirm a reset deletes everything. Nothing was deleted.",
             )
         deployment.reset(db.get_connection())
         return redirect(url_for("settings"))
 
-    def refused(error):
+    def refused(group, error):
         """The settings page again, carrying why an import or reset did nothing.
 
         Rendered rather than redirected to, for the reason `rejected_search_url` gives. No
         draft is passed, which is what keeps the add field from taking focus and scrolling
         the page away from the banner.
+
+        The group is named because the page keeps its three in collapsed `<details>`, and a
+        banner about an import over a shut Snapshot group is a complaint with nothing to act
+        on: whichever one refused is the one the page comes back open at. It is the caller
+        that knows, which is why it is an argument rather than something read off the error.
         """
-        return render_template("settings.html", error=error, **saved_search_urls())
+        return render_template(
+            "settings.html", error=error, open_group=group, **saved_search_urls()
+        )
 
     def rejected_search_url(url, error):
         """The settings page again, carrying the reason and what was typed.
@@ -546,9 +560,18 @@ def create_app(database_path):
         being told the same thing a second time. The paths that succeed all redirect, so
         the reload that actually matters — the one after something was written — is the one
         that stays safe.
+
+        The search group is named for the same reason `refused` names one: the page's three
+        groups are shut on arrival, and a banner about an address over a shut group — with
+        the field holding the draft inside it, `autofocus` and all — would be a complaint
+        with nothing to act on.
         """
         return render_template(
-            "settings.html", error=error, draft=url, **saved_search_urls()
+            "settings.html",
+            error=error,
+            draft=url,
+            open_group="search",
+            **saved_search_urls(),
         )
 
     def saved_search_urls():

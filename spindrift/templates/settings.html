@@ -1,8 +1,22 @@
 {% extends "layout.html" %}
 
-{#- The deployment's configuration and its whole state: where the catalogue's search
-    control points and the list of places it could point, then export, import and reset of
-    everything the deployment holds.
+{#- The deployment's configuration and its whole state, in three collapsible groups: where
+    the catalogue's search control points and the list of places it could point, then the
+    snapshot taken of everything the deployment holds or written over it, then the reset
+    that empties it.
+
+    Groups rather than one stack, because the page had grown into a wall with a radio list,
+    a text field, a file picker, two confirmations and five buttons all at the same level,
+    where the only thing separating a save from a reset was distance. A `<details>` per
+    group means one thing is on screen at a time, and the two that destroy data are behind
+    a click that has to be deliberate. `<details>` rather than tabs because it needs no
+    script, keeps every group linkable and printable, and degrades to plain open sections
+    anywhere it is not understood.
+
+    Within a group the actions are divided by `<hr>` rather than by another frame: choosing
+    a search URL and adding one belong together, as do exporting a snapshot and importing
+    one, and a rule says "related but separate" where a second border would say "somewhere
+    else".
 
     Plain forms, no htmx, no script — so the layout's head block stays empty here exactly
     as it does on the by-platform page. The machinery the catalogue carries is paid for by
@@ -20,140 +34,202 @@
   <a class="nav" href="{{ url_for('page') }}">&larr; Catalogue</a>
 {% endblock %}
 
+{#- Which group is open on arrival. None of them, normally: the page opens as three named
+    bars, so what it holds is legible in a glance and nothing is on screen that was not
+    asked for. It is a page visited to do one thing, and which one is known before it
+    loads.
+
+    The exception is a refusal, where the endpoint names the group it came from. A banner
+    about an import over a shut Snapshot group is a complaint with nothing to act on, so
+    whatever refused is the one thing open beneath it. Only one is ever named, and nothing
+    is remembered between visits — a group left open is shut again by the next load, which
+    is the right default for a page whose last two sections delete catalogues. -#}
+{% set open_group = open_group|default(none, true) %}
+
 {% block content %}
+  {#- What the three bars below are, in one line, because they open shut: the summaries
+      name each group and this says what the set of them adds up to. -#}
   <p class="lede">
-    Where the search button beside each game goes, one at a time — and below that, export,
-    import or reset everything this deployment holds.
+    Settings
   </p>
 
-  {#- The same banner class the catalogue uses for a duplicate name, in the same place
-      relative to what it is about: above the thing the message concerns. It is the reason
-      the add path renders rather than redirects — see the endpoint. -#}
+  {#- The same banner class the catalogue uses for a duplicate name, and above every group
+      rather than inside one, because any of the three can raise it. Which group it is
+      about is said by the one left open beneath it. It is the reason the add, import and
+      reset paths render rather than redirect — see the endpoints. -#}
   {% if error %}
     <p class="error" role="alert">{{ error }}</p>
   {% endif %}
 
-  {% if search_urls %}
-    <form class="search-urls" method="post"
-          action="{{ url_for('set_active_search_url') }}">
-      {#- A group, named, because a bare stack of radios has nothing to announce itself as
-          and the heading above it belongs to the page rather than to the control. -#}
-      <fieldset>
-        <legend>Search with</legend>
+  <details class="group" {% if open_group == "search" %}open{% endif %}>
+    {#- The name is a heading as well as a summary, so the page has an outline to move
+        through rather than three unlabelled regions, and the line under it says what the
+        group is for while it is shut — a collapsed group whose contents cannot be guessed
+        is a group nobody opens. -#}
+    <summary>
+      <span class="group-marker" aria-hidden="true"></span>
+      <h2 class="group-name">Search URL</h2>
+      <span class="group-note">Where the search button beside each game sends its name</span>
+    </summary>
 
-        {#- Absence first, and checked when nothing is active. A radio group cannot be
-            emptied once a choice is made, so "off" has to be a choice within it — the same
-            move the status control makes with its leading em dash, and for the same reason.
-            Spelled out in words rather than a dash because a radio has the room, and
-            because what it turns off is a control on another page entirely.
+    <div class="group-body">
+      {% if search_urls %}
+        <form class="search-urls" method="post"
+              action="{{ url_for('set_active_search_url') }}">
+          {#- A group, named, because a bare stack of radios has nothing to announce itself
+              as and the summary above it belongs to the whole section rather than to the
+              control. -#}
+          <fieldset>
+            <legend>Search with</legend>
 
-            Choosing it costs the saved list nothing: the addresses stay, and turning the
-            button back on is picking one of them again. -#}
-        <label class="search-url off">
-          <input type="radio" name="active" value=""
-                 {% if not active_search_url %}checked{% endif %}>
-          <span class="host">No search button</span>
-        </label>
+            {#- Absence first, and checked when nothing is active. A radio group cannot be
+                emptied once a choice is made, so "off" has to be a choice within it — the
+                same move the status control makes with its leading em dash, and for the
+                same reason. Spelled out in words rather than a dash because a radio has the
+                room, and because what it turns off is a control on another page entirely.
 
-        {% for search_url in search_urls %}
-          {#- The host over the address, and both: the host is what the entry is called and
-              is all that needs reading to tell two apart, and the address underneath is the
-              only record of the entry there is, since these cannot be edited. Derived from
-              the URL rather than stored beside it, so the two can never disagree. -#}
-          <div class="search-url">
-            <label>
-              <input type="radio" name="active" value="{{ search_url.id }}"
-                     {% if search_url.active %}checked{% endif %}>
-              <span class="host">{{ search_host(search_url.url) }}</span>
-              <span class="url">{{ search_url.url }}</span>
+                Choosing it costs the saved list nothing: the addresses stay, and turning
+                the button back on is picking one of them again. -#}
+            <label class="search-url off">
+              <input type="radio" name="active" value=""
+                     {% if not active_search_url %}checked{% endif %}>
+              <span class="host">No search button</span>
             </label>
-            {#- Inside the same form as the radios, reaching a different endpoint. No
-                confirmation, unlike the catalogue's delete: that one destroys a game and
-                everything decided about it, where the worst this can cost is retyping an
-                address. Discarding an unsaved radio change on the way is deliberate —
-                the click asked for a deletion, not for a selection. -#}
-            <button type="submit" class="remove-url"
-                    formaction="{{ url_for('delete_search_url', url_id=search_url.id) }}"
-                    aria-label="Delete {{ search_url.url }}">&times;</button>
-          </div>
-        {% endfor %}
-      </fieldset>
 
-      {#- An explicit save rather than a radio that submits on change. This page has no
-          script to submit with, and the button is also what makes the choice reversible
-          before it reaches the catalogue. -#}
-      <button type="submit" class="sd-button save">Save</button>
-    </form>
-  {% else %}
-    {#- The dashed empty state the other pages use. No radio group is drawn at all: with
-        nothing saved there is nothing that could be active, so an "off" choice on its own
-        would be a control offering one option. -#}
-    <p class="empty">No search URLs yet — add one below.</p>
-  {% endif %}
+            {% for search_url in search_urls %}
+              {#- The host over the address, and both: the host is what the entry is called
+                  and is all that needs reading to tell two apart, and the address underneath
+                  is the only record of the entry there is, since these cannot be edited.
+                  Derived from the URL rather than stored beside it, so the two can never
+                  disagree. -#}
+              <div class="search-url">
+                <label>
+                  <input type="radio" name="active" value="{{ search_url.id }}"
+                         {% if search_url.active %}checked{% endif %}>
+                  <span class="host">{{ search_host(search_url.url) }}</span>
+                  <span class="url">{{ search_url.url }}</span>
+                </label>
+                {#- Inside the same form as the radios, reaching a different endpoint. No
+                    confirmation, unlike the catalogue's delete: that one destroys a game and
+                    everything decided about it, where the worst this can cost is retyping an
+                    address. Discarding an unsaved radio change on the way is deliberate —
+                    the click asked for a deletion, not for a selection. -#}
+                <button type="submit" class="remove-url"
+                        formaction="{{ url_for('delete_search_url', url_id=search_url.id) }}"
+                        aria-label="Delete {{ search_url.url }}">&times;</button>
+              </div>
+            {% endfor %}
+          </fieldset>
 
-  <form class="add-url" method="post" action="{{ url_for('add_search_url') }}">
-    <label for="url">Add a URL</label>
-    {#- The placeholder shows the shape rather than describing it, `{}` included, because
-        the one rule this field has is that the marker must be somewhere in the address.
-        `autofocus` only after this field's own rejection — keyed on the draft rather than
-        on the error, because an import or reset shares the banner and a refused one must
-        not scroll the page away from its message to a field nobody asked for. -#}
-    <input id="url" name="url" type="text" value="{{ draft or '' }}"
-           placeholder="https://example.com/search?q={}"
-           class="sd-input" autocomplete="off" spellcheck="false"
-           {% if draft %}autofocus{% endif %}>
-    <button type="submit" class="sd-button sd-button--ghost">Add</button>
-    <p class="hint">
-      Put <code>{}</code> where the game’s name should go.
-    </p>
-  </form>
+          {#- An explicit save rather than a radio that submits on change. This page has no
+              script to submit with, and the button is also what makes the choice reversible
+              before it reaches the catalogue. -#}
+          <button type="submit" class="sd-button save">Save</button>
+        </form>
+      {% else %}
+        {#- The dashed empty state the other pages use. No radio group is drawn at all: with
+            nothing saved there is nothing that could be active, so an "off" choice on its
+            own would be a control offering one option. -#}
+        <p class="empty">No search URLs yet — add one below.</p>
+      {% endif %}
 
-  {#- The deployment's whole state, below the search control because it is used far less
-      often. Three separate forms rather than one, because each does something different
-      and two of them destroy data: a button reaching the wrong endpoint here would cost a
-      catalogue, not an address.
+      <hr class="rule">
 
-      Export is a plain link, because it is a read with no side effects and the file
-      arrives as a download on any device without script. -#}
-  <section class="deployment">
-    <h2>Export</h2>
-    <p class="hint">
-      Download a snapshot: every game, where it’s playable, what became of it, and every
-      search URL, in one file.
-    </p>
-    <a class="sd-button sd-button--ghost deployment-action" href="{{ url_for('export_snapshot') }}">Export snapshot</a>
-  </section>
+      <form class="add-url" method="post" action="{{ url_for('add_search_url') }}">
+        <label for="url">Add a URL</label>
+        {#- The placeholder shows the shape rather than describing it, `{}` included, because
+            the one rule this field has is that the marker must be somewhere in the address.
+            `autofocus` only after this field's own rejection — keyed on the draft rather than
+            on the error, because an import or reset shares the banner and a refused one must
+            not scroll the page away from its message to a field nobody asked for. A draft
+            only ever arrives with this group named as the one to open, which is what keeps
+            the focus on a field that is actually on screen. -#}
+        <input id="url" name="url" type="text" value="{{ draft or '' }}"
+               placeholder="https://example.com/search?q={}"
+               class="sd-input" autocomplete="off" spellcheck="false"
+               {% if draft %}autofocus{% endif %}>
+        <button type="submit" class="sd-button sd-button--ghost">Add</button>
+        <p class="hint">
+          Put <code>{}</code> where the game’s name should go.
+        </p>
+      </form>
+    </div>
+  </details>
 
-  {#- The confirmation is a checkbox and nothing more — no second page, no dialog, no typed
-      phrase. `required` spares a round trip that would lose the chosen file, but it is a
-      convenience: the endpoint refuses an unticked request on its own, before it reads the
-      file. -#}
-  <form class="deployment" method="post" action="{{ url_for('import_snapshot') }}"
-        enctype="multipart/form-data">
-    <h2>Import</h2>
-    <p class="hint">
-      Replace everything here with a snapshot. Nothing already here survives, and there’s no
-      undo — export first if you might want it back.
-    </p>
-    <input type="file" name="snapshot" accept=".json,application/json"
-           aria-label="Snapshot file" required>
-    <label class="confirm">
-      <input type="checkbox" name="confirm" value="yes" required>
-      I understand this replaces everything
-    </label>
-    <button type="submit" class="sd-button sd-button--ghost sd-button--danger deployment-action">Import</button>
-  </form>
+  {#- Export and import in one group because they are two directions of the same file, and
+      keeping them together is what puts the way out beside the way in: the line that says
+      to export first is one rule away from the button that does it.
 
-  <form class="deployment" method="post" action="{{ url_for('reset_deployment') }}">
-    <h2>Reset</h2>
-    <p class="hint">
-      Delete every game and every search URL, leaving an empty catalogue. There’s no undo —
-      export first if you might want it back.
-    </p>
-    <label class="confirm">
-      <input type="checkbox" name="confirm" value="yes" required>
-      I understand this deletes everything
-    </label>
-    <button type="submit" class="sd-button sd-button--ghost sd-button--danger deployment-action">Reset</button>
-  </form>
+      Separate forms rather than one, because a button reaching the wrong endpoint here
+      would cost a catalogue, not an address. Export is a plain link, because it is a read
+      with no side effects and the file arrives as a download on any device without script. -#}
+  <details class="group" {% if open_group == "snapshot" %}open{% endif %}>
+    <summary>
+      <span class="group-marker" aria-hidden="true"></span>
+      <h2 class="group-name">Snapshot</h2>
+      <span class="group-note">Take a copy of this deployment, or replace it with one</span>
+    </summary>
+
+    <div class="group-body">
+      <section class="deployment">
+        <h3>Export</h3>
+        <p class="hint">
+          Download a snapshot: every game, where it’s playable, what became of it, and every
+          search URL, in one file.
+        </p>
+        <a class="sd-button sd-button--ghost deployment-action" href="{{ url_for('export_snapshot') }}">Export snapshot</a>
+      </section>
+
+      <hr class="rule">
+
+      {#- The confirmation is a checkbox and nothing more — no second page, no dialog, no
+          typed phrase. `required` spares a round trip that would lose the chosen file, but it
+          is a convenience: the endpoint refuses an unticked request on its own, before it
+          reads the file. -#}
+      <form class="deployment" method="post" action="{{ url_for('import_snapshot') }}"
+            enctype="multipart/form-data">
+        <h3>Import</h3>
+        <p class="hint">
+          Replace everything here with a snapshot. Nothing already here survives, and there’s no
+          undo — export first if you might want it back.
+        </p>
+        <input type="file" name="snapshot" accept=".json,application/json"
+               aria-label="Snapshot file" required>
+        <label class="confirm">
+          <input type="checkbox" name="confirm" value="yes" required>
+          I understand this replaces everything
+        </label>
+        <button type="submit" class="sd-button sd-button--ghost sd-button--danger deployment-action">Import</button>
+      </form>
+    </div>
+  </details>
+
+  {#- Alone in a group of its own, and last. It shares nothing with the snapshot above it —
+      there is no file, and nothing comes back — so a rule between them would claim a kinship
+      that isn't there. Being shut is most of what this group does: the one control here that
+      empties a catalogue for nothing in return now takes a deliberate click to even see. -#}
+  <details class="group group--danger" {% if open_group == "reset" %}open{% endif %}>
+    <summary>
+      <span class="group-marker" aria-hidden="true"></span>
+      <h2 class="group-name">Reset</h2>
+      <span class="group-note">Delete every game and every search URL</span>
+    </summary>
+
+    <div class="group-body">
+      <form class="deployment" method="post" action="{{ url_for('reset_deployment') }}">
+        {#- What the summary above does not already say. It named what goes; this says what
+            is left and that nothing brings it back, so opening the group adds something
+            rather than repeating the line that was on screen before the click. -#}
+        <p class="hint">
+          Leaves an empty catalogue with no search URLs. There’s no undo — export first if
+          you might want it back.
+        </p>
+        <label class="confirm">
+          <input type="checkbox" name="confirm" value="yes" required>
+          I understand this deletes everything
+        </label>
+        <button type="submit" class="sd-button sd-button--ghost sd-button--danger deployment-action">Reset</button>
+      </form>
+    </div>
+  </details>
 {% endblock %}
