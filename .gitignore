@@ -2,6 +2,7 @@ scratch
 .venv
 __pycache__/
 .pytest_cache/
+.coverage
 
 # The catalogue database and its WAL / shared-memory sidecars. Every toggle rewrites
 # these, so committing them would leave the working tree permanently dirty.
