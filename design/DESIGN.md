@@ -9,7 +9,7 @@ The app should look like an old phosphor-green monitor. The display is dark with
 - Background `--sd-bg`. Panels use `--sd-surface`, and nested or hovered panels use `--sd-surface-raised`.
 - `--sd-primary` (green) is for primary actions, links, headings and the active nav item.
 - `--sd-accent` (amber) is for numbers, stats, focus rings and highlights. Use it sparingly.
-- Game status always maps like this: playing = green, backlog = amber, completed = cyan, dropped = red. Use the `.sd-badge--*` classes, and always pair the colour with a text label.
+- Game status always maps like this: playing = green, finished = cyan, 100% = gold (the amber accent), abandoned = red. 100% is the one filled badge, so the table's best outcome reads at a glance. Use the `.sd-badge--*` classes, and always pair the colour with a text label.
 - Text on a green fill uses `--sd-on-primary`.
 - Each platform has a tint, `--sd-platform-*`. They're grouped by family: a blue ramp for PlayStation, a green ramp for Xbox, and a grey-blue ramp for the PC storefronts. Text on a tint uses `--sd-platform-ink`. Every tint is at least 4.5:1 against that ink.
 
@@ -32,7 +32,7 @@ The app should look like an old phosphor-green monitor. The display is dark with
 - Respect `prefers-reduced-motion` (already handled in `theme.css`).
 
 ## Components (in `spindrift/static/theme.css`)
-`.sd-panel`, `.sd-button`, `.sd-button--ghost`, `.sd-input`, `.sd-stat`, `.sd-badge--{playing|backlog|completed|dropped}`, `.sd-progress > span`.
+`.sd-panel`, `.sd-button`, `.sd-button--ghost`, `.sd-input`, `.sd-stat`, `.sd-badge--{playing|backlog|completed|100|dropped}`, `.sd-progress > span`.
 Extend these rather than inventing new styles. New components follow the same rules above.
 
 ## Accessibility
