@@ -347,8 +347,8 @@ input[type="file"]::file-selector-button {
   border-color: transparent;
 }
 
-.sd-badge--completed.sd-badge--filled {
-  background: var(--sd-status-completed);
+.sd-badge--100.sd-badge--filled {
+  background: var(--sd-status-100);
   color: var(--sd-bg);
 }
 

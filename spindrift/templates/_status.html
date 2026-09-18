@@ -1,12 +1,12 @@
 {#- The badge a status is drawn with, shared by the catalogue and the by-platform table.
 
-    The design's four statuses and the catalogue's four are not the same four: finished and
-    100% both map to completed, told apart as the outlined badge and the filled one. -#}
+    The design's status names and the catalogue's are not the same: finished is drawn with
+    the completed badge, and 100% takes the gold one, filled, as the loudest of the four. -#}
 {% macro badge_class(status) -%}
   sd-badge {{ {
     "playing": "sd-badge--playing",
     "finished": "sd-badge--completed",
-    "100%": "sd-badge--completed sd-badge--filled",
+    "100%": "sd-badge--100 sd-badge--filled",
     "abandoned": "sd-badge--dropped",
   }.get(status, "sd-badge--none") }}
 {%- endmacro %}

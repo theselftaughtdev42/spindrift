@@ -20,6 +20,7 @@
   --sd-status-playing: var(--sd-primary);
   --sd-status-backlog: var(--sd-accent);
   --sd-status-completed: var(--sd-info);
+  --sd-status-100: var(--sd-accent);
   --sd-status-dropped: var(--sd-danger);
 
   /* Platform tints, by family; all of them take the one dark ink. */
@@ -148,6 +149,7 @@ a:hover { color: var(--sd-accent); }
 .sd-badge--playing { color: var(--sd-status-playing); }
 .sd-badge--backlog { color: var(--sd-status-backlog); }
 .sd-badge--completed { color: var(--sd-status-completed); }
+.sd-badge--100 { color: var(--sd-status-100); }
 .sd-badge--dropped { color: var(--sd-status-dropped); }
 
 .sd-progress {
