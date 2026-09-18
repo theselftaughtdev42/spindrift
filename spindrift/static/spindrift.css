@@ -641,8 +641,23 @@ input[type="file"]::file-selector-button {
    gets renamed, retoggled and deleted — and a focus ring at half strength is a focus ring
    that has been half lost. Focus only, not hover: the grid already spends hover on lighting
    a platform column, and a second thing happening on every pass of the mouse across a
-   hundred rows would be movement rather than feedback. */
-.row:focus-within > :not(.status) {
+   hundred rows would be movement rather than feedback.
+
+   Every focus but the status control's own, and that exception is what makes a status
+   change visible at the moment it is made. Choosing one answers with the row re-rendered,
+   and htmx puts the keyboard back on the select it was chosen from — so without this the
+   row would light up in the instant it was told to recede, and stay lit until the reader
+   happened to click somewhere else. The one change they had just made would be the one
+   thing the catalogue did not show them.
+
+   Nothing is given up by it. The exception exists to keep a focus ring readable, and the
+   ring in this case is drawn around the status cell — the one part of the row that is
+   never dimmed in the first place, so there was never anything here for it to protect.
+
+   `:has()` is unguarded, as it is on the arrow above. Where it is missing the whole rule
+   is dropped, which leaves a receded row receded while it is being worked in: the duller
+   of the two behaviours, not the wrong one. */
+.row:focus-within:not(:has(.status select:focus)) > :not(.status) {
   filter: none;
 }
 
