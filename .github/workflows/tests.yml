@@ -31,4 +31,4 @@ jobs:
         run: uv sync --locked --dev
 
       - name: Run the suite
-        run: uv run pytest tests
+        run: uv run pytest tests --cov

@@ -7,6 +7,9 @@ local: static.clean
 static.clean:
 	python3 spindrift/static_manifest.py --clear
 
+test:
+	uv run pytest tests --cov
+
 docker.build:
 	docker build -t spindrift:local .
 
@@ -16,14 +19,6 @@ docker.run:
 docker.latest:
 	docker run --rm --name spindrift --platform linux/amd64 -p 127.0.0.1:8000:8000 -v "${PWD}:/data" ghcr.io/theselftaughtdev42/spindrift:latest
 
-# Cut a release: bump pyproject on a branch, merge through a pull request, then tag the
-# merged commit and push. The tag push is what the publish workflow builds the images from.
-#
-#   make release VERSION=0.2.0
-#
-# The `Protect Main` ruleset requires the PR and grants no bypass, so pushing the release
-# commit straight at main is rejected. The tag goes on the *merged* commit, which is what main
-# actually gets. `--verify-tag` stops a tag push that did not land from cutting a release.
 release:
 	@test -n "$(VERSION)" || { echo "VERSION is required, e.g. make release VERSION=0.2.0"; exit 1; }
 	@git diff --quiet && git diff --cached --quiet || { echo "working tree is dirty; commit or stash first"; exit 1; }
