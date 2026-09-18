@@ -21,7 +21,7 @@
       </thead>
       {% for platform, games in groups %}
         <tbody>
-          {#- Read-only: there is one place a status is changed, and it is the catalogue. -#}
+          {#- Read-only: the catalogue is the one place a status is changed. -#}
           {% for game in games %}
             <tr {% if game.status %}data-status="{{ game.status }}"{% endif %}>
               {% if loop.first %}

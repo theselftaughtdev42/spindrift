@@ -1,33 +1,23 @@
 {% from "_status.html" import badge_class %}
-{#- One game, as a row of the grid. Rendered both inside the whole catalogue and alone as the
-    answer to the endpoints that change one game in place, so the two cannot disagree.
+{#- One game, as a row of the grid, rendered inside the catalogue and alone.
 
-    `data-status` and `data-undecided` are absent rather than empty or false, so CSS can ask
-    whether the attribute is there. `data-undecided` is derived here rather than sent as a
-    class, which is what lets a re-rendered row drop out of a filtered page on its own. -#}
+    The data attributes are absent rather than false, so CSS can ask whether they are there.
+    `data-undecided` is derived here, which lets a re-rendered row leave a filtered page. -#}
 <div class="row" role="row"
      {% if game.status %}data-status="{{ game.status }}"{% endif %}
      {% if not intents.get(game.id) %}data-undecided{% endif %}>
-  {#- Two triggers, because Enter is only one of the two ways a person finishes editing a
-      field. `blur` rather than the `focusout` that would bubble here on its own, because this
-      form holds the search link too, and `changed` so tabbing through costs no requests.
-
-      The row is the target, and that is inseparable from saving on blur: swapping the whole
-      list would rebuild the entry form and destroy any field already clicked into. -#}
+  {#- `blur` rather than the `focusout` that would bubble from the search link too, and
+      `changed` so tabbing through costs no requests. -#}
   <form class="name rename" role="rowheader"
         hx-post="{{ url_for('rename_game', game_id=game.id) }}"
         hx-trigger="submit, blur changed from:find input"
         hx-target="closest .row"
         hx-swap="outerHTML">
-    {#- The `id` keeps the keyboard here when the row is swapped out from under it: htmx
-        restores focus to the element carrying the same id in the replacement markup. `title`
-        is what makes a name clipped by the column recoverable without clicking into it. -#}
+    {#- The `id` keeps focus here across the swap; `title` recovers a clipped name. -#}
     <input id="name-{{ game.id }}" name="name" type="text" value="{{ game.name }}"
            title="{{ game.name }}"
            aria-label="Rename {{ game.name }}" autocomplete="off">
-    {#- The `replace` filter rather than Python's `format`, which would read a URL's own
-        braces as fields and raise on `?q={}&kind={game}`. URL-encoded, or an ampersand in a
-        title would start a query parameter of the storefront's own. -#}
+    {#- `replace`, not `format`, which would read a URL's own braces as fields. -#}
     {% if active_search_url %}
       <a class="search"
          href="{{ active_search_url | replace('{}', game.name | urlencode) }}"
@@ -44,8 +34,8 @@
     {% include "_cell.html" %}
   {% endfor %}
   <span class="status" role="cell">
-    {#- The accessible name says which game, because a column of identical dropdowns is one a
-        screen reader cannot tell apart. The `id` keeps focus here across the swap. -#}
+    {#- Named by game: a column of identical dropdowns is one a screen reader cannot tell
+        apart. The `id` keeps focus here across the swap. -#}
     <select id="status-{{ game.id }}" name="status" class="{{ badge_class(game.status) }}"
             aria-label="Status of {{ game.name }}"
             hx-post="{{ url_for('set_status', game_id=game.id) }}"

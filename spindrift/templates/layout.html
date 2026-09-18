@@ -1,7 +1,5 @@
 <!doctype html>
-{#- The stylesheet needs the platform count to lay out that many tracks and to size the page.
-    A custom property keeps the number in one place, so retiring a platform cannot leave the
-    grid reserving a track for it. -#}
+{#- The stylesheet lays out one grid track per platform and needs the count to do it. -#}
 <html lang="en" style="--platform-count: {{ platforms | length }}">
   <head>
     <meta charset="utf-8">
@@ -14,13 +12,9 @@
   </head>
   <body {% block body_attributes %}{% endblock %}>
     <header class="masthead">
-      {#- The mark beside a live heading rather than the lockup as an image: an SVG loaded as
-          an image cannot reach the page's web fonts, so the wordmark would fall back to a
-          system monospace. -#}
+      {#- Live text, not the lockup as an image: an SVG loaded as an image cannot reach the
+          page's web fonts. -#}
       <h1 class="logo">
-        {#- The way back to the catalogue from anywhere, including from the catalogue itself:
-            a logo that is a link on one page and plain text on another is a worse guess than
-            one that always goes home. -#}
         <a href="{{ url_for('page') }}">
           <img src="{{ url_for('static', filename='spindrift-mark.svg') }}" alt="" width="40" height="40">
           Spindrift

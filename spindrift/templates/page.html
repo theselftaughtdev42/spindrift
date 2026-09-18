@@ -4,8 +4,7 @@
   <script src="{{ url_for('static', filename='htmx.min.js') }}" defer></script>
 {% endblock %}
 
-{#- A failed toggle must not look identical to a successful one. htmx's error events bubble
-    to the body, so one handler covers every request on the page. -#}
+{#- htmx's error events bubble to the body, so one handler covers every request. -#}
 {% block body_attributes %}hx-on::before-request="document.getElementById('failure').hidden = true; document.getElementById('finished')?.remove()"
         hx-on::response-error="document.getElementById('failure').hidden = false"
         hx-on::send-error="document.getElementById('failure').hidden = false"{% endblock %}
@@ -40,8 +39,7 @@
   </div>
   <p class="all-decided">Every game has a platform chosen.</p>
 
-  {#- Replaces the browser's own confirm, which can't be styled and on some browsers offers to
-      silence the page's dialogs — the one safety net in front of a delete. Cancel holds the
+  {#- Replaces the browser's own confirm, which some browsers offer to silence. Cancel holds
       focus, so Enter pressed out of habit keeps the game. -#}
   <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-dialog-title"
           aria-describedby="confirm-dialog-question">
@@ -66,8 +64,7 @@
         event.preventDefault();
         pending = event.detail;
         question.textContent = event.detail.question;
-        // Escape closes without setting this, so a "confirm" left over from the last delete
-        // would otherwise go on to delete the next game.
+        // Escape closes without setting this, leaving the last delete's "confirm" behind.
         dialog.returnValue = "";
         dialog.showModal();
       });

@@ -12,7 +12,7 @@
     <span class="column remove" role="columnheader"></span>
   </div>
 
-  {#- Re-rendered on every add, which is what clears it. -#}
+  {#- Re-rendered on every add, which is what clears the fields. -#}
   <form class="add" role="row"
         hx-post="{{ url_for('add_game') }}"
         hx-target="#catalogue">
