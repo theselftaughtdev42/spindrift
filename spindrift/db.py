@@ -2,8 +2,7 @@ import sqlite3
 
 from flask import current_app, g
 
-# Ordered schema ladder: a migration's position is its version. Append-only once released
-# — never edited in place.
+# A migration's position is its version. Append-only once released, never edited in place.
 MIGRATIONS = [
     """
     CREATE TABLE games (
@@ -19,21 +18,15 @@ MIGRATIONS = [
         PRIMARY KEY (game_id, platform)
     );
     """,
-    # The intent is a flag on an availability rather than a column on the game, so it cannot
-    # name a platform the game is not playable on. The partial index holds it to one per game.
     """
     ALTER TABLE game_platforms ADD COLUMN intended INTEGER NOT NULL DEFAULT 0;
     CREATE UNIQUE INDEX game_platforms_one_intent
         ON game_platforms (game_id) WHERE intended;
     """,
-    # Nullable with no backfill: absence is how this schema says nothing has been recorded.
-    # The value set is closed on the write path rather than as a CHECK here.
+    # Nullable: absence is how this schema says nothing has been recorded.
     """
     ALTER TABLE games ADD COLUMN status TEXT;
     """,
-    # `active` is a flag on the row rather than a pointer held elsewhere, so deleting the
-    # active URL leaves nothing active and no dangling id to guard. The URL's shape is
-    # enforced on the write path; only its uniqueness is something a request cannot evade.
     """
     CREATE TABLE search_urls (
         id INTEGER PRIMARY KEY,

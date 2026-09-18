@@ -41,8 +41,7 @@ def create_app(database_path):
     app.jinja_env.globals["search_host"] = search_host
     app.jinja_env.globals["version"] = app.config["VERSION"]
 
-    # nginx, not Flask, serves /static/ where it matters, so a digested filename is the
-    # app's only cache-busting lever. No manifest means plain names.
+    # nginx serves /static/ in deployment, so the filename is the only cache-busting lever.
     static_manifest = manifest.load()
 
     @app.url_defaults
@@ -52,8 +51,7 @@ def create_app(database_path):
             if filename in static_manifest:
                 values["filename"] = static_manifest[filename]
 
-    # Digested names are only as fresh as the HTML quoting them, so documents must always
-    # revalidate.
+    # Digested names are only as fresh as the HTML quoting them.
     @app.after_request
     def revalidate_documents(response):
         if response.mimetype == "text/html":
@@ -63,8 +61,6 @@ def create_app(database_path):
     db.migrate(app.config["DATABASE_PATH"])
     app.teardown_appcontext(db.close_connection)
 
-    # A context processor rather than a jinja global, because the answer comes out of the
-    # database and can differ from one request to the next.
     @app.context_processor
     def active_search_link():
         row = (
@@ -77,7 +73,7 @@ def create_app(database_path):
             "active_search_host": search_host(row["url"]) if row else None,
         }
 
-    # The SELECT is the point: it makes a green check mean the database is reachable too.
+    # The SELECT makes a green check mean the database is reachable too.
     @app.get("/health")
     def health():
         db.get_connection().execute("SELECT 1")
@@ -116,7 +112,7 @@ def create_app(database_path):
     def add_game():
         name = request.form["name"].strip()
         platforms = request.form.getlist("platform")
-        # Checked before the game is written, so a bad value leaves nothing behind.
+        # Checked first, so a bad platform leaves no game behind.
         if any(platform not in PLATFORMS for platform in platforms):
             abort(400)
         if not name:
@@ -150,8 +146,7 @@ def create_app(database_path):
         except sqlite3.IntegrityError:
             return retargeted_catalogue(f"{name} is already in the catalogue.")
         connection.commit()
-        # One row, not the whole list: the field saves on blur, and rebuilding the list would
-        # pull focus back to the entry form and destroy a field just clicked into.
+        # One row, not the list: rebuilding it would steal focus from the field just used.
         return render_template("_row.html", **game_row(game_id))
 
     @app.post("/games/<int:game_id>/platforms/<platform>")
@@ -174,13 +169,11 @@ def create_app(database_path):
                     (game_id, platform),
                 )
             except sqlite3.IntegrityError:
-                # The foreign key refusing a game another device deleted — the same stale
-                # page as the other paths, so the same 404.
+                # The foreign key refusing a game another device deleted.
                 abort(404)
             available, intended = True, False
         elif not row["intended"]:
-            # Cleared first: the one-intent index rejects the pair even for the length of a
-            # statement.
+            # Cleared first: the one-intent index rejects the pair mid-statement.
             connection.execute(
                 "UPDATE game_platforms SET intended = 0 WHERE game_id = ? AND intended",
                 (game_id,),
@@ -203,8 +196,7 @@ def create_app(database_path):
     @app.post("/games/<int:game_id>/status")
     def set_status(game_id):
         status = request.form["status"]
-        # Closed set, checked before the write. The empty string is not a value but the
-        # control's way of saying nothing has been recorded.
+        # The empty string is the control saying nothing is recorded, not a status.
         if status and status not in STATUSES:
             abort(400)
 
@@ -218,8 +210,7 @@ def create_app(database_path):
     @app.delete("/games/<int:game_id>")
     def delete_game(game_id):
         connection = db.get_connection()
-        # No row check: a game already gone is the outcome asked for, and a 404 would raise
-        # the failure banner over a deletion that did happen.
+        # No row check: a game already gone is the outcome asked for.
         connection.execute("DELETE FROM games WHERE id = ?", (game_id,))
         connection.commit()
         return render_template("_catalogue.html", **catalogue())
@@ -254,16 +245,11 @@ def create_app(database_path):
 
     @app.post("/settings/active")
     def set_active_search_url():
-        """Point the catalogue's search control somewhere, or nowhere.
-
-        The empty value is not a failure: it is the first radio, and how the control is
-        turned off.
-        """
+        """Point the search control somewhere, or nowhere; the empty value turns it off."""
         active = request.form["active"]
         connection = db.get_connection()
         if active:
-            # A URL another device deleted. Clearing the flag and then failing to set it
-            # would turn the search control off as a side effect.
+            # Checked before clearing, or a URL another device deleted turns the control off.
             chosen = connection.execute(
                 "SELECT url FROM search_urls WHERE id = ?", (active,)
             ).fetchone()
@@ -276,8 +262,6 @@ def create_app(database_path):
                 "UPDATE search_urls SET active = 1 WHERE id = ?", (active,)
             )
         connection.commit()
-        # Saving a radio that already looked chosen changes nothing you can see, so the
-        # group has to say what it now does.
         note = (
             f"Searching with {search_host(chosen['url'])}."
             if active
@@ -301,8 +285,7 @@ def create_app(database_path):
     def import_snapshot():
         """Replace the deployment's entire state with an uploaded snapshot.
 
-        Every step that can refuse runs before anything is deleted; the replacement itself
-        is one transaction, so a constraint the snapshot breaks rolls it back whole.
+        Everything that can refuse runs before anything is deleted.
         """
         if not request.form.get("confirm"):
             return refused(
@@ -341,10 +324,7 @@ def create_app(database_path):
         return redirect(url_for("page", finished="reset"))
 
     def refused(group, error):
-        """The settings page again, carrying why an import or reset did nothing.
-
-        The group is named so the page reopens at whichever one refused.
-        """
+        """The settings page again, reopened at the group that refused."""
         return render_template(
             "settings.html", error=error, open_group=group, **saved_search_urls()
         )
@@ -352,10 +332,7 @@ def create_app(database_path):
     def search_group(error=None, draft=None, note=None):
         """The search URL group on its own, for htmx; the whole page for anything else.
 
-        The same partial either way, so what a rejection says and where it says it does not
-        depend on whether the swap happened. The whole page is rendered rather than
-        redirected, the one departure from post-then-redirect here: a message through a
-        redirect needs either a session or the address to carry it.
+        An error renders rather than redirects, because a redirect cannot carry the message.
         """
         group = {
             "search_error": error,
@@ -380,8 +357,7 @@ def create_app(database_path):
     def retargeted_catalogue(error):
         """The whole list, answering a request that asked for a single row.
 
-        Only a rename onto a name already taken needs this, and the response has to carry
-        its own target because it does not match the one the request declared.
+        It carries its own target, which no longer matches the one the request declared.
         """
         response = make_response(
             render_template("_catalogue.html", error=error, **catalogue())
@@ -406,11 +382,7 @@ def create_app(database_path):
         return {"games": games, "availability": availability, "intents": intents}
 
     def game_row(game_id):
-        """What `catalogue()` returns, narrowed to one game.
-
-        A missing game is a 404 rather than a `None` handed to the template: unlike a delete
-        that finds nothing, the change asked for here genuinely was not saved.
-        """
+        """What `catalogue()` returns, narrowed to one game."""
         connection = db.get_connection()
         game = connection.execute(
             "SELECT id, name, status FROM games WHERE id = ?", (game_id,)

@@ -1,7 +1,6 @@
 {#- One availability, from `game_id`, `platform`, `available` and `intended`. -#}
 <div class="cell" role="cell" data-platform="{{ platform }}">
-  {#- The `id` survives the swap: htmx restores focus to the element carrying the same id in
-      the replacement markup. The platform's space becomes a hyphen, an id may not hold one. -#}
+  {#- htmx restores focus to the same `id` after a swap; an id may not hold a space. -#}
   <button type="button"
           id="cell-{{ game_id }}-{{ platform | replace(' ', '-') }}"
           aria-pressed="{{ 'true' if available else 'false' }}"

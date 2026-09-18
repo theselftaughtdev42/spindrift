@@ -1,7 +1,6 @@
 from urllib.parse import urlsplit
 
-# Mandatory rather than appended when absent, so a mistyped `{nme}` is refused instead of
-# quietly becoming a URL with a name stuck on the end.
+# Mandatory rather than appended when absent, so a mistyped placeholder is refused.
 SEARCH_PLACEHOLDER = "{}"
 
 # The value lands in an `href` on every row, where `javascript:` would run on a click.
@@ -11,8 +10,7 @@ SEARCH_SCHEMES = ("http", "https")
 def search_url_problem(url):
     """What is wrong with a search URL, in words for the cataloguer — or `None` if nothing.
 
-    The one place a search URL's shape is admitted from, so a typed one and an imported one
-    cannot drift. Uniqueness is the database's index instead.
+    The one place a URL's shape is admitted from, so a typed one and an imported one agree.
     """
     if SEARCH_PLACEHOLDER not in url:
         return f"That URL needs {SEARCH_PLACEHOLDER} in it, where the game's name goes."

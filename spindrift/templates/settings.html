@@ -1,11 +1,7 @@
 {% extends "layout.html" %}
 
-{#- The deployment's configuration and its whole state, in three collapsible groups, the two
-    that destroy data behind a click that has to be deliberate.
-
-    The snapshot and reset forms are plain: each ends on the catalogue, so there is nothing
-    here to keep. The search group is htmx, in `_search_urls.html`, because its actions leave
-    you in it. -#}
+{#- Snapshot and reset are plain forms, each ending on the catalogue. The search group is
+    htmx, in `_search_urls.html`, because its actions leave you in it. -#}
 {% block title %}Settings — Spindrift{% endblock %}
 
 {% block head %}
@@ -37,8 +33,7 @@
     {% include "_search_urls.html" %}
   </details>
 
-  {#- Separate forms, because a button reaching the wrong endpoint here would cost a
-      catalogue, not an address. Export is a plain link, being a read with no side effects. -#}
+  {#- Separate forms: a button reaching the wrong endpoint here would cost a catalogue. -#}
   <details class="group" {% if open_group == "snapshot" %}open{% endif %}>
     <summary>
       <span class="group-marker" aria-hidden="true"></span>
@@ -58,8 +53,7 @@
 
       <hr class="rule">
 
-      {#- `required` is only a convenience: the endpoint refuses an unticked request before
-          it reads the file. -#}
+      {#- `required` is only a convenience; the endpoint refuses an unticked request. -#}
       <form class="deployment" method="post" action="{{ url_for('import_snapshot') }}"
             enctype="multipart/form-data">
         <h3>Import</h3>

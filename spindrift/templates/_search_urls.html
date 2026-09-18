@@ -1,8 +1,5 @@
-{#- The search URL group's whole body, swapped in for itself so an action leaves the group
-    open and the page where it was. Every control here posts back to this same partial.
-
-    Each one keeps its plain `action`/`formaction` as well, which is what still works if htmx
-    never loads: the endpoints answer a request without htmx's header with the whole page. -#}
+{#- The search URL group's body, swapped in for itself so an action leaves the page where
+    it was. The plain `action`/`formaction` is what still works if htmx never loads. -#}
 <div id="search-urls" class="group-body" hx-target="#search-urls" hx-swap="outerHTML">
   {% if search_error %}
     <p class="error" role="alert">{{ search_error }}</p>
@@ -18,8 +15,7 @@
       <fieldset>
         <legend>Search with</legend>
 
-        {#- A radio group cannot be emptied once a choice is made, so "off" has to be a
-            choice within it. -#}
+        {#- A radio group cannot be emptied, so "off" has to be a choice within it. -#}
         <label class="search-url off">
           <input type="radio" name="active" value=""
                  {% if not active_search_url %}checked{% endif %}>
@@ -53,10 +49,8 @@
   <form class="add-url" method="post" action="{{ url_for('add_search_url') }}"
         hx-post="{{ url_for('add_search_url') }}">
     <label for="url">Add a URL</label>
-    {#- The id is also what htmx restores focus to after a swap, so typing a second URL
-        straight after the first needs no click. `autofocus` is for the rejected draft, and
-        keyed on the draft rather than the error: on a full page it must not scroll away
-        from an import or reset banner. -#}
+    {#- The `id` is what htmx restores focus to after a swap. `autofocus` is keyed on the
+        draft, not the error, so a full page does not scroll away from its banner. -#}
     <input id="url" name="url" type="text" value="{{ draft or '' }}"
            placeholder="https://example.com/search?q={}"
            class="sd-input" autocomplete="off" spellcheck="false"

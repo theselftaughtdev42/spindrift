@@ -1,9 +1,7 @@
 """The shape of a snapshot, and whether a file is one this deployment can import.
 
-Organised around games rather than tables, so the file holds no database ids. The models add
-the two checks the database cannot make — that an intent names one of its own game's
-platforms, and that a name is more than whitespace — and leave uniqueness to the indexes,
-which fail inside the import's transaction. Format compatibility is ADR-0001.
+Organised around games rather than tables, so the file holds no database ids. Format
+compatibility is ADR-0001.
 """
 
 import json
@@ -15,7 +13,7 @@ from spindrift.platforms import PLATFORMS
 from spindrift.search_urls import search_url_problem
 from spindrift.statuses import STATUSES
 
-# The snapshot format this build writes, and whose major it reads. See ADR-0001.
+# What this build writes, and whose major it reads. See ADR-0001.
 FORMAT_VERSION = "1.0"
 FORMAT_MAJOR = int(FORMAT_VERSION.split(".")[0])
 
@@ -65,8 +63,7 @@ class Game(BaseModel):
     def known_intent(cls, intended):
         return intended if intended is None else known_platform(intended)
 
-    # The schema makes this impossible by construction; a snapshot spells the two out
-    # separately, so it has to be checked here.
+    # The database cannot check this: a snapshot spells the two out separately.
     @model_validator(mode="after")
     def intent_is_available(self):
         if self.intended is not None and self.intended not in self.platforms:
@@ -100,11 +97,9 @@ class Snapshot(BaseModel):
 def parse(data):
     """The snapshot in `data`, fully validated — or a `SnapshotError` saying why not.
 
-    Nothing here touches the database: the whole file is validated before a row is deleted.
     Strict rather than coercing, or a hand-written `"active": "no"` would quietly become true.
     """
-    # `RecursionError`: deeply nested brackets exhaust the decoder's stack rather than
-    # failing to parse.
+    # `RecursionError`: deeply nested brackets exhaust the decoder's stack.
     try:
         document = json.loads(data)
     except (ValueError, RecursionError):
@@ -132,7 +127,7 @@ def parse(data):
 
 
 def describe(error):
-    """The first thing wrong with a snapshot, located from one the way a reader counts."""
+    """The first thing wrong with a snapshot, with positions counted from one."""
     problems = error.errors()
     first = problems[0]
     where = " › ".join(
