@@ -25,6 +25,7 @@ from either side of it asks for a name that is still sitting on disk.
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 
 # Beside the package rather than inside `static/`: nginx is handed the static directory and
@@ -58,15 +59,32 @@ def digested_name(name, digest):
     return f"{path.stem}.{digest}{path.suffix}"
 
 
+def clear(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
+    """Remove everything a build wrote: the digested copies and the manifest naming them.
+
+    `build` runs this first, which is what stops a re-run digesting a digest. `make local`
+    runs it on its own, for a different reason: the manifest is the app's only way of
+    finding its static files, and it names whatever some earlier build happened to digest.
+    One left in the source tree pins every page to those names, so an edited stylesheet is
+    served as it was whenever that build ran and no amount of refreshing helps — the
+    failure looks like a change that did not take rather than like a stale file.
+
+    Clearing puts a developer's tree back in the state `load` calls ordinary: no manifest,
+    plain names, and Flask serving them itself with `no-cache`.
+    """
+    for stale in static_dir.iterdir():
+        if stale.is_file() and GENERATED.search(stale.name):
+            stale.unlink()
+    manifest_path.unlink(missing_ok=True)
+
+
 def build(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
     """Write a digested copy of every static file, and the manifest naming them.
 
     Run from the Dockerfile, against the files already copied into the image. Anything left
     from an earlier run is cleared first so that re-running cannot digest a digest.
     """
-    for stale in static_dir.iterdir():
-        if stale.is_file() and GENERATED.search(stale.name):
-            stale.unlink()
+    clear(static_dir, manifest_path)
 
     manifest = {}
     for source in sorted(static_dir.iterdir()):
@@ -96,7 +114,14 @@ def load(manifest_path=MANIFEST_PATH):
 
 # Run as a script rather than imported as `-m spindrift.static_manifest`, which would pull
 # in the package's `__init__` and with it Flask. Nothing here needs the venv, and keeping it
-# that way means the image can build the manifest on the base interpreter.
+# that way means the image can build the manifest on the base interpreter — and that `make
+# local` can undo it without one either.
+#
+# `--clear` rather than a second script, because the pattern naming a generated file is the
+# thing both halves have to agree on, and it is defined once above.
 if __name__ == "__main__":
-    for name, digested in build().items():
-        print(f"{name} -> {digested}")
+    if "--clear" in sys.argv[1:]:
+        clear()
+    else:
+        for name, digested in build().items():
+            print(f"{name} -> {digested}")

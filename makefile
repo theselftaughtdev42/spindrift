@@ -1,5 +1,19 @@
-local:
+# Clear the image build's leavings before starting, because a manifest sitting in the source
+# tree is what the app reads to find its static files — and it names whatever some earlier
+# build digested. Leave one there and every page goes on quoting those names, so an edited
+# stylesheet is served as it was whenever that build ran. The failure reads as a change that
+# did not take, which is a bad half-hour to hand anybody.
+#
+# Clearing rather than rebuilding: the manifest is read once when the app is created, so a
+# fresh one would be stale again by the second edit of a session. With nothing there the app
+# is in its ordinary development mode — plain names, served by Flask with `no-cache`.
+#
+# Stdlib only, on the system interpreter, exactly as the Dockerfile runs the same script.
+local: static.clean
 	uv run main.py
+
+static.clean:
+	python3 spindrift/static_manifest.py --clear
 
 docker.build:
 	docker build -t spindrift:local .
