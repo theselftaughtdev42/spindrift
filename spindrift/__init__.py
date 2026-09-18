@@ -20,6 +20,12 @@ from spindrift.statuses import STATUSES
 from spindrift.version import resolve_version
 
 
+FINISHED = {
+    "imported": "Snapshot imported",
+    "reset": "Data reset completed",
+}
+
+
 def search_host(url):
     host = urlsplit(url).hostname or url
     return host.removeprefix("www.")
@@ -83,7 +89,8 @@ def create_app(database_path):
 
     @app.get("/")
     def page():
-        return render_template("page.html", **catalogue())
+        finished = FINISHED.get(request.args.get("finished"))
+        return render_template("page.html", finished=finished, **catalogue())
 
     @app.get("/by-platform")
     def by_platform():
@@ -225,25 +232,25 @@ def create_app(database_path):
     def add_search_url():
         url = request.form["url"].strip()
         if not url:
-            return redirect(url_for("settings"))
+            return search_group()
         problem = search_url_problem(url)
         if problem:
-            return rejected_search_url(url, problem)
+            return search_group(error=problem, draft=url)
 
         connection = db.get_connection()
         try:
             connection.execute("INSERT INTO search_urls (url) VALUES (?)", (url,))
         except sqlite3.IntegrityError:
-            return rejected_search_url(url, "That URL is already saved.")
+            return search_group(error="That URL is already saved.", draft=url)
         connection.commit()
-        return redirect(url_for("settings"))
+        return search_group(note=f"{search_host(url)} added.")
 
     @app.post("/settings/urls/<int:url_id>/delete")
     def delete_search_url(url_id):
         connection = db.get_connection()
         connection.execute("DELETE FROM search_urls WHERE id = ?", (url_id,))
         connection.commit()
-        return redirect(url_for("settings"))
+        return search_group(note="Search URL deleted.")
 
     @app.post("/settings/active")
     def set_active_search_url():
@@ -258,10 +265,10 @@ def create_app(database_path):
             # A URL another device deleted. Clearing the flag and then failing to set it
             # would turn the search control off as a side effect.
             chosen = connection.execute(
-                "SELECT id FROM search_urls WHERE id = ?", (active,)
+                "SELECT url FROM search_urls WHERE id = ?", (active,)
             ).fetchone()
             if chosen is None:
-                return redirect(url_for("settings"))
+                return search_group()
         # Cleared first, then set: the partial index allows only one active row.
         connection.execute("UPDATE search_urls SET active = 0 WHERE active")
         if active:
@@ -269,7 +276,14 @@ def create_app(database_path):
                 "UPDATE search_urls SET active = 1 WHERE id = ?", (active,)
             )
         connection.commit()
-        return redirect(url_for("settings"))
+        # Saving a radio that already looked chosen changes nothing you can see, so the
+        # group has to say what it now does.
+        note = (
+            f"Searching with {search_host(chosen['url'])}."
+            if active
+            else "Search button turned off."
+        )
+        return search_group(note=note)
 
     @app.get("/settings/export")
     def export_snapshot():
@@ -314,7 +328,7 @@ def create_app(database_path):
                 f"Import failed — that snapshot breaks one of the catalogue's rules, such"
                 f" as two games with the same name. {snapshot.UNCHANGED}",
             )
-        return redirect(url_for("settings"))
+        return redirect(url_for("page", finished="imported"))
 
     @app.post("/settings/reset")
     def reset_deployment():
@@ -324,7 +338,7 @@ def create_app(database_path):
                 "Tick the box to confirm a reset deletes everything. Nothing was deleted.",
             )
         deployment.reset(db.get_connection())
-        return redirect(url_for("settings"))
+        return redirect(url_for("page", finished="reset"))
 
     def refused(group, error):
         """The settings page again, carrying why an import or reset did nothing.
@@ -335,19 +349,25 @@ def create_app(database_path):
             "settings.html", error=error, open_group=group, **saved_search_urls()
         )
 
-    def rejected_search_url(url, error):
-        """The settings page again, carrying the reason and what was typed.
+    def search_group(error=None, draft=None, note=None):
+        """The search URL group on its own, for htmx; the whole page for anything else.
 
-        Rendered rather than redirected, the one departure from post-then-redirect here:
-        a message through a redirect needs either a session or the address to carry it.
+        The same partial either way, so what a rejection says and where it says it does not
+        depend on whether the swap happened. The whole page is rendered rather than
+        redirected, the one departure from post-then-redirect here: a message through a
+        redirect needs either a session or the address to carry it.
         """
-        return render_template(
-            "settings.html",
-            error=error,
-            draft=url,
-            open_group="search",
+        group = {
+            "search_error": error,
+            "draft": draft,
+            "note": note,
             **saved_search_urls(),
-        )
+        }
+        if request.headers.get("HX-Request"):
+            return render_template("_search_urls.html", **group)
+        if error:
+            return render_template("settings.html", open_group="search", **group)
+        return redirect(url_for("settings"))
 
     def saved_search_urls():
         connection = db.get_connection()

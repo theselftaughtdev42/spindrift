@@ -643,6 +643,49 @@ input[type="file"]::file-selector-button {
   font-weight: 600;
 }
 
+.finished {
+  --close-width: 44px;
+
+  display: flex;
+  align-items: center;
+  gap: var(--sd-space-2);
+  margin: 0 0 var(--sd-space-3);
+  padding: var(--sd-space-1);
+  border: var(--sd-border-width) solid var(--sd-accent);
+  border-left-width: var(--sd-border-width-thick);
+  background: var(--sd-surface);
+  box-shadow: var(--sd-shadow);
+  color: var(--sd-text);
+  font-weight: 600;
+}
+
+/* The button and the gap mirrored on the other side, so the text centres on the box rather
+   than on what the button leaves of it. */
+.finished span {
+  flex: 1;
+  padding-left: calc(var(--close-width) + var(--sd-space-2));
+  text-align: center;
+}
+
+.finished-close {
+  flex: none;
+  width: var(--close-width);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--sd-radius);
+  background: none;
+  color: var(--sd-accent);
+  font: inherit;
+  font-size: var(--sd-text-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.finished-close:hover {
+  background: var(--sd-surface-raised);
+}
+
 /* A name column plus a tinted column per platform cannot fit a phone — the cells come out
    under 30px. Below this width the matrix becomes one card per game, with no change to the
    markup or the endpoints.
@@ -874,6 +917,12 @@ input[type="file"]::file-selector-button {
 
 .group--danger {
   border-color: var(--sd-danger);
+}
+
+.saved {
+  margin: 0 0 var(--sd-space-3);
+  color: var(--sd-accent);
+  font-weight: 600;
 }
 
 /* The fieldset is kept for the grouping and the legend a stack of radios needs. */
