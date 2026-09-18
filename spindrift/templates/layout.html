@@ -18,8 +18,13 @@
           an image cannot reach the page's web fonts, so the wordmark would fall back to a
           system monospace. -#}
       <h1 class="logo">
-        <img src="{{ url_for('static', filename='spindrift-mark.svg') }}" alt="" width="40" height="40">
-        Spindrift
+        {#- The way back to the catalogue from anywhere, including from the catalogue itself:
+            a logo that is a link on one page and plain text on another is a worse guess than
+            one that always goes home. -#}
+        <a href="{{ url_for('page') }}">
+          <img src="{{ url_for('static', filename='spindrift-mark.svg') }}" alt="" width="40" height="40">
+          Spindrift
+        </a>
       </h1>
       {% block nav %}{% endblock %}
     </header>
