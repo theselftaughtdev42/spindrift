@@ -1,37 +1,22 @@
-{#- The shell both pages share: the head, the masthead, and the link between them.
-
-    Extracted when the second page arrived, and holding exactly what the two have in
-    common. Anything only the catalogue needs — htmx, the handlers that watch it, the
-    banner they raise — is a block it fills in, so the by-platform page does not carry a
-    script it never calls. -#}
 <!doctype html>
-{#- How many platform columns there are is a fact about `PLATFORMS`, and the stylesheet
-    needs it twice: to lay out that many tracks, and to work out how wide the page has to
-    be to hold them. Passing it as a custom property is what keeps the number in one
-    place — retiring a platform used to leave the grid still reserving a track for it, as
-    an empty band of colour off the right-hand end of every row. -#}
+{#- The stylesheet needs the platform count to lay out that many tracks and to size the page.
+    A custom property keeps the number in one place, so retiring a platform cannot leave the
+    grid reserving a track for it. -#}
 <html lang="en" style="--platform-count: {{ platforms | length }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Spindrift{% endblock %}</title>
-    {#- The theme first: it holds the design's tokens and base components, and the app's
-        own stylesheet is written entirely in terms of them. -#}
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='spindrift-mark.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}">
     {% block head %}{% endblock %}
   </head>
   <body {% block body_attributes %}{% endblock %}>
-    {#- The heading names the app on both pages and the link beside it names the other
-        one, so which page you are on is told by the link you are being offered rather
-        than by a title you have to read. -#}
     <header class="masthead">
-      {#- The mark beside a live heading rather than the lockup SVG as an image. The lockup's
-          wordmark is SVG text in the pixel font, and an SVG loaded as an image can't reach
-          the page's web fonts, so the word would fall back to a system monospace. The
-          heading uses the same font and the same offset shadow, so it draws the lockup
-          itself. The mark is decoration, and the heading's text is its name. -#}
+      {#- The mark beside a live heading rather than the lockup as an image: an SVG loaded as
+          an image cannot reach the page's web fonts, so the wordmark would fall back to a
+          system monospace. -#}
       <h1 class="logo">
         <img src="{{ url_for('static', filename='spindrift-mark.svg') }}" alt="" width="40" height="40">
         Spindrift
@@ -41,12 +26,6 @@
 
     {% block content %}{% endblock %}
 
-    {#- The build the page was served by, named once at the foot of the shell both pages
-        share. It is here for the same reason /version exists — to say which release is
-        running — but for a person on a phone rather than a script over curl: the app is
-        pulled as a moving tag, so "which one is on this device right now" is a question
-        the interface itself should be able to answer without opening a terminal. Quiet
-        enough to ignore until it is the thing you came to check. -#}
     <footer class="version">Spindrift {{ version }}</footer>
   </body>
 </html>

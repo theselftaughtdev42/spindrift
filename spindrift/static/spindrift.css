@@ -1,26 +1,3 @@
-/* The app's own layout and components, written entirely in the tokens `theme.css` defines.
-   That file loads first and holds the palette, the type, the spacing grid and the base
-   components (`.sd-button`, `.sd-input`, `.sd-badge`, ...). Nothing here names a colour,
-   a font or a spacing value of its own; the rules for what goes where are in
-   design/DESIGN.md.
-
-   The theme is dark only. The old light and dark palettes, chosen by
-   `prefers-color-scheme`, are gone. A phosphor monitor has one mode.
-
-   What stays local is the per-platform lookup: which token a column's tint comes from. The
-   tints themselves are `--sd-platform-*` tokens, arranged by family. PS1 and PS2 are one
-   blue ramp running light to dark, so the PlayStation entries read as a single region of
-   the grid with structure inside it rather than as unrelated hues. The three Xbox entries
-   are a green ramp on the same principle, ordered by specificity rather than age: the
-   coarse backward-compatible entry takes the lightest step and the two named generations
-   sit darker beneath it. Steam and GoG, the two PC storefronts, share a desaturated ramp
-   of their own, so they stay distinct from the saturated PlayStation blues beside them.
-   The gap there is saturation rather than hue, because two more steps of blue would read
-   as four PlayStations.
-
-   Every tint is light enough to take the one dark ink, `--sd-platform-ink`, at 4.5:1 or
-   better. The reflowed layout prints a platform's name on its own colour, and a single ink
-   means there's no pairing to keep in step when a tint changes. */
 [data-platform="Steam"] { --tint: var(--sd-platform-steam); }
 [data-platform="GoG"] { --tint: var(--sd-platform-gog); }
 [data-platform="Xbox"] { --tint: var(--sd-platform-xbox); }
@@ -31,42 +8,15 @@
 [data-platform="Switch"] { --tint: var(--sd-platform-switch); }
 [data-platform="Emulator"] { --tint: var(--sd-platform-emulator); }
 
-/* The page is as wide as the catalogue needs and no wider, rather than a round number the
-   grid is then stretched to fill. Everything in the sum below is a width the grid already
-   has to have — the platform columns, the delete column, the rules between them and the
-   border around them — plus the one width that is a judgement: how much room a game's name
-   is worth. So retiring two platforms narrows the page by exactly the two columns it no
-   longer draws, and the grid still ends where its last column ends.
+/* The page is exactly as wide as the catalogue needs. Everything in the sum is a width the
+   grid already has to have, plus the one judgement: `--name-max`, which holds the longest
+   real names without clipping. The rules between columns are one fewer than the columns and
+   the border adds one each side, together the `+ 4`; the page's own padding is in the sum
+   because `box-sizing` is `border-box`.
 
-   `--name-max` is that judgement. 26rem holds the longest names in a real catalogue
-   ("Harry Potter and the Deathly Hallows, Part 1" and its shelf-mates, at 44 characters)
-   without clipping. Measured in Chakra Petch that name is 317px, the same as it was in
-   system-ui, so the number survived the change of typeface. It also stops the column
-   growing into the empty band that a name column given every spare pixel turns into. Names
-   past it clip with an ellipsis and keep their `title`, the same as they always did.
-
-   The rules between columns are one fewer than the columns — `--platform-count` of them
-   plus the two between the name, the status and the delete columns — and the border adds
-   one rule's width on each side, which together are the `+ 4`. All of them are the theme's
-   border width. The page's own side padding is in the sum as well, because `box-sizing` is
-   `border-box`: without it the padding would eat into the measure and the name column would
-   come out short of its maximum by exactly that padding.
-
-   `--status-column` is the width the longest of the five labels needs as a badge, plus the
-   arrow. "Abandoned" is 72px of the badge's VT323 at `--sd-text-lg`, and the badge's border,
-   its left padding and the room the arrow takes bring that to 108px. 7rem leaves a few
-   pixels over, because the column's job is to show the status, and a status column that
-   clips the status isn't doing it.
-
-   Both numbers move with the length of `PLATFORMS`: a platform added is another `--cell`
-   plus its rule on the minimum as well as on the maximum, and the minimum is the one with
-   somewhere to arrive. Nine platforms put it at 750px, which is why the reflow happens at
-   47em (752px). That breakpoint is a consequence of this sum rather than an independent
-   judgement. A tenth platform moves it again, so the two have to be read together.
-
-   The status column is deliberately not paid for out of `--name-max`. That number is a
-   judgement made against real names, and reducing it would start clipping the ones it was
-   chosen to hold. */
+   Both numbers move with the length of `PLATFORMS`: at nine the minimum comes to 750px, which
+   is why the reflow is at 47em (752px). That breakpoint follows from this sum — read them
+   together. */
 body {
   --cell: 44px;
   --status-column: 7rem;
@@ -84,8 +34,6 @@ body {
   max-width: var(--catalogue-width);
 }
 
-/* The display font is upper case wherever it appears, matching the lockup. Body copy keeps
-   its sentence case: that's the only other place a case decision is made. */
 h1,
 h2,
 .sd-button,
@@ -93,11 +41,6 @@ input[type="file"]::file-selector-button {
   text-transform: uppercase;
 }
 
-/* The heading and the links to the other pages share one line, at opposite ends of the
-   measure. They're centred rather than aligned on the baseline, because the links take
-   vertical padding to reach a thumb-sized target, and baseline alignment would hang that
-   padding below the heading rather than around it. They wrap on a phone, where the logo
-   alone takes most of the width. */
 .masthead {
   display: flex;
   flex-wrap: wrap;
@@ -107,8 +50,6 @@ input[type="file"]::file-selector-button {
   margin-bottom: var(--sd-space-4);
 }
 
-/* The lockup, drawn live: the mark beside the heading, with the heading's own pixel font
-   and offset shadow supplying the wordmark. The gap is the logo's clear space. */
 .logo {
   display: flex;
   align-items: center;
@@ -122,8 +63,6 @@ input[type="file"]::file-selector-button {
   image-rendering: pixelated;
 }
 
-/* Underlined only on hover. At rest the primary green and the link's position already say
-   "link", and the masthead is quieter for it. */
 .nav {
   display: inline-flex;
   align-items: center;
@@ -138,42 +77,17 @@ input[type="file"]::file-selector-button {
   text-decoration: underline;
 }
 
-/* The matrix is CSS Grid carrying ARIA table roles rather than a `<table>`, because the
-   mobile layout reflows it into chip rows. Reflowing a real table means overriding
-   `display` on every row and cell; a grid reflows by redefining its columns.
+/* CSS Grid carrying ARIA table roles rather than a `<table>`, because the mobile layout
+   reflows it into cards: reflowing a real table means overriding `display` on every row and
+   cell, where a grid only redefines its columns.
 
-   Specifically it is a column of rows, each row a grid of its own sharing one column
-   definition, rather than a single grid every row pours its cells into. The two resolve to
-   identical widths — every column is a fixed size bar the name, which takes what is left
-   of the same total — but only this way can the header stick. Sticky travel is bounded by
-   the element's containing block, and a grid item's containing block is its own grid area:
-   one row tall, which is no travel at all. A flex item's containing block is the whole
-   flex container, so the header can travel the length of the catalogue.
-
-   The rules between cells are the gaps, with the border colour showing through, so the
-   grid is drawn as a lattice of 2px phosphor lines without any cell carrying a border of
-   its own. */
+   Specifically a column of rows, each row a grid of its own sharing one column definition.
+   Only this way can the header stick: a grid item's containing block is its own one-row-tall
+   area, where a flex item's is the whole container. */
 .matrix {
   /* Declared once and inherited by every row, so the header, the entry form and the games
-     cannot drift out of alignment with each other.
-
-     The repeat count comes from the platform list itself rather than from a number written
-     here, because a number written here is a number that can be left behind: it is the
-     count, the tint and the hover rule that each platform costs, and this is the one of the
-     three that fails silently — a track too many is drawn as empty space rather than as a
-     missing colour.
-
-     The name column takes what is left, which is bounded because the page is: `--name-max`
-     is the whole of the slack the grid has to give it.
-
-     The trailing column is the delete control's own, rather than somewhere inside the name
-     cell, so that it sits as far from the toggles as the row allows. Status takes the one
-     before it: past the platforms, because it is not about a platform, and before delete,
-     because delete's separation from everything else is the point of where it sits.
-
-     At the page's minimum this comes to 750px against the 752px at which the matrix
-     reflows into cards, so the columns fit inside the slack there is. The name column is
-     the flexible track and absorbs the squeeze down to its own 8rem floor. */
+     cannot drift out of alignment. The repeat count comes from the platform list rather than
+     a number written here, which is the one of a platform's costs that fails silently. */
   --columns:
     minmax(8rem, 1fr) repeat(var(--platform-count, 9), var(--cell))
     var(--status-column) var(--remove-column);
@@ -185,17 +99,13 @@ input[type="file"]::file-selector-button {
   border-radius: var(--sd-radius);
   background: var(--sd-border);
   box-shadow: var(--sd-shadow);
-  /* Both declarations are wanted: `clip` is what the rule means, and `hidden` is what a
-     browser too old to know `clip` falls back to. The difference is that `hidden` makes the
-     matrix a scroll container, and a sticky element sticks to its nearest scrollport —
-     which would be this box, a box that never scrolls, so the header would sit at the top
-     of the catalogue looking sticky and never move. */
+  /* Both are wanted: `clip` is what the rule means and `hidden` is the fallback. The
+     difference is that `hidden` makes this a scroll container, and the header would then
+     stick to a box that never scrolls. */
   overflow: hidden;
   overflow: clip;
 }
 
-/* The entry form is in here with the header and the games because it is a row like any
-   other: sharing their columns is what puts each checkbox under the platform it names. */
 .matrix-head,
 .add,
 .row {
@@ -214,24 +124,19 @@ input[type="file"]::file-selector-button {
   background: var(--sd-surface);
 }
 
-/* Bottom-aligned to sit on the same line as the rotated platform labels beside it. */
 .corner {
   align-items: flex-end;
 }
 
-/* Sticky as one row rather than a line of independently sticky cells, so it is always clear
-   which column is being clicked in a long catalogue. Opaque, because the gaps between its
-   cells would otherwise show the row sliding underneath. */
+/* Opaque, or the gaps between its cells would show the row sliding underneath. */
 .matrix-head {
   position: sticky;
   top: 0;
   z-index: 1;
   background: var(--sd-border);
-  /* The rule beneath the header is a flex gap, and a gap stays where the header would
-     have been rather than travelling with it — so a stuck header sits flush on the row
-     sliding underneath, with nothing dividing them. A hard, unblurred shadow occupies no
-     space in the layout, so it can draw that line under the stuck header while falling
-     exactly on the gap, same colour and same pixels, when the header is back at rest. */
+  /* The rule beneath the header is a flex gap, which stays behind when the header travels.
+     A hard, unblurred shadow takes up no space, so it draws that line under a stuck header
+     and falls exactly on the gap, same colour and pixels, when the header is back at rest. */
   box-shadow: 0 var(--sd-border-width) 0 var(--sd-border);
 }
 
@@ -245,58 +150,35 @@ input[type="file"]::file-selector-button {
   letter-spacing: 0.02em;
 }
 
-/* Bottom-aligned with "Game" and the feet of the rotated platform labels, so the header
-   reads along one line however its cells are set. */
 .head-status {
   align-items: flex-end;
 }
 
-/* Untinted at rest — a header wearing every column's colour would compete with the grid it
-   labels — but it carries the same lift as its cells, so a highlighted column is
-   highlighted all the way up to the name of the platform. `0%` resolves to plain
-   `--sd-bg`, which is what the rule above already said. */
+/* Untinted at rest, but carrying the same lift as its cells, so a highlighted column is
+   highlighted up to the name of the platform. `0%` resolves to plain `--sd-bg`. */
 .column {
   background: color-mix(in srgb, var(--tint) var(--column-lift, 0%), var(--sd-bg));
 }
 
-/* Turned on its side, so a column's width is set by the tap target beneath it rather than
-   by the length of the platform's name. Horizontal labels are not something this layout
-   can afford: a column apiece wide enough for "Emulator" needs well past 800px of page,
-   which is wider than the width at which the matrix reflows, so between those two widths
-   there would be nothing to render but a sideways scrollbar. Height is the axis with room
-   going spare, and unlike width it stays constant however many platforms are added later.
+/* Turned on its side, so a column's width is set by the tap target beneath it rather than by
+   the platform's name: horizontal labels need past 800px, wider than the width at which the
+   matrix reflows, leaving a band with nothing to draw but a sideways scrollbar.
 
-   `rotate(180deg)` on top of `vertical-rl` is what makes a label read bottom-to-top, the
-   direction a matrix header conventionally runs. `sideways-lr` states that in a single
-   declaration and is what this rule becomes once it is safe to rely on.
-
-   The padding is logical rather than physical because the axes have swapped: here
-   `padding-inline` is the gap at the ends of the label and `padding-block` the gap across
-   the column. Physical values would silently mean the other one. */
+   `rotate(180deg)` over `vertical-rl` is what makes a label read bottom-to-top. The padding
+   is logical because the axes have swapped — physical values would mean the other one. */
 .column {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  /* Flush to the bottom of the header, so labels of different lengths start on one line
-     with "Game" rather than floating at a height apiece. */
   justify-content: flex-start;
   padding-block: var(--sd-space-1);
   padding-inline: var(--sd-space-2);
 }
 
-/* The rename field carries the cell's own padding instead. The cell keeps a sliver, and the
-   field makes up the rest, so its text sits on the same left edge as the "Game" header
-   above it.
-
-   The gap is what separates the field from the search link when there is one, and there's
-   nothing for it to separate when there isn't: a catalogue with no active search URL is
-   laid out exactly as it was before the link existed. */
 .name.rename {
   gap: var(--sd-space-1);
   padding: var(--sd-space-1);
 }
 
-/* An input dressed as text: no border or fill until it is pointed at or focused, so a
-   catalogue at rest reads as a list of names rather than a column of form fields. */
 .rename input {
   flex: 1;
   min-width: 0;
@@ -319,13 +201,8 @@ input[type="file"]::file-selector-button {
   background: var(--sd-bg);
 }
 
-/* Sized and shaped like the delete control at the other end of the row, because both are
-   the same kind of thing: a single square affordance attached to a game rather than to a
-   platform. It shares the name cell with the field, mirroring the entry row above, where
-   the Add button sits beside the name it acts on.
-
-   Quietened with opacity rather than colour: the glyph is an emoji and paints in its own
-   palette, so `color` would leave it just as loud as the game names beside it. */
+/* Quietened with opacity rather than colour: the glyph is an emoji and paints in its own
+   palette. */
 .search {
   display: flex;
   align-items: center;
@@ -349,24 +226,10 @@ input[type="file"]::file-selector-button {
   opacity: 1;
 }
 
-/* Pointing at any one cell lifts the tint of every cell in its column and of the heading
-   above them, which is what makes a column readable as a column in a grid that has no
-   column element to highlight — each row is a grid of its own, so the cells of one column
-   are not siblings and nothing but a match on the platform's name relates them.
-   `--column-lift` is that lift: a percentage each tinted surface adds to its own resting
-   strength, declared here once and consumed by the rules below.
-
-   A pointer-only affordance, hence the query: there is no hovering a column on a phone,
-   and on a phone there are no columns either. Where `:has()` is unsupported the highlight
-   simply never fires — the grid is exactly what it was before, so no fallback is owed. */
 @media (hover: hover) {
-  /* One line per platform, because CSS cannot carry an attribute's value from the cell
-     being hovered across to the cells that share it. Adding a platform means adding a line
-     here as well as a tint lookup at the top of this file — the two lists are the same
-     list.
-
-     `:focus-within` alongside `:hover` so tabbing through a row lights the same column a
-     mouse would, and so the highlight follows the keyboard rather than being lost to it. */
+  /* One line per platform, because CSS cannot carry an attribute's value from the hovered
+     cell across to the cells that share it: adding a platform means a line here as well as a
+     tint above. `:focus-within` so the highlight follows the keyboard too. */
   .matrix:has([data-platform="Steam"]:is(:hover, :focus-within)) [data-platform="Steam"],
   .matrix:has([data-platform="GoG"]:is(:hover, :focus-within)) [data-platform="GoG"],
   .matrix:has([data-platform="Xbox"]:is(:hover, :focus-within)) [data-platform="Xbox"],
@@ -380,10 +243,6 @@ input[type="file"]::file-selector-button {
   }
 }
 
-/* The entry row sits between the sticky header and the catalogue, on the page background
-   like the header rather than on a panel like the rows, so it reads as chrome, not as a
-   game. The padding is wider than the Add button's hard shadow, so the shadow lands
-   inside the cell rather than on the rule beside it. */
 .name.entry {
   gap: var(--sd-space-3);
   padding: var(--sd-space-2);
@@ -400,8 +259,6 @@ input[type="file"]::file-selector-button {
   background: color-mix(in srgb, var(--tint) calc(6% + var(--column-lift, 0%)), var(--sd-bg));
 }
 
-/* The label fills the cell for the same reason the toggle button does on a game row:
-   the whole cell is the target, not just the box inside it. */
 .cell.entry label {
   display: flex;
   align-items: center;
@@ -417,16 +274,6 @@ input[type="file"]::file-selector-button {
   cursor: pointer;
 }
 
-/* The button fills the cell entirely: that is what makes the whole cell the click
-   target rather than a small control sitting inside one.
-
-   Centred rather than simply `block`, because a cell has something to show inside it: the
-   marker on the one platform a game is meant to be played on. The mobile chip re-states
-   the same centring with a gap, where the marker stands beside a visible label rather
-   than alone.
-
-   The change of fill is stepped, like all of the theme's motion, and happens only because
-   the cell was clicked. */
 .cell button {
   display: flex;
   align-items: center;
@@ -446,15 +293,9 @@ input[type="file"]::file-selector-button {
   background: var(--tint);
 }
 
-/* The decision, drawn over the availability rather than in place of it: the cell keeps
-   the tint it had when it was merely playable, and gains a ring and a marker. That is the
-   feature stated in CSS — choosing a platform adds something to one cell and takes
-   nothing from the rest of the row.
-
-   Both the ring and the marker are drawn in the platform ink, so one rule covers every
-   column. The ring is inset rather than an outline, which is spoken for: focus draws one,
-   and a cell can be focused and intended at once, so the two marks have to be able to
-   coexist without either being lost. */
+/* Drawn over the availability rather than in place of it: the cell keeps its tint and gains a
+   ring and a marker. The ring is inset rather than an outline, which focus is spoken for — a
+   cell can be focused and intended at once. */
 .cell button[data-intended] {
   box-shadow: inset 0 0 0 var(--sd-border-width) var(--sd-platform-ink);
 }
@@ -470,10 +311,6 @@ input[type="file"]::file-selector-button {
   outline-offset: calc(-1 * var(--sd-space-1) - var(--sd-border-width));
 }
 
-/* Deleting is unrecoverable and the toggles beside it are not, so the delete control is
-   given every separation the row can offer: the last column, a gutter of empty space
-   between it and Emulator, the page's background rather than a panel's, and no platform
-   tint. It should not read as one more toggle. */
 .remove {
   display: flex;
   align-items: center;
@@ -496,8 +333,6 @@ input[type="file"]::file-selector-button {
   cursor: pointer;
 }
 
-/* Danger colouring is held back until the pointer is on it: a red cross standing on
-   every row would shout down the grid the page exists to make readable. */
 .remove button:hover {
   background: var(--sd-surface-raised);
   color: var(--sd-danger);
@@ -507,20 +342,6 @@ input[type="file"]::file-selector-button {
   outline-offset: calc(-1 * var(--sd-border-width));
 }
 
-/* The outcome is drawn as the theme's status badge, in its own column only. A row already
-   carries up to nine platform tints, and a status band running underneath them would put
-   two colour languages in the same space, so neither would be readable. Kept to its own
-   column, the statuses read down the right-hand edge as a single ribbon that says how much
-   of the catalogue is done and which one game is being played now.
-
-   Which badge a status wears is decided in `_status.html`, which both pages share. The
-   design has four statuses and the catalogue records four, but not the same four, and
-   that's where the translation lives. Finished and 100% are both completed, cyan. That's
-   the pair this column exists to tell apart, so 100% is the filled badge and finished the
-   outlined one: they differ in weight as well as in the words.
-
-   A game with nothing recorded wears no status colour. Its badge is muted and has no
-   frame, which is to say it looks like the rest of the row and claims nothing. */
 .sd-badge--none {
   color: var(--sd-text-muted);
   border-color: transparent;
@@ -531,8 +352,6 @@ input[type="file"]::file-selector-button {
   color: var(--sd-bg);
 }
 
-/* The cell is flush with its select, so the whole cell is the control and the badge's
-   frame sits directly inside the grid's own rules. */
 .matrix .status {
   position: relative;
   display: flex;
@@ -540,26 +359,14 @@ input[type="file"]::file-selector-button {
   background: var(--sd-surface);
 }
 
-/* Chrome, like the name cell beside it on the entry row: the add form has no game to have
-   an outcome yet, so this column's place is held and nothing more. */
 .matrix .status.entry {
   background: var(--sd-bg);
 }
 
-/* The chevron the control loses to `appearance: none` below, drawn back on. Native select
-   arrows are painted by the platform in the platform's own colour. This one is a character
-   in the theme's muted ink, which is legible on the panel and inside every outlined badge.
-
-   Laid over the select rather than set beside it, which is the difference between an arrow
-   and a dead spot: a sibling in the flex row would sit outside the select's own box, so a
-   click on the most dropdown-looking part of the cell would land on the cell and do
-   nothing. Positioned, the select still spans the full width and the arrow floats on top of
-   its right-hand end, where `pointer-events: none` lets the click fall through to the
-   control underneath. The select's right padding is what keeps the label from running
-   under it.
-
-   Only on a game's row: the entry row's cell is a placeholder holding a column open, and an
-   arrow there would advertise a control that is not present. */
+/* The chevron `appearance: none` takes away, drawn back on. Laid over the select rather than
+   set beside it, which is the difference between an arrow and a dead spot: a sibling would
+   sit outside the select's own box, so a click on the most dropdown-looking part of the cell
+   would land on nothing. `pointer-events: none` lets the click through. */
 .row .status::after {
   content: "\25BE";
   position: absolute;
@@ -572,21 +379,14 @@ input[type="file"]::file-selector-button {
   pointer-events: none;
 }
 
-/* The one badge the muted arrow would vanish into is the filled one, so there the arrow
-   takes the ink the badge's label uses. */
+/* The filled badge is the one the muted arrow would vanish into. */
 .row .status:has(.sd-badge--filled)::after {
   color: var(--sd-bg);
 }
 
-/* The badge's font, colour and frame come from `.sd-badge`, so all this sets is how the
-   select fills the cell and where its label sits.
-
-   The right-hand padding is the room the arrow above needs; the label stops before it
-   rather than running underneath. `min-width: 0` is what lets a flex item shrink below its
-   content, without which the select would push the cell wider than its track — and
-   `text-overflow` is what that shrinking then looks like. It should never fire at the sizes
-   above; it is the graceful answer if a reader's own font size takes the label past the
-   width, which is the one input this file cannot measure in advance. */
+/* The right padding is the room the arrow needs. `min-width: 0` lets the flex item shrink
+   below its content, without which the select would push the cell wider than its track, and
+   `text-overflow` is what that shrinking looks like. */
 .status select {
   flex: 1;
   min-width: 0;
@@ -610,9 +410,8 @@ input[type="file"]::file-selector-button {
   outline-offset: calc(-1 * var(--sd-space-1) - var(--sd-border-width));
 }
 
-/* The menu itself is not the cell and must not inherit the badge's colours or its font: an
-   option list painted in cyan on cyan can't be read. It's put back onto the panel's own
-   surface, ink and body type. */
+/* The menu is not the cell and must not inherit the badge's colours or font: an option list
+   painted cyan on cyan cannot be read. */
 .status option {
   background: var(--sd-surface);
   color: var(--sd-text);
@@ -620,51 +419,27 @@ input[type="file"]::file-selector-button {
   font-size: var(--sd-text-md);
 }
 
-/* Done is done: a game that has been finished, completed or given up on steps back so that
-   the ones still ahead stand out. Dimming rather than hiding — the catalogue stays the whole
-   catalogue, and a row you can still read is a row you can still change your mind about.
-
-   Everything except the status cell: the dimming is about clutter and the colour is about
-   identification, so the mark saying which of the three states this is stays at full
-   strength on a row that has otherwise receded. A filter can't be undone by a child, so the
-   exception has to be made here, on the children, rather than on the row.
-
-   Darkened rather than made translucent. The grid's rules are the matrix's own background
-   showing through the gaps, so a half-transparent cell lets that green through as well and
-   the receded rows come out brighter than the rest. Darkening keeps every cell opaque. */
+/* Done is done: a finished, completed or abandoned game steps back. Everything except the
+   status cell, whose colour identifies the state — and the exception has to be made on the
+   children, because a filter cannot be undone by one. Darkened rather than made translucent,
+   or the matrix's own green would show through the gaps and brighten the receded rows. */
 .row:is([data-status="finished"], [data-status="100%"], [data-status="abandoned"])
   > :not(.status) {
   filter: brightness(0.55);
 }
 
-/* Restored while the row is being worked in, because a receded row is still a row that
-   gets renamed, retoggled and deleted — and a focus ring at half strength is a focus ring
-   that has been half lost. Focus only, not hover: the grid already spends hover on lighting
-   a platform column, and a second thing happening on every pass of the mouse across a
-   hundred rows would be movement rather than feedback.
+/* Restored while the row is being worked in, or a focus ring at half strength is half lost.
 
-   Every focus but the status control's own, and that exception is what makes a status
-   change visible at the moment it is made. Choosing one answers with the row re-rendered,
-   and htmx puts the keyboard back on the select it was chosen from — so without this the
-   row would light up in the instant it was told to recede, and stay lit until the reader
-   happened to click somewhere else. The one change they had just made would be the one
-   thing the catalogue did not show them.
-
-   Nothing is given up by it. The exception exists to keep a focus ring readable, and the
-   ring in this case is drawn around the status cell — the one part of the row that is
-   never dimmed in the first place, so there was never anything here for it to protect.
-
-   `:has()` is unguarded, as it is on the arrow above. Where it is missing the whole rule
-   is dropped, which leaves a receded row receded while it is being worked in: the duller
-   of the two behaviours, not the wrong one. */
+   Every focus but the status control's own, and that exception is what makes a status change
+   visible at the moment it is made: choosing one answers with the row re-rendered and the
+   keyboard back on the select, so without it the row would light up in the instant it was
+   told to recede. */
 .row:focus-within:not(:has(.status select:focus)) > :not(.status) {
   filter: none;
 }
 
-/* Present in the markup on every cell, but hidden here: at these widths the column
-   header already names the platform. The mobile layout reveals it, where there is no
-   header. It stays in the accessibility tree either way, which is what gives the
-   button its name. */
+/* Hidden here, where the column header already names the platform; the mobile layout reveals
+   it. It stays in the accessibility tree either way, which is what names the button. */
 .cell-label {
   position: absolute;
   width: 1px;
@@ -682,10 +457,8 @@ input[type="file"]::file-selector-button {
   color: var(--sd-text-muted);
 }
 
-/* Framed like the matrix — same border, same panel fill, same hard shadow — because it is
-   the same catalogue read a different way, and the pages should look like one app.
-   `separate` borders rather than `collapse`, so the frame is drawn inside the element's
-   own box and the tinted first cell can't overrun it. */
+/* `separate` borders rather than `collapse`, so the frame is drawn inside the element's own
+   box and the tinted first cell cannot overrun it. */
 .plan {
   width: 100%;
   border: var(--sd-border-width) solid var(--sd-border);
@@ -711,14 +484,8 @@ input[type="file"]::file-selector-button {
   letter-spacing: 0.02em;
 }
 
-/* The platform column takes exactly the width of the longest platform name and no more,
-   which is what `1%` against `nowrap` buys: the column cannot fit the content, so it
-   settles at the content's own width and the games take everything left over. Spelling a
-   width out instead would be a guess that goes wrong the moment a longer platform is
-   added.
-
-   Tinted with the same lookup the grid's cells use, so the Switch is the same red on both
-   pages and a platform is recognisable here before its name is read. */
+/* `1%` against `nowrap` settles the column at the content's own width, so the games take
+   everything left over and no platform name has to be guessed at. */
 .plan tbody th {
   width: 1%;
   background: var(--tint);
@@ -727,32 +494,18 @@ input[type="file"]::file-selector-button {
   white-space: nowrap;
 }
 
-/* The outcome, read-only, drawn with the same badge the matrix uses — so a finished game
-   looks the same on both pages and neither has to be learned separately. Read-only
-   because there is one place a status is set, and a second control for it would only raise
-   the question of which page is authoritative.
-
-   Sized to its contents like the platform column above, so the game names keep the width.
-   The vertical padding is trimmed by the badge's own, so its label sits on the game name's
-   line. */
 .plan td.status {
   width: 1%;
   padding-block: var(--sd-space-1);
   white-space: nowrap;
 }
 
-/* The same recession the matrix gives a finished row, and with the same exception: the
-   status keeps its colour, so a row that has stepped back is still identifiable as the
-   thing it stepped back for. The platform heading is a `th` spanning the whole group and is
-   not any one row's to dim. */
+/* The platform heading spans the whole group and is not any one row's to dim. */
 .plan tr:is([data-status="finished"], [data-status="100%"], [data-status="abandoned"])
   > td:not(.status) {
   opacity: 0.55;
 }
 
-/* Rules between the games of a group, and between one group and the next — the second
-   crossing the tinted column as well, because a group boundary is the more important of
-   the two and stopping short of the platform would make it the fainter. */
 .plan tbody tr + tr > td {
   border-top: var(--sd-border-width) solid var(--sd-border);
 }
@@ -769,19 +522,9 @@ input[type="file"]::file-selector-button {
   text-align: center;
 }
 
-/* The undecided filter, and everything it does to the page.
-
-   All of it is inside the `@supports` gate, the control included, because without `:has()`
-   there is no way to read a checkbox's state from an ancestor and the box would tick and
-   filter nothing. A control that lies about what it did is worse than one that is not
-   offered, so where the selector is unsupported the whole thing is simply absent — the
-   catalogue is exactly the catalogue it was before this existed. That is the same call the
-   entry chips make on mobile, and the opposite of the one the column highlight makes,
-   which can be missing without anybody being told a falsehood.
-
-   Hidden as well when there are no games at all: an empty catalogue has nothing to filter,
-   and a control offering to narrow "no games" to fewer is noise over the top of the line
-   that says to add one. */
+/* The undecided filter, control included, is entirely inside this `@supports` gate: without
+   `:has()` the box would tick and filter nothing, and a control that lies about what it did
+   is worse than one not offered. */
 .filter {
   display: none;
 }
@@ -791,9 +534,6 @@ input[type="file"]::file-selector-button {
 }
 
 @supports selector(:has(*)) {
-  /* Its own line above the grid, right-aligned to sit over the end of the row rather than
-     over the names — this narrows what is below it, so it belongs at the edge the
-     narrowing is about rather than at the start of the reading order of the games. */
   .filter {
     display: flex;
     justify-content: flex-end;
@@ -804,8 +544,6 @@ input[type="file"]::file-selector-button {
     display: none;
   }
 
-  /* A square toggle, and at rest a quiet one: this is a control the catalogue is usually
-     not using, so at rest it reads as an offer rather than as a state the page is in. */
   .filter label {
     display: inline-flex;
     align-items: center;
@@ -821,23 +559,14 @@ input[type="file"]::file-selector-button {
     user-select: none;
   }
 
-  /* Filled when it is on, in the amber highlight — which is what the stripe on an undecided
-     row is drawn in too, so the control and the rows it isolates are the same colour, and
-     turning it on is visibly the same subject as the marks it leaves behind.
-
-     This is the one state that has to carry across a room: a filtered catalogue is a
-     partial catalogue, and a reader who forgets the filter is on is a reader who thinks
-     games have gone missing. Hence a fill rather than a border change. */
   .filter label:has(input:checked) {
     border-color: var(--sd-accent);
     background: var(--sd-accent);
     color: var(--sd-bg);
   }
 
-  /* The native box goes once the toggle can show the state itself — filled is ticked, the
-     same substitution the entry chips make at phone widths. The input stays in the markup
-     because it is what holds the state, what a screen reader announces, and what the
-     selectors here are reading. */
+  /* The native box goes once the toggle can show the state itself. The input stays: it is
+     what holds the state, what a screen reader announces, and what these selectors read. */
   .filter input {
     position: absolute;
     width: 1px;
@@ -850,61 +579,34 @@ input[type="file"]::file-selector-button {
     white-space: nowrap;
   }
 
-  /* Focus has to be drawn by the toggle, since the thing actually focused is now a pixel
-     wide and clipped. Offset outward, so the amber ring sits on the page's own background
-     rather than inside the amber fill it would otherwise be invisible against. */
+  /* Drawn by the toggle, since the thing actually focused is now a clipped pixel. Offset
+     outward, or the amber ring would sit invisible inside the amber fill. */
   .filter label:has(input:focus-visible) {
     outline: 3px solid var(--sd-accent);
     outline-offset: var(--sd-space-1);
   }
 
-  /* The mark the filter is the other half of: a stripe down the leading edge of every
-     row still waiting for an answer, in the amber the toggle above fills with. It is what
-     makes the undecided readable without the filter — a scan down the left edge of the
-     catalogue answers "what is left" as well as ticking the box does, and on a short
-     catalogue that is the whole of the question.
-
-     On the name cell rather than on the row, because the row is a grid whose cells carry
-     their own backgrounds: a stripe on the row would be painted over by the first cell
-     that starts. The name cell is that first cell in both layouts — the leading column on
-     desktop, the top line of the card on a phone — so the mark lands on the leading edge
-     either way. It's the emphasis border width, but drawn inset, so it takes no room from
-     the name.
-
-     Inside the `@supports` gate with the rest of the feature. The stripe needs no `:has()`
-     of its own, but where the filter cannot be offered this would be a mark on the
-     catalogue with nothing on the page explaining what it means. */
+  /* The other half of the filter: a stripe on every row still waiting for an answer. On the
+     name cell rather than the row, because the row's cells carry their own backgrounds and
+     the first would paint over it — and the name cell leads in both layouts. */
   .row[data-undecided] .name {
     box-shadow: inset var(--sd-border-width-thick) 0 0 var(--sd-accent);
   }
 
-  /* The filter itself: everything that has been decided on steps out of the document's
-     flow, leaving the grid holding only the games still waiting for an answer. `display`
-     rather than `visibility` or opacity, so the rows below close up and the remaining
-     handful sit together under the header instead of scattered down a page of gaps.
-
-     Matched on the row's absence of `data-undecided` rather than on a class the server
-     applies, which is what lets a swapped row take itself out: deciding on a platform
-     answers with that row re-rendered, the fresh copy arrives without the attribute, and
-     it vanishes from a filtered page the moment it stops belonging there. Nothing has to
-     tell the filter that anything changed. */
+  /* `display` rather than visibility, so the rows below close up. Matched on the row's own
+     missing `data-undecided` rather than a class the server applies, which is what lets a
+     re-rendered row take itself out of a filtered page with nothing told to the filter. */
   body:has(.filter input:checked) .row:not([data-undecided]) {
     display: none;
   }
 
-  /* The stripe is redundant while the filter is on — every row on screen is an undecided
-     one, and a mark that appears beside all of them marks nothing. It comes back with the
-     rest of the catalogue when the filter goes off. */
   body:has(.filter input:checked) .row[data-undecided] .name {
     box-shadow: none;
   }
 
-  /* Shown only when the filter is on, the catalogue holds games, and none of them is
-     undecided. All three are needed. Without the first it would appear on a fully decided
-     catalogue that nobody is filtering, which is not a question anyone asked; without the
-     second it would appear on an empty one — the box stays ticked after the last game is
-     deleted — and "every game has a platform chosen" printed over "no games yet" is a
-     sentence about a catalogue that does not exist. */
+  /* All three conditions are needed: without the filter it would appear on a catalogue
+     nobody is filtering, and without `.row` it would print over "no games yet", the box
+     having stayed ticked after the last game was deleted. */
   body:has(.row):has(.filter input:checked):not(:has(.row[data-undecided])) .all-decided {
     display: block;
     margin: var(--sd-space-3) 0 0;
@@ -920,24 +622,14 @@ input[type="file"]::file-selector-button {
   font-weight: 600;
 }
 
-/* A name column plus a tinted column per platform cannot fit a phone: the cells come out
-   under 30px wide, below a comfortable tap target and with no room for a label saying what
-   is being tapped. Below this width the matrix stops being a matrix and becomes one card
-   per game — the name on its own line, the platforms as labelled chips beneath it.
+/* A name column plus a tinted column per platform cannot fit a phone — the cells come out
+   under 30px. Below this width the matrix becomes one card per game, with no change to the
+   markup or the endpoints.
 
-   Nothing about the markup or the endpoints changes; the grid is redefined and the
-   labels already sitting in every cell are revealed. This is what the grid-plus-ARIA
-   choice in place of a `<table>` bought.
-
-   The breakpoint is in `em` so it follows the reader's own font size — the layout runs
-   out of room when the text gets bigger, not when the screen gets smaller. 47em is 752px
-   at a default 16px root, and it's there because the grid's own minimum is 750px at nine
-   platforms. The cards have to take over before the columns stop fitting, or the page
-   grows a sideways scrollbar in the band between the two. It was 45em before the theme's
-   2px rules and wider status badges added 33px to that minimum. */
+   In `em`, so it follows the reader's own font size. 47em is 752px, and it is there because
+   the grid's own minimum is 750px at nine platforms: the cards have to take over before the
+   columns stop fitting, or the page grows a sideways scrollbar in the band between. */
 @media (max-width: 47em) {
-  /* The logo alone would take most of a phone's width at the desktop size, so it steps
-     down a size and the links wrap onto the line below it. */
   .logo {
     font-size: var(--sd-text-xl);
     gap: var(--sd-space-2);
@@ -948,8 +640,6 @@ input[type="file"]::file-selector-button {
     height: var(--sd-space-4);
   }
 
-  /* The frame belongs to the rows now: each is a card of its own rather than a band of
-     one shared grid. */
   .matrix {
     display: block;
     border: none;
@@ -958,8 +648,6 @@ input[type="file"]::file-selector-button {
     overflow: visible;
   }
 
-  /* There is no column left for a header to name, so it goes entirely and the chips'
-     own labels take the job over. */
   .matrix-head {
     display: none;
   }
@@ -967,17 +655,9 @@ input[type="file"]::file-selector-button {
   .add,
   .row {
     display: grid;
-    /* Three chips to a line, and a constant rather than the platform count divided by
-       something: the number that matters here is how wide a chip has to be to hold its
-       label and take a thumb, and on a 320px screen three or four are what that allows.
-       Five is too narrow for the labels — "Emulator", "Xbox One" and "Xbox 360" tie at
-       eight characters.
-
-       Which of three and four it is comes from the length of the list. At nine platforms,
-       four strands a single chip alone on a third line, which is the one shape that reads
-       as a mistake rather than as a deliberate short line. Three costs nothing to fix it:
-       nine chips come out as three full lines. A last line short by a chip or two is
-       fine — it is the line of one that is not. */
+    /* Three chips to a line, a constant rather than the platform count divided by something:
+       what matters is how wide a chip has to be to hold its label and take a thumb. At nine
+       platforms, four strands a single chip alone on a third line. */
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--sd-border-width);
     margin-bottom: var(--sd-space-3);
@@ -986,77 +666,49 @@ input[type="file"]::file-selector-button {
     overflow: hidden;
   }
 
-  /* The entry card is an action, not the first game, so it keeps more space beneath it
-     than the games keep between themselves. */
   .add {
     margin-bottom: var(--sd-space-4);
   }
 
-  /* Pinned to the first line rather than left to flow, which is also what keeps the
-     chips off that line: auto-placement fills around what has been placed explicitly,
-     so the first chip starts a fresh line beneath instead of taking the gap beside the
-     name. */
+  /* Pinned to the first line, which is also what keeps the chips off it: auto-placement
+     fills around what has been placed explicitly. */
   .name {
     grid-row: 1;
     grid-column: 1 / -2;
   }
 
-  /* Nothing sits beside the name field here — the entry card has no delete control —
-     so it takes the full width for the longest possible game name. */
   .name.entry {
     grid-row: 1;
     grid-column: 1 / -1;
   }
 
-  /* Delete keeps a column of its own, as it does on desktop. It sits on the name's line
-     rather than among the chips, on the page's background rather than the card's, and a
-     whole line's height away from the nearest chip. This is the one control on the card
-     that destroys data, and a phone is where a thumb is least precise. */
   .remove {
     grid-row: 1;
     grid-column: -2 / -1;
     padding: 0 var(--sd-space-1) 0 var(--sd-space-2);
   }
 
-  /* A line of its own, the full width of the card, beneath the chips. It gets there by
-     document order plus a full-row span rather than by being placed: the name and the
-     delete control are both pinned to row 1, so auto-placement fills the chips in beneath
-     them and this — the next thing in the markup, and too wide for any gap left over —
-     starts a fresh line under the lot. Which means the card the cataloguer already knows is
-     not rearranged: the name and delete are exactly where they were. */
   .matrix .status {
     grid-column: 1 / -1;
   }
 
-  /* The desktop grid needs these columns' places held or their neighbours slide out of
-     alignment. Cards have no column to align to, so the placeholders go. */
   .matrix .status.entry,
   .remove.entry {
     display: none;
   }
 
-  /* The reason the reflow works: the label every cell has been carrying all along,
-     visually hidden where a column header named the platform, shown here where nothing
-     else does. */
   .cell-label {
     position: static;
     width: auto;
     height: auto;
     margin: 0;
     clip-path: none;
-    /* The last two undo the rest of the hiding, and they matter now rather than being
-       tidiness: a shown label that cannot wrap can only clip, and the marker on an
-       intended chip takes exactly the width that "Xbox 360", "Xbox One" and "Emulator"
-       were using at 320px. Wrapping to two lines is the right answer at that width —
-       every chip on the line grows together, and a name is readable in a way half a
-       name is not. */
+    /* These matter rather than being tidiness: a shown label that cannot wrap can only clip,
+       and an intended chip's marker takes the width the longest names were using at 320px. */
     overflow: visible;
     white-space: normal;
   }
 
-  /* Both kinds of chip — the toggle on a game card and the checkbox on the entry card —
-     are one shape: a full-width target no shorter than a thumb, with its platform named
-     inside it. */
   .cell button,
   .cell.entry label {
     display: flex;
@@ -1073,19 +725,13 @@ input[type="file"]::file-selector-button {
     text-align: center;
   }
 
-  /* A set chip prints its name on top of its own tint, which the desktop grid never has
-     to do — hence every tint being chosen to carry the platform ink. */
   .cell button[aria-pressed="true"] {
     color: var(--sd-platform-ink);
   }
 
-  /* A tick box beside "Emulator" does not fit a chip at 320px, and the box was never the
-     point: the entry chip means the same thing as the toggle below it, so it is given
-     the same shape and states the same way — filled is ticked. The input itself stays in
-     the markup, because it is what the form submits and what a screen reader announces.
-
-     Guarded, because without `:has()` the chip cannot show its own state and the native
-     box is then the only thing that can. */
+  /* A tick box beside "Emulator" does not fit a chip at 320px: the entry chip states the same
+     way the toggle does, filled for ticked. Guarded, because without `:has()` the native box
+     is the only thing that can show it. */
   @supports selector(:has(*)) {
     .cell.entry input {
       position: absolute;
@@ -1104,46 +750,26 @@ input[type="file"]::file-selector-button {
       color: var(--sd-platform-ink);
     }
 
-    /* The outline the box would have taken has to move with it, or the form loses its
-       keyboard trail. Inset, because the card clips anything outside the chip. */
+    /* The outline has to move with the box, or the form loses its keyboard trail. */
     .cell.entry label:has(:focus-visible) {
       outline: 3px solid var(--sd-accent);
       outline-offset: calc(-1 * var(--sd-space-1) - var(--sd-border-width));
     }
   }
 
-  /* The name field earns its border here instead of waiting to be pointed at. On desktop
-     a hover reveals it, and a finger cannot hover: without this the one control that looks
-     like nothing is the one you are supposed to tap to correct a typo. */
+  /* The field earns its border here rather than waiting to be pointed at: a finger cannot
+     hover, and this is the control you are meant to tap to correct a typo. */
   .rename input {
     border-color: var(--sd-border);
   }
 }
 
-/* The settings page.
-
-   Everything here is outside the mobile media query above, because none of it needs a
-   second layout: this page is a stack of full-width rows at every width, and every control
-   already takes the theme's 44px minimum target. */
-
-/* The pair of masthead links, held together at the right-hand end. The masthead spreads
-   its children across the measure, so without this the heading and the two links would sit
-   at three points across the page rather than at two. */
 .nav-links {
   display: flex;
   align-items: center;
   gap: var(--sd-space-4);
 }
 
-/* The settings page's three collapsible groups — search URL, snapshot, reset.
-
-   Narrower than the measure the catalogue sets. `body` is as wide as a column per platform
-   plus a name, which is right for a grid and far too wide for a list of addresses: a radio
-   at the left edge and its address running to the right of the page is a line the eye has
-   to travel rather than read. The measure is set here, on the group, so everything inside
-   inherits it and no inner form has to carry a width of its own.
-
-   Framed like the matrix and the plan table, so the pages read as one app. */
 .group {
   max-width: 44rem;
   border: var(--sd-border-width) solid var(--sd-border);
@@ -1151,18 +777,10 @@ input[type="file"]::file-selector-button {
   box-shadow: var(--sd-shadow);
 }
 
-/* Enough to clear the hard shadow the group above casts, and then some: the gap between
-   two groups is the only thing saying they are separate things rather than one long panel
-   with lines across it. */
 .group + .group {
   margin-top: var(--sd-space-5);
 }
 
-/* The whole bar is the control, which is what the padding and the min-height are for — a
-   summary is the disclosure button, and a 44px target that spans the panel is a far better
-   thing to hand a finger than a word. `list-style` drops the browser's own triangle, and
-   the WebKit pseudo-element beside it does the same for older Safari; the marker this page
-   draws instead is below. */
 .group > summary {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -1182,18 +800,12 @@ input[type="file"]::file-selector-button {
   background: var(--sd-surface-raised);
 }
 
-/* Pulled inside the panel rather than sat outside it. The theme's focus ring is offset
-   outwards, which on an element filling its parent's box would draw the amber over the
-   group's own border and read as the frame changing colour. */
 .group > summary:focus-visible {
   outline-offset: calc(-1 * var(--sd-border-width) - 3px);
 }
 
-/* A plus that becomes a minus, in the display font like the rest of the bar, and in amber
-   because it is the one part of the group that reports state rather than names something.
-   Both glyphs are one character wide in that font, so the heading beside it does not shift
-   as a group opens. Its own element rather than generated on the summary, so the words in
-   the bar are the accessible name and this is not read out as part of it. */
+/* Both glyphs are one character wide in the display font, so the heading beside it does not
+   shift. Its own element, so it is not read out as part of the accessible name. */
 .group-marker {
   grid-column: 1;
   color: var(--sd-accent);
@@ -1209,10 +821,6 @@ input[type="file"]::file-selector-button {
   content: "-";
 }
 
-/* A heading, so the page has an outline, but sized and flattened well below what `h2` is
-   for elsewhere: the theme's `h2` is a page section's title with the offset shadow to
-   match, and three of those stacked would shout over the catalogue they configure. Still
-   well above the pixel font's 12px floor. */
 .group-name {
   grid-column: 2;
   margin: 0;
@@ -1220,16 +828,12 @@ input[type="file"]::file-selector-button {
   text-shadow: none;
 }
 
-/* Under the name and in the body font, because it is a sentence rather than a label. It is
-   what a shut group has to go on, so it says what the group does, not what it contains. */
 .group-note {
   grid-column: 2;
   color: var(--sd-text-muted);
   font-size: var(--sd-text-sm);
 }
 
-/* The line between the bar and what it opened onto. Drawn only when open, because a shut
-   group has nothing below it to divide from. */
 .group[open] > summary {
   border-bottom: var(--sd-border-width) solid var(--sd-border);
 }
@@ -1238,45 +842,29 @@ input[type="file"]::file-selector-button {
   padding: var(--sd-space-3);
 }
 
-/* Between two actions inside one group — choosing a search URL and adding one, exporting a
-   snapshot and importing one. A rule rather than a second frame: these belong together,
-   and another border inside this one would say they had been filed somewhere else. Drawn
-   the full width of the body, past the padding, so it reads as dividing the panel rather
-   than as a line inside a paragraph. */
 .rule {
   margin: var(--sd-space-4) calc(-1 * var(--sd-space-3));
   border: 0;
   border-top: var(--sd-border-width) solid var(--sd-border);
 }
 
-/* The one group that only destroys. Its frame says so at rest, the way the two danger
-   buttons inside the page do, so that what it is is legible while it is shut — which is
-   how it will be nearly always. */
 .group--danger {
   border-color: var(--sd-danger);
 }
 
-/* A panel inside the group's panel, so it takes the raised fill the design keeps for
-   nesting and drops the hard shadow: one shadow per frame, and the group outside is the
-   frame casting it. The fieldset's own border and padding are replaced; what the element is
-   kept for is the grouping and the legend, which is what a stack of radios needs to
-   announce itself as one control. */
+/* The fieldset is kept for the grouping and the legend a stack of radios needs. */
 .search-urls fieldset {
   margin: 0;
   padding: 0;
   border: var(--sd-border-width) solid var(--sd-border);
   background: var(--sd-surface-raised);
-  /* A fieldset's default `min-inline-size` is `min-content`, which on a phone is the
-     longest address in the list and wider than the group around it — the frame would have
-     a list of URLs running out through its right-hand edge. Zeroing it is what lets the
-     addresses ellipsise as the rules below already ask them to. */
+  /* A fieldset's default `min-inline-size` is `min-content` — on a phone, the longest
+     address — so the list would run out through the frame's right-hand edge. */
   min-inline-size: 0;
 }
 
-/* Sat on the frame's top edge rather than inside it, which is what the padding and the
-   background are for: a legend punches a gap in the border it sits on, and a transparent
-   one would leave the words floating in that gap. The fill matches the group behind it
-   rather than the page, which is what the fieldset is now sitting on. */
+/* Sat on the frame's top edge: a legend punches a gap in the border it sits on, and a
+   transparent one would leave the words floating in that gap. */
 .search-urls legend {
   margin-left: var(--sd-space-2);
   padding: 0 var(--sd-space-2);
@@ -1295,21 +883,14 @@ input[type="file"]::file-selector-button {
   padding: var(--sd-space-2) var(--sd-space-3);
 }
 
-/* Rules between entries and none above the first, the same way the plan table separates
-   its rows. */
 .search-url + .search-url {
   border-top: var(--sd-border-width) solid var(--sd-border);
 }
 
-/* The off choice is separated from the addresses by a rule of its own, because it is not
-   one of them: it is the state where none is chosen, and running it into the list would
-   make it read as a site called "No search button". */
 .search-urls .off {
   border-bottom: var(--sd-border-width) solid var(--sd-border);
 }
 
-/* The whole entry is the target, not just the radio — a small circle is a poor thing to
-   ask a finger for, and the label already covers the host and the address beside it. */
 .search-url label {
   display: flex;
   align-items: center;
@@ -1327,9 +908,8 @@ input[type="file"]::file-selector-button {
   accent-color: var(--sd-primary);
 }
 
-/* The host and the address are stacked, and the stack is what can shrink: `min-width: 0`
-   on both this and the label above is what lets a long address ellipsise rather than push
-   the delete button off the end of the row. */
+/* `min-width: 0` here and on the label is what lets a long address ellipsise rather than
+   push the delete button off the end of the row. */
 .search-url .host {
   min-width: 0;
   font-weight: 600;
@@ -1344,9 +924,6 @@ input[type="file"]::file-selector-button {
   white-space: nowrap;
 }
 
-/* The address wraps onto a line of its own beneath the host, indented past the radio so it
-   reads as that entry's detail rather than as a second column. The off choice has no
-   address and keeps the single line the flex above gives it. */
 .search-url:not(.off) label {
   align-items: baseline;
   flex-wrap: wrap;
@@ -1357,9 +934,6 @@ input[type="file"]::file-selector-button {
   margin-left: calc(var(--sd-space-3) * 2);
 }
 
-/* The same quiet ✕ the catalogue's rows carry, and quiet for the same reason: it is the
-   one control here that destroys something, so it should not compete with the choice the
-   page is actually about. */
 .remove-url {
   flex: none;
   width: 44px;
@@ -1380,8 +954,6 @@ input[type="file"]::file-selector-button {
   color: var(--sd-danger);
 }
 
-/* The one thing on this page that changes the catalogue, so it is the one filled button.
-   The margin is what separates it from the list it saves. */
 .save {
   margin-top: var(--sd-space-4);
 }
@@ -1393,8 +965,6 @@ input[type="file"]::file-selector-button {
   flex-wrap: wrap;
 }
 
-/* Above the field rather than beside it, and spanning the row, so the field and its button
-   sit on a line of their own. */
 .add-url label {
   flex-basis: 100%;
   color: var(--sd-text-muted);
@@ -1408,26 +978,17 @@ input[type="file"]::file-selector-button {
   min-width: 12rem;
 }
 
-/* Outlined rather than filled: adding an address to the list is not what changes the
-   catalogue, and painting it like Save would say it was. The same goes for export, import
-   and reset below. */
 .sd-button--ghost:hover {
   background: var(--sd-surface-raised);
   color: var(--sd-primary);
 }
 
-/* The two that destroy data say so in their colour, at rest as well as on hover. Unlike
-   the quiet ✕ beside each URL, these cost a whole catalogue, and they sit behind a
-   checkbox rather than among controls in constant use. */
 .sd-button--danger,
 .sd-button--danger:hover {
   border-color: var(--sd-danger);
   color: var(--sd-danger);
 }
 
-/* Under the field, spanning the row, because it is about what goes in the field. The
-   placeholder shows the shape and this says what the shape means — a placeholder vanishes
-   the moment anything is typed, which is exactly when the rule starts mattering. */
 .hint {
   flex-basis: 100%;
   margin: 0;
@@ -1443,9 +1004,6 @@ input[type="file"]::file-selector-button {
   font-family: var(--sd-font-body);
 }
 
-/* Export, import and reset: each a heading, a line of explanation and its controls. The
-   measure comes from the group around them, and so does the space between them — a rule
-   divides the two that share a group, and a gap divides the group that holds the third. */
 .deployment {
   display: flex;
   flex-wrap: wrap;
@@ -1453,15 +1011,12 @@ input[type="file"]::file-selector-button {
   gap: var(--sd-space-2) var(--sd-space-3);
 }
 
-/* In the body font, because the name of the group above it is the pixel-font heading here
-   and two of those stacked would read as two sections rather than one and its parts. */
 .deployment h3 {
   flex-basis: 100%;
   margin: 0;
   font-size: var(--sd-text-md);
 }
 
-/* The link is dressed as a button because it is one in every way but method. */
 .deployment-action {
   display: inline-flex;
   align-items: center;
@@ -1469,8 +1024,6 @@ input[type="file"]::file-selector-button {
   text-decoration: none;
 }
 
-/* The file picker's own button, drawn as the theme's ghost button, so the one native
-   control on the page doesn't look like it came from somewhere else. */
 .deployment input[type="file"] {
   flex-basis: 100%;
   color: var(--sd-text-muted);
@@ -1509,11 +1062,6 @@ input[type="file"]::file-selector-button {
   accent-color: var(--sd-danger);
 }
 
-/* The build the shell names at the foot of every page. Muted, so it sits below the
-   measure as a label rather than content — read when a deploy is being checked and
-   ignored the rest of the time. In the stat font, because what's being read is a number.
-   Its top margin keeps it clear of whatever page ends above it; the body's own bottom
-   padding gives it room beneath. */
 .version {
   margin-top: var(--sd-space-6);
   color: var(--sd-text-muted);
@@ -1521,10 +1069,6 @@ input[type="file"]::file-selector-button {
   font-size: var(--sd-text-lg);
 }
 
-/* The page's own confirm, asked before a game is deleted. A panel with the thick border and
-   hard shadow the design keeps for emphasis, over a page dimmed with its own background
-   colour rather than a blur. The Delete button is the danger one, and Cancel sits first
-   and holds the focus, so the safe choice is the one reached without thinking. */
 .confirm-dialog {
   width: min(28rem, calc(100vw - 2 * var(--sd-space-3)));
   padding: 0;

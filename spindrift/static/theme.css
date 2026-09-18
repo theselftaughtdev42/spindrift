@@ -22,8 +22,7 @@
   --sd-status-completed: var(--sd-info);
   --sd-status-dropped: var(--sd-danger);
 
-  /* Platform tints, by family: a blue ramp for PlayStation, a green ramp for Xbox and a
-     grey-blue ramp for the PC storefronts. All of them take the one dark ink. */
+  /* Platform tints, by family; all of them take the one dark ink. */
   --sd-platform-ink: var(--sd-bg);
   --sd-platform-steam: #a3afcc;
   --sd-platform-gog: #7d89a8;
