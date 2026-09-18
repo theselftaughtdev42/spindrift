@@ -6,7 +6,7 @@
 
 {#- A failed toggle must not look identical to a successful one. htmx's error events bubble
     to the body, so one handler covers every request on the page. -#}
-{% block body_attributes %}hx-on::before-request="document.getElementById('failure').hidden = true"
+{% block body_attributes %}hx-on::before-request="document.getElementById('failure').hidden = true; document.getElementById('finished')?.remove()"
         hx-on::response-error="document.getElementById('failure').hidden = false"
         hx-on::send-error="document.getElementById('failure').hidden = false"{% endblock %}
 
@@ -18,6 +18,13 @@
 {% endblock %}
 
 {% block content %}
+  {% if finished %}
+    <p id="finished" class="finished" role="status">
+      <span>{{ finished }}</span>
+      <button type="button" class="finished-close" aria-label="Dismiss this message"
+              onclick="this.closest('.finished').remove()">&times;</button>
+    </p>
+  {% endif %}
   <p id="failure" class="failure" role="alert" hidden>
     That change wasn’t saved — the server didn’t respond.
   </p>
