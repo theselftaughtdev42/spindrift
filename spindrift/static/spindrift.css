@@ -500,6 +500,14 @@ input[type="file"]::file-selector-button {
   white-space: nowrap;
 }
 
+/* Block rather than the badge's own inline-block, so every chip is the width of the column
+   instead of the width of its word. `width: 1%` above has already settled that column on the
+   longest label, so the stack is as narrow as it can be and still line up — the same full-cell
+   badge the catalogue's select gives that view. */
+.plan td.status .sd-badge {
+  display: block;
+}
+
 /* The platform heading spans the whole group and is not any one row's to dim. */
 .plan tr:is([data-status="finished"], [data-status="100%"], [data-status="abandoned"])
   > td:not(.status) {
