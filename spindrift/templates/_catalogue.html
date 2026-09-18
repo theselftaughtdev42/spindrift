@@ -5,7 +5,6 @@
 <div class="matrix" role="table" aria-label="Games by platform">
   <div class="matrix-head" role="row">
     <span class="corner" role="columnheader">Game</span>
-    {#- `data-platform` is the handle the column's tint and the hover highlight match on. -#}
     {% for platform in platforms %}
       <span class="column" role="columnheader" data-platform="{{ platform }}">{{ platform }}</span>
     {% endfor %}
@@ -14,8 +13,7 @@
     <span class="column remove" role="columnheader"></span>
   </div>
 
-  {#- A row of the grid, so each checkbox sits under the column it means. Re-rendered on
-      every add, which is what clears it. -#}
+  {#- Re-rendered on every add, which is what clears it. -#}
   <form class="add" role="row"
         hx-post="{{ url_for('add_game') }}"
         hx-target="#catalogue">
@@ -32,8 +30,7 @@
         </label>
       </span>
     {% endfor %}
-    {#- Empty, but holding these columns' places: a row contributes its cells straight to
-        the grid, so without them its neighbours slide out of alignment. -#}
+    {#- Empty, but holding these columns' places, or the rows slide out of alignment. -#}
     <span class="status entry" role="cell"></span>
     <span class="remove entry" role="cell"></span>
   </form>

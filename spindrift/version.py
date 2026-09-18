@@ -6,11 +6,9 @@ from pathlib import Path
 def resolve_version():
     """What build this is, worked out once at startup.
 
-    The image bakes the release tag into `SPINDRIFT_VERSION`, which is what lets a running
-    container be asked what it is and a rollback confirmed from outside. Where there is no
-    such build this falls back to pyproject, read second because that file carries the
-    *next* version all through the commits after a release is cut. "unknown" is the last
-    resort: a truthful answer beats raising on a missing file.
+    The image bakes the release tag into `SPINDRIFT_VERSION`. pyproject is only a fallback
+    and is read second, because it carries the *next* version all through the commits after
+    a release is cut. "unknown" beats raising on a missing file.
     """
     baked = os.environ.get("SPINDRIFT_VERSION")
     if baked:

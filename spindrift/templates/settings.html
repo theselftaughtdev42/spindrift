@@ -1,23 +1,19 @@
 {% extends "layout.html" %}
 
-{#- The deployment's configuration and its whole state, in three collapsible groups.
-
-    A `<details>` per group means one thing is on screen at a time, and the two that destroy
-    data sit behind a click that has to be deliberate. Plain forms, no htmx, no script: the
-    machinery the catalogue carries is paid for by a problem this page does not have.
+{#- The deployment's configuration and its whole state, in three collapsible groups, the two
+    that destroy data behind a click that has to be deliberate. Plain forms, no htmx.
 
     HTML forbids one form inside another, which is what shapes the markup below: the radios
     and the delete buttons share one form, and the deletes reach their own endpoint with
-    `formaction`. The add form is genuinely separate and sits after the list. -#}
+    `formaction`. -#}
 {% block title %}Settings — Spindrift{% endblock %}
 
 {% block nav %}
   <a class="nav" href="{{ url_for('page') }}">&larr; Catalogue</a>
 {% endblock %}
 
-{#- Which group is open on arrival: none of them, unless an endpoint names the one that
-    refused — a banner about an import over a shut Snapshot group is a complaint with nothing
-    to act on. Nothing is remembered between visits. -#}
+{#- Which group is open on arrival: none, unless an endpoint names the one that refused.
+    Nothing is remembered between visits. -#}
 {% set open_group = open_group|default(none, true) %}
 
 {% block content %}
@@ -25,15 +21,12 @@
     Settings
   </p>
 
-  {#- Above every group rather than inside one, because any of the three can raise it; which
-      one it is about is said by the group left open beneath it. -#}
+  {#- Above every group rather than inside one, because any of the three can raise it. -#}
   {% if error %}
     <p class="error" role="alert">{{ error }}</p>
   {% endif %}
 
   <details class="group" {% if open_group == "search" %}open{% endif %}>
-    {#- A heading as well as a summary, so the page has an outline, with a line under it
-        saying what the group is for while it is shut. -#}
     <summary>
       <span class="group-marker" aria-hidden="true"></span>
       <h2 class="group-name">Search URL</h2>
@@ -48,9 +41,8 @@
           <fieldset>
             <legend>Search with</legend>
 
-            {#- Absence first, and checked when nothing is active: a radio group cannot be
-                emptied once a choice is made, so "off" has to be a choice within it.
-                Choosing it costs the saved list nothing. -#}
+            {#- A radio group cannot be emptied once a choice is made, so "off" has to be a
+                choice within it. -#}
             <label class="search-url off">
               <input type="radio" name="active" value=""
                      {% if not active_search_url %}checked{% endif %}>
@@ -58,9 +50,6 @@
             </label>
 
             {% for search_url in search_urls %}
-              {#- The host is what the entry is called; the address beneath it is the only
-                  record there is, since these cannot be edited. Derived from the URL, so
-                  the two can never disagree. -#}
               <div class="search-url">
                 <label>
                   <input type="radio" name="active" value="{{ search_url.id }}"
@@ -68,9 +57,6 @@
                   <span class="host">{{ search_host(search_url.url) }}</span>
                   <span class="url">{{ search_url.url }}</span>
                 </label>
-                {#- In the same form as the radios, reaching a different endpoint. No
-                    confirmation, unlike the catalogue's delete: the worst this can cost is
-                    retyping an address. -#}
                 <button type="submit" class="remove-url"
                         formaction="{{ url_for('delete_search_url', url_id=search_url.id) }}"
                         aria-label="Delete {{ search_url.url }}">&times;</button>
@@ -78,13 +64,12 @@
             {% endfor %}
           </fieldset>
 
-          {#- An explicit save: this page has no script to submit on change with, and the
-              button is what makes the choice reversible before it reaches the catalogue. -#}
+          {#- An explicit save: this page has no script to submit on change with. -#}
           <button type="submit" class="sd-button save">Save</button>
         </form>
       {% else %}
-        {#- No radio group at all: with nothing saved there is nothing that could be active,
-            so an "off" choice on its own would be a control offering one option. -#}
+        {#- No radio group at all: with nothing saved, an "off" choice on its own would be a
+            control offering one option. -#}
         <p class="empty">No search URLs yet — add one below.</p>
       {% endif %}
 
@@ -93,8 +78,7 @@
       <form class="add-url" method="post" action="{{ url_for('add_search_url') }}">
         <label for="url">Add a URL</label>
         {#- `autofocus` only after this field's own rejection, and keyed on the draft rather
-            than on the error: an import or reset shares the banner, and a refused one must
-            not scroll the page away from its message. -#}
+            than the error: an import or reset shares the banner and must not scroll away. -#}
         <input id="url" name="url" type="text" value="{{ draft or '' }}"
                placeholder="https://example.com/search?q={}"
                class="sd-input" autocomplete="off" spellcheck="false"
@@ -107,9 +91,8 @@
     </div>
   </details>
 
-  {#- Export and import together, as two directions of one file, but in separate forms: a
-      button reaching the wrong endpoint here would cost a catalogue, not an address. Export
-      is a plain link, being a read with no side effects. -#}
+  {#- Separate forms, because a button reaching the wrong endpoint here would cost a
+      catalogue, not an address. Export is a plain link, being a read with no side effects. -#}
   <details class="group" {% if open_group == "snapshot" %}open{% endif %}>
     <summary>
       <span class="group-marker" aria-hidden="true"></span>
@@ -129,8 +112,8 @@
 
       <hr class="rule">
 
-      {#- `required` spares a round trip that would lose the chosen file, but it is only a
-          convenience: the endpoint refuses an unticked request before it reads the file. -#}
+      {#- `required` is only a convenience: the endpoint refuses an unticked request before
+          it reads the file. -#}
       <form class="deployment" method="post" action="{{ url_for('import_snapshot') }}"
             enctype="multipart/form-data">
         <h3>Import</h3>
@@ -149,8 +132,6 @@
     </div>
   </details>
 
-  {#- Alone and last: it shares nothing with the snapshot above it, and being shut is most
-      of what this group does. -#}
   <details class="group group--danger" {% if open_group == "reset" %}open{% endif %}>
     <summary>
       <span class="group-marker" aria-hidden="true"></span>

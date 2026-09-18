@@ -8,8 +8,8 @@
 {% endblock %}
 
 {% block content %}
-  {#- A real `<table>`, where the catalogue is a grid wearing table roles: two columns of
-      text have no reflow to do, so this page can use the element that means what it is. -#}
+  {#- A real `<table>`, where the catalogue is a grid: two columns of text have no reflow
+      to do, so this page can use the element that means what it is. -#}
   {% if groups %}
     <p class="lede">Where each decided game is meant to be played, and how far it got.</p>
 
@@ -26,16 +26,11 @@
           {#- Read-only: there is one place a status is changed, and it is the catalogue. -#}
           {% for game in games %}
             <tr {% if game.status %}data-status="{{ game.status }}"{% endif %}>
-              {#- Written once and spanning its games, so the platform reads as a heading
-                  over them. `data-platform` is the handle the matrix tints by, so a platform
-                  is the same colour on both pages. -#}
               {% if loop.first %}
                 <th scope="rowgroup" rowspan="{{ games | length }}"
                     data-platform="{{ platform }}">{{ platform }}</th>
               {% endif %}
               <td>{{ game.name }}</td>
-              {#- The same em dash the catalogue's control shows for a game nothing has
-                  been recorded about. -#}
               <td class="status">
                 <span class="{{ badge_class(game.status) }}">{{ game.status | capitalize if game.status else "—" }}</span>
               </td>

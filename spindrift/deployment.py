@@ -1,7 +1,7 @@
 """Moving a deployment's entire state in and out: export, import and reset.
 
-Each works on the whole of it and never on part, and none of them touches the schema.
-Concurrency is SQLite's own locking and nothing more, which is accepted on a home network.
+None of them touches the schema, and concurrency is SQLite's own locking and nothing more,
+which is accepted on a home network.
 """
 
 from spindrift.platforms import PLATFORMS

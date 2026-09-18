@@ -1,10 +1,7 @@
-{#- One availability: whether `game_id` can be played on `platform`, and whether that is the
-    way it is meant to be played. The button fills the cell, so the whole cell is the click
-    target. -#}
+{#- One availability, from `game_id`, `platform`, `available` and `intended`. -#}
 <div class="cell" role="cell" data-platform="{{ platform }}">
   {#- The `id` survives the swap: htmx restores focus to the element carrying the same id in
-      the replacement markup, so cycling with the keyboard stays on this cell. The
-      platform's space becomes a hyphen, because an id may not hold one. -#}
+      the replacement markup. The platform's space becomes a hyphen, an id may not hold one. -#}
   <button type="button"
           id="cell-{{ game_id }}-{{ platform | replace(' ', '-') }}"
           aria-pressed="{{ 'true' if available else 'false' }}"
@@ -12,11 +9,7 @@
           hx-post="{{ url_for('cycle_platform', game_id=game_id, platform=platform) }}"
           hx-target="closest .row"
           hx-swap="outerHTML">
-    {#- The whole of the intent on screen, and hidden from the accessibility tree: it is a
-        sighted reader's cue only, and the button announces itself as it always did. -#}
     {% if intended %}<span class="intent-marker" aria-hidden="true">&#9654;</span>{% endif %}
-    {#- Hidden on desktop, where the column header names the platform, and shown on mobile,
-        where there is none. -#}
     <span class="cell-label">{{ platform }}</span>
   </button>
 </div>

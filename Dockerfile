@@ -5,8 +5,7 @@ WORKDIR /app
 COPY . .
 
 # Give every static file a second name carrying a digest of its contents, and write the
-# manifest the app reads to find them: nginx serves these off disk, so a name fixed to its
-# bytes is what lets it cache them hard. Ahead of the sync and on the base image's own
+# manifest the app reads to find them. Ahead of the sync and on the base image's own
 # interpreter, because the script is stdlib only — `uv run` would re-resolve the environment
 # and pull the dev group back in, putting pytest in the release image.
 RUN python3 spindrift/static_manifest.py

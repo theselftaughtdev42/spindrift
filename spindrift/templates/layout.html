@@ -1,9 +1,7 @@
-{#- The shell both pages share. Anything only the catalogue needs — htmx, the handlers that
-    watch it, the banner they raise — is a block it fills in. -#}
 <!doctype html>
-{#- The stylesheet needs the platform count twice: to lay out that many tracks, and to work
-    out how wide the page has to be to hold them. A custom property keeps the number in one
-    place, so retiring a platform cannot leave the grid reserving a track for it. -#}
+{#- The stylesheet needs the platform count to lay out that many tracks and to size the page.
+    A custom property keeps the number in one place, so retiring a platform cannot leave the
+    grid reserving a track for it. -#}
 <html lang="en" style="--platform-count: {{ platforms | length }}">
   <head>
     <meta charset="utf-8">
@@ -17,9 +15,9 @@
   </head>
   <body {% block body_attributes %}{% endblock %}>
     <header class="masthead">
-      {#- The mark beside a live heading rather than the lockup as an image: an SVG loaded
-          as an image cannot reach the page's web fonts, so the wordmark would fall back to
-          a system monospace. The heading draws it instead, in the same font and shadow. -#}
+      {#- The mark beside a live heading rather than the lockup as an image: an SVG loaded as
+          an image cannot reach the page's web fonts, so the wordmark would fall back to a
+          system monospace. -#}
       <h1 class="logo">
         <img src="{{ url_for('static', filename='spindrift-mark.svg') }}" alt="" width="40" height="40">
         Spindrift
@@ -29,8 +27,7 @@
 
     {% block content %}{% endblock %}
 
-    {#- Which release is running, for a person on a phone rather than a script over curl —
-        the app is pulled as a moving tag. Quiet enough to ignore until you came to check. -#}
+    {#- Which release is running, for a person on a phone rather than a script over curl. -#}
     <footer class="version">Spindrift {{ version }}</footer>
   </body>
 </html>

@@ -37,8 +37,8 @@ def create_app(database_path):
     app.jinja_env.globals["search_host"] = search_host
     app.jinja_env.globals["version"] = app.config["VERSION"]
 
-    # nginx, not Flask, serves /static/ where it matters, so the digested name written into
-    # the HTML is the app's only cache-busting lever. No manifest means plain names.
+    # nginx, not Flask, serves /static/ where it matters, so a digested filename is the
+    # app's only cache-busting lever. No manifest means plain names.
     static_manifest = manifest.load()
 
     @app.url_defaults
@@ -48,8 +48,8 @@ def create_app(database_path):
             if filename in static_manifest:
                 values["filename"] = static_manifest[filename]
 
-    # Digested names are only as fresh as the HTML quoting them, so documents are always
-    # revalidated: one conditional request, then everything they reference straight from cache.
+    # Digested names are only as fresh as the HTML quoting them, so documents must always
+    # revalidate.
     @app.after_request
     def revalidate_documents(response):
         if response.mimetype == "text/html":
@@ -59,8 +59,8 @@ def create_app(database_path):
     db.migrate(app.config["DATABASE_PATH"])
     app.teardown_appcontext(db.close_connection)
 
-    # Rendered from four endpoints, so not threaded through each call. A context processor
-    # rather than a jinja global because the answer comes out of the database.
+    # A context processor rather than a jinja global, because the answer comes out of the
+    # database and can differ from one request to the next.
     @app.context_processor
     def active_search_link():
         row = (
@@ -73,8 +73,7 @@ def create_app(database_path):
             "active_search_host": search_host(row["url"]) if row else None,
         }
 
-    # The SELECT is the point: a green check then means the database is reachable too, which
-    # is the failure worth catching when the data lives on a mounted volume.
+    # The SELECT is the point: it makes a green check mean the database is reachable too.
     @app.get("/health")
     def health():
         db.get_connection().execute("SELECT 1")
@@ -147,14 +146,12 @@ def create_app(database_path):
                 "UPDATE games SET name = ? WHERE id = ?", (name, game_id)
             )
         except sqlite3.IntegrityError:
-            # The one rename outcome that reaches past the row: the banner lives above the
-            # grid, so the answer has to be the whole list and say so in its headers.
+            # The banner lives above the grid, so this answer has to be the whole list and
+            # has to say so in its headers.
             return retargeted_catalogue(f"{name} is already in the catalogue.")
         connection.commit()
-        # One row rather than the whole list: the field saves on blur, and rebuilding the
-        # list would pull focus back to the entry form and destroy a field just clicked into.
-        # The cost is the re-sort — a renamed game keeps its place until the list is next
-        # drawn whole.
+        # One row, not the whole list: the field saves on blur, and rebuilding the list would
+        # pull focus back to the entry form and destroy a field just clicked into.
         return render_template("_row.html", **game_row(game_id))
 
     @app.post("/games/<int:game_id>/platforms/<platform>")
@@ -177,13 +174,13 @@ def create_app(database_path):
                     (game_id, platform),
                 )
             except sqlite3.IntegrityError:
-                # The foreign key refusing a game another device has deleted. The same
-                # stale-page situation as the other paths, so the same 404.
+                # The foreign key refusing a game another device deleted — the same stale
+                # page as the other paths, so the same 404.
                 abort(404)
             available, intended = True, False
         elif not row["intended"]:
-            # Deciding here un-decides the previous platform, and clears it first: the
-            # one-intent index rejects the pair even for the length of a statement.
+            # Cleared first: the one-intent index rejects the pair even for the length of a
+            # statement.
             connection.execute(
                 "UPDATE game_platforms SET intended = 0 WHERE game_id = ? AND intended",
                 (game_id,),
@@ -200,16 +197,15 @@ def create_app(database_path):
             )
         connection.commit()
 
-        # The whole row: deciding on a platform un-decides another, and that cell is always
-        # in this same row. Re-read from the database, so nothing is shown that was not stored.
+        # The whole row, because deciding on a platform un-decides another cell in it.
         return render_template("_row.html", **game_row(game_id))
 
     @app.post("/games/<int:game_id>/status")
     def set_status(game_id):
         """Record what became of a game — or clear the record back to nothing."""
         status = request.form["status"]
-        # Closed set, checked before the write. The empty string is not a value: it is how
-        # the control says "nothing recorded", stored as the absence that means that.
+        # Closed set, checked before the write. The empty string is not a value but the
+        # control's way of saying nothing has been recorded.
         if status and status not in STATUSES:
             abort(400)
 
@@ -240,7 +236,7 @@ def create_app(database_path):
         url = request.form["url"].strip()
         if not url:
             return redirect(url_for("settings"))
-        # Checked before the write, and the same check an imported snapshot's URLs go through.
+        # Checked before the write, so a bad URL leaves nothing behind.
         problem = search_url_problem(url)
         if problem:
             return rejected_search_url(url, problem)
@@ -249,7 +245,6 @@ def create_app(database_path):
         try:
             connection.execute("INSERT INTO search_urls (url) VALUES (?)", (url,))
         except sqlite3.IntegrityError:
-            # The unique index, with the address left in the field to be corrected.
             return rejected_search_url(url, "That URL is already saved.")
         connection.commit()
         # Saved, not selected: pointing the catalogue somewhere is a separate, deliberate choice.
@@ -258,9 +253,8 @@ def create_app(database_path):
     @app.post("/settings/urls/<int:url_id>/delete")
     def delete_search_url(url_id):
         connection = db.get_connection()
-        # No row check and no confirmation: the cost of a misclick is retyping an address.
-        # Deleting the active URL takes the flag with it, leaving nothing active — which is
-        # the state that means the catalogue shows no search control.
+        # No row check and no confirmation: the worst a misclick costs is retyping an
+        # address. Deleting the active URL takes the flag with it, leaving nothing active.
         connection.execute("DELETE FROM search_urls WHERE id = ?", (url_id,))
         connection.commit()
         return redirect(url_for("settings"))
@@ -276,7 +270,7 @@ def create_app(database_path):
         connection = db.get_connection()
         if active:
             # A URL another device deleted. Clearing the flag and then failing to set it
-            # would turn the search control off as a side effect, so nothing is changed.
+            # would turn the search control off as a side effect.
             chosen = connection.execute(
                 "SELECT id FROM search_urls WHERE id = ?", (active,)
             ).fetchone()
@@ -293,10 +287,7 @@ def create_app(database_path):
 
     @app.get("/settings/export")
     def export_snapshot():
-        """Download a snapshot of the deployment's entire state.
-
-        Sent as an attachment, named with today's date so several can be told apart.
-        """
+        """Download a snapshot of the deployment's entire state, as a dated attachment."""
         filename = f"spindrift-{date.today().isoformat()}.json"
         return (
             deployment.export(db.get_connection()),
@@ -355,8 +346,7 @@ def create_app(database_path):
     def refused(group, error):
         """The settings page again, carrying why an import or reset did nothing.
 
-        The group is named because the page keeps its three collapsed: whichever one
-        refused is the one it comes back open at.
+        The group is named so the page reopens at whichever one refused.
         """
         return render_template(
             "settings.html", error=error, open_group=group, **saved_search_urls()
@@ -366,9 +356,7 @@ def create_app(database_path):
         """The settings page again, carrying the reason and what was typed.
 
         Rendered rather than redirected, the one departure from post-then-redirect here:
-        carrying a message through a redirect would need either a session or the message in
-        the address. The cost is that a reload re-submits a refusal; every path that writes
-        redirects.
+        a message through a redirect needs either a session or the address to carry it.
         """
         return render_template(
             "settings.html",
@@ -379,10 +367,7 @@ def create_app(database_path):
         )
 
     def saved_search_urls():
-        """The list the settings page draws, in insertion order.
-
-        Nothing rearranges a radio group under a reader because they added an entry.
-        """
+        """The list the settings page draws, in insertion order so it never rearranges."""
         connection = db.get_connection()
         return {
             "search_urls": connection.execute(
@@ -393,8 +378,8 @@ def create_app(database_path):
     def retargeted_catalogue(error):
         """The whole list, answering a request that asked for a single row.
 
-        Only a rename onto a name already taken needs this: the banner belongs to the page,
-        so the response has to carry its own target.
+        Only a rename onto a name already taken needs this, and the response has to carry
+        its own target because it does not match the one the request declared.
         """
         response = make_response(
             render_template("_catalogue.html", error=error, **catalogue())
@@ -409,8 +394,7 @@ def create_app(database_path):
         games = connection.execute(
             "SELECT id, name, status FROM games ORDER BY name COLLATE NOCASE"
         ).fetchall()
-        # Both off one read: an intent is an availability wearing a flag. A set, because the
-        # grid asks about every game against every platform.
+        # Both off one read: an intent is an availability wearing a flag.
         availability = set()
         intents = {}
         for row in connection.execute(
@@ -424,10 +408,8 @@ def create_app(database_path):
     def game_row(game_id):
         """What `catalogue()` returns, narrowed to one game.
 
-        The row partial draws the same whether it is rendered inside a whole catalogue or
-        alone, so it is handed the same names holding the same shapes from both directions.
-        A missing game is a 404 rather than a `None` for the template: unlike a delete that
-        finds nothing, the change asked for here genuinely was not saved.
+        A missing game is a 404 rather than a `None` handed to the template: unlike a delete
+        that finds nothing, the change asked for here genuinely was not saved.
         """
         connection = db.get_connection()
         game = connection.execute(

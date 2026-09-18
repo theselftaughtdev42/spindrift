@@ -1,27 +1,19 @@
 {% from "_status.html" import badge_class %}
-{#- One game, as a row of the grid. Rendered both inside the whole catalogue and alone as
-    the answer to the endpoints that change one game in place, so the two cannot disagree
-    about what a row looks like.
+{#- One game, as a row of the grid. Rendered both inside the whole catalogue and alone as the
+    answer to the endpoints that change one game in place, so the two cannot disagree.
 
-    `data-status` and `data-undecided` are the handles CSS hangs the tint, the dimming and
-    the undecided filter off. Both are absent rather than empty or false, so the question CSS
-    asks is whether the attribute is there. `data-undecided` is derived here rather than sent
-    as a class, which is what makes the filter need no wiring: a re-rendered row arrives
-    without it and drops out of a filtered page on its own. -#}
+    `data-status` and `data-undecided` are absent rather than empty or false, so CSS can ask
+    whether the attribute is there. `data-undecided` is derived here rather than sent as a
+    class, which is what lets a re-rendered row drop out of a filtered page on its own. -#}
 <div class="row" role="row"
      {% if game.status %}data-status="{{ game.status }}"{% endif %}
      {% if not intents.get(game.id) %}data-undecided{% endif %}>
-  {#- An editable field at rest rather than text that swaps into one: no second markup shape
-      for the row and no endpoint to fetch it.
-
-      Two triggers, because Enter is only one of the two ways a person finishes editing a
-      field; clicking or tabbing away used to throw the edit out silently. `blur` rather than
-      the `focusout` that would bubble here on its own, because this form holds the search
-      link too, and `changed` so tabbing through a row costs no requests.
+  {#- Two triggers, because Enter is only one of the two ways a person finishes editing a
+      field. `blur` rather than the `focusout` that would bubble here on its own, because this
+      form holds the search link too, and `changed` so tabbing through costs no requests.
 
       The row is the target, and that is inseparable from saving on blur: swapping the whole
-      list would rebuild the entry form, pull the page back to its `autofocus` and destroy
-      any field already clicked into. -#}
+      list would rebuild the entry form and destroy any field already clicked into. -#}
   <form class="name rename" role="rowheader"
         hx-post="{{ url_for('rename_game', game_id=game.id) }}"
         hx-trigger="submit, blur changed from:find input"
@@ -33,21 +25,14 @@
     <input id="name-{{ game.id }}" name="name" type="text" value="{{ game.name }}"
            title="{{ game.name }}"
            aria-label="Rename {{ game.name }}" autocomplete="off">
-    {#- Only when a saved search URL is active; with none there is no sensible destination,
-        and absence is how the feature is turned off. An anchor rather than a button, so it
-        offers what a link offers.
-
-        The name is substituted into the URL's `{}` rather than appended, which lets a
-        destination carry query parameters after the search term. The `replace` filter rather
-        than Python's `format`, which would read a URL's own braces as fields and raise on
-        `?q={}&kind={game}`. URL-encoded, or an ampersand in a title would start a query
-        parameter of the storefront's own. -#}
+    {#- The `replace` filter rather than Python's `format`, which would read a URL's own
+        braces as fields and raise on `?q={}&kind={game}`. URL-encoded, or an ampersand in a
+        title would start a query parameter of the storefront's own. -#}
     {% if active_search_url %}
       <a class="search"
          href="{{ active_search_url | replace('{}', game.name | urlencode) }}"
          target="_blank" rel="noopener noreferrer"
          aria-label="Search {{ active_search_host }} for {{ game.name }}">
-        {#- Decoration: hidden, so the link is announced by its label alone. -#}
         <span aria-hidden="true">🔍</span>
       </a>
     {% endif %}
@@ -55,38 +40,28 @@
   {% for platform in platforms %}
     {% set game_id = game.id %}
     {% set available = (game.id, platform) in availability %}
-    {#- At most one cell can answer true — the database holds the intent to one platform. -#}
     {% set intended = intents.get(game.id) == platform %}
     {% include "_cell.html" %}
   {% endfor %}
-  {#- Outside the tinted block of toggles, because it is not a fact about a platform: the
-      intent among those cells already records where, and this records what happened. -#}
   <span class="status" role="cell">
-    {#- A select rather than another cycling button: five states are far too many to cycle
-        blind. The accessible name says which game, because a column of identical dropdowns
-        is one a screen reader cannot tell apart. The `id` puts focus back on this control
-        after the row is swapped, so a session spent backfilling keeps the keyboard. -#}
+    {#- The accessible name says which game, because a column of identical dropdowns is one a
+        screen reader cannot tell apart. The `id` keeps focus here across the swap. -#}
     <select id="status-{{ game.id }}" name="status" class="{{ badge_class(game.status) }}"
             aria-label="Status of {{ game.name }}"
             hx-post="{{ url_for('set_status', game_id=game.id) }}"
             hx-target="closest .row"
             hx-swap="outerHTML">
-      {#- Absence first, and selected when nothing has been recorded. The em dash stands for
-          it rather than a word, which would make it sound like something that was decided.
-          Choosing it again is how a status is cleared. -#}
+      {#- The empty option is how a status is cleared. -#}
       <option value="" {% if not game.status %}selected{% endif %}>&mdash;</option>
-      {#- The stored words with a sentence's capital on them: one vocabulary, not two. -#}
       {% for status in statuses %}
         <option value="{{ status }}"
                 {% if game.status == status %}selected{% endif %}>{{ status | capitalize }}</option>
       {% endfor %}
     </select>
   </span>
-  {#- Last, and outside the tinted block of toggles: it is the one control on the row that
-      destroys data, so reaching it by accident instead of Emulator has to be hard. -#}
+  {#- Last and apart from the toggles: the one control on the row that destroys data. -#}
   <span class="remove" role="cell">
-    {#- The question names the game and says what it costs — a dialog that says nothing is
-        one people learn to dismiss unread. Asked in the page's own dialog; see `page.html`. -#}
+    {#- Intercepted by the page's own dialog; see `page.html`. -#}
     <button type="button"
             aria-label="Delete {{ game.name }}"
             hx-delete="{{ url_for('delete_game', game_id=game.id) }}"

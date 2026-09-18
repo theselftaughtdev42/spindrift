@@ -1,8 +1,6 @@
-# Clear the image build's leavings first: a manifest left in the source tree names whatever
-# some earlier build digested, so every page goes on quoting those names and an edited
-# stylesheet is served as it was. Cleared rather than rebuilt, because the app reads the
-# manifest once when it is created. Stdlib only, on the system interpreter, as the
-# Dockerfile runs it.
+# A manifest left in the source tree names whatever some earlier build digested, so every
+# page goes on quoting those names and an edited stylesheet is served as it was. Cleared
+# rather than rebuilt, because the app reads it once when it is created.
 local: static.clean
 	uv run main.py
 
@@ -18,19 +16,14 @@ docker.run:
 docker.latest:
 	docker run --rm --name spindrift --platform linux/amd64 -p 127.0.0.1:8000:8000 -v "${PWD}:/data" ghcr.io/theselftaughtdev42/spindrift:latest
 
-# Cut a release: bump pyproject on a branch, merge it through a pull request, then tag the
-# merged commit and push. The tag push is what the publish workflow builds the `$(VERSION)`
-# and `major.minor` images from, so this one command is the whole release.
+# Cut a release: bump pyproject on a branch, merge through a pull request, then tag the
+# merged commit and push. The tag push is what the publish workflow builds the images from.
 #
 #   make release VERSION=0.2.0
 #
-# The pull request is not ceremony: the `Protect Main` ruleset requires one and grants no
-# bypass, so pushing the release commit straight at main is rejected and the tag never leaves
-# the machine. Nothing gates the PR once open, so it is created and merged back to back. The
-# tag goes on the *merged* commit, which is what main actually gets. The PR is labelled
-# `internal`, which `.github/release.yml` excludes, so a release does not announce itself in
-# its own notes. `--verify-tag` stops a tag push that did not land from cutting a release
-# from main under the same name.
+# The `Protect Main` ruleset requires the PR and grants no bypass, so pushing the release
+# commit straight at main is rejected. The tag goes on the *merged* commit, which is what main
+# actually gets. `--verify-tag` stops a tag push that did not land from cutting a release.
 release:
 	@test -n "$(VERSION)" || { echo "VERSION is required, e.g. make release VERSION=0.2.0"; exit 1; }
 	@git diff --quiet && git diff --cached --quiet || { echo "working tree is dirty; commit or stash first"; exit 1; }
@@ -45,8 +38,7 @@ release:
 	git push -u origin HEAD
 	gh pr create --fill --label internal
 # GitHub works out mergeability in the background and reports UNKNOWN until it has, so wait
-# for a verdict rather than for a fixed number of seconds. The bound stops a repository that
-# never settles from hanging the release.
+# for a verdict rather than a fixed number of seconds. The bound stops a hang.
 	@n=0; while [ "$$(gh pr view release/v$(VERSION) --json mergeable -q .mergeable)" = UNKNOWN ] && [ $$n -lt 30 ]; do n=$$((n+1)); sleep 1; done
 	git switch main
 	gh pr merge release/v$(VERSION) --merge --delete-branch
@@ -55,9 +47,8 @@ release:
 	git push origin v$(VERSION)
 	gh release create v$(VERSION) --generate-notes --verify-tag
 
-# What `make release` would publish as notes, without publishing anything: it asks the same
-# API `--generate-notes` calls, so what prints here is what lands. Empty output means no PRs
-# merged since the last release.
+# What `make release` would publish as notes, without publishing anything. Empty output means
+# no PRs merged since the last release.
 #
 #   make release.notes VERSION=0.5.0
 release.notes:

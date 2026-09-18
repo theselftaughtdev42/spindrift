@@ -1,13 +1,9 @@
 """The shape of a snapshot, and whether a file is one this deployment can import.
 
-Organised around games rather than tables, so the file holds no database ids. The models ask
-the write paths' own rules rather than copying them, and add the two checks the database
-cannot make: that an intent names one of its own game's platforms, and that a name is more
-than whitespace. Uniqueness is left to the indexes, which fail inside the import's
-transaction like any other constraint.
-
-Unknown fields are ignored, so a snapshot from a newer minor version still parses; per
-ADR-0001 anything added in a later minor is optional with a default, so an older one does.
+Organised around games rather than tables, so the file holds no database ids. The models add
+the two checks the database cannot make — that an intent names one of its own game's
+platforms, and that a name is more than whitespace — and leave uniqueness to the indexes,
+which fail inside the import's transaction. Format compatibility is ADR-0001.
 """
 
 import json
@@ -70,8 +66,8 @@ class Game(BaseModel):
     def known_intent(cls, intended):
         return intended if intended is None else known_platform(intended)
 
-    # Impossible by construction in the schema, where the intent is a flag on an
-    # availability row. A snapshot spells the two out separately, so it is checked here.
+    # The schema makes this impossible by construction; a snapshot spells the two out
+    # separately, so it has to be checked here.
     @model_validator(mode="after")
     def intent_is_available(self):
         if self.intended is not None and self.intended not in self.platforms:
@@ -106,11 +102,10 @@ def parse(data):
     """The snapshot in `data`, fully validated — or a `SnapshotError` saying why not.
 
     Nothing here touches the database: the whole file is validated before a row is deleted.
-    The version is read first, because it decides which rules the rest is read by. Strict
-    rather than coercing, or a hand-written `"active": "no"` would quietly become true.
+    Strict rather than coercing, or a hand-written `"active": "no"` would quietly become true.
     """
     # `RecursionError`: deeply nested brackets exhaust the decoder's stack rather than
-    # failing to parse, and are no more a snapshot for it.
+    # failing to parse.
     try:
         document = json.loads(data)
     except (ValueError, RecursionError):
@@ -144,8 +139,8 @@ def describe(error):
     where = " › ".join(
         str(part + 1) if isinstance(part, int) else str(part) for part in first["loc"]
     )
-    # The stop goes because the sentence carries on: the search URL rule's messages are
-    # whole sentences, written for the settings page's own banner.
+    # The stop goes because the sentence carries on: these messages are whole sentences,
+    # written for the settings page's banner.
     message = first["msg"].removeprefix("Value error, ").rstrip(".")
     more = len(problems) - 1
     extra = f" (and {more} more problem{'s' if more > 1 else ''})" if more else ""

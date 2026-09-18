@@ -1,8 +1,7 @@
 name: Publish image
 
-# Releases only: a `v*` tag is the one thing that publishes an image, and the semver lines
-# below turn it into the `0.2.0`, `0.2` and `latest` tags you pin and roll back to. Pull
-# requests build but never push, so a broken Dockerfile is caught before a tag is cut.
+# Releases only: a `v*` tag is the one thing that publishes an image. Pull requests build but
+# never push, so a broken Dockerfile is caught before a tag is cut.
 on:
   push:
     tags: ['v*']

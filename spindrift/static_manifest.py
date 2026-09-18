@@ -1,13 +1,9 @@
 """Content-addressed names for the static files, and the manifest that maps to them.
 
 nginx serves /static/ off disk in front of the app, so the name written into the HTML is the
-only cache-busting lever there is: every file is copied to one carrying a digest of its own
-contents, and nginx can then be told to keep them for a year. A digest rather than the
-release version, so a file that has not changed is not refetched on every deploy.
-
-Copies rather than renames — the originals are what a developer edits and what Flask serves
-where there is no build. The deploy adds these to the host without deleting what is already
-there, so a page from either side of a release asks for a name still sitting on disk.
+only cache-busting lever there is. A digest rather than the release version, so a file that
+has not changed is not refetched on every deploy. Copies rather than renames, because the
+originals are what a developer edits and what Flask serves where there is no build.
 """
 
 import hashlib
@@ -41,9 +37,8 @@ def digested_name(name, digest):
 def clear(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
     """Remove everything a build wrote: the digested copies and the manifest naming them.
 
-    `build` runs this first, so a re-run cannot digest a digest. `make local` runs it alone:
-    a manifest left in the source tree pins every page to the names some earlier build
-    digested, and an edited stylesheet is then served as it was, refresh or no refresh.
+    `build` runs this first, so a re-run cannot digest a digest. `make local` runs it alone,
+    because a manifest left in the source tree pins every page to an earlier build's names.
     """
     for stale in static_dir.iterdir():
         if stale.is_file() and GENERATED.search(stale.name):
@@ -52,10 +47,7 @@ def clear(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
 
 
 def build(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
-    """Write a digested copy of every static file, and the manifest naming them.
-
-    Run from the Dockerfile, against the files already copied into the image.
-    """
+    """Write a digested copy of every static file, and the manifest naming them."""
     clear(static_dir, manifest_path)
 
     manifest = {}
@@ -71,10 +63,8 @@ def build(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
 
 
 def load(manifest_path=MANIFEST_PATH):
-    """The manifest if a build wrote one, and an empty mapping if not.
-
-    Empty is the ordinary state on a developer's machine: `url_for` falls through to the
-    plain names, which Flask serves itself with `no-cache`.
+    """The manifest if a build wrote one, and an empty mapping if not, which is the ordinary
+    state where there is no build: `url_for` then falls through to the plain names.
     """
     try:
         return json.loads(manifest_path.read_text())
@@ -84,8 +74,7 @@ def load(manifest_path=MANIFEST_PATH):
 
 # Run as a script rather than `-m spindrift.static_manifest`, which would import the package
 # and with it Flask. This is stdlib only, so the image can build the manifest on the base
-# interpreter. `--clear` is a flag rather than a second script because both halves have to
-# agree on the pattern naming a generated file.
+# interpreter.
 if __name__ == "__main__":
     if "--clear" in sys.argv[1:]:
         clear()

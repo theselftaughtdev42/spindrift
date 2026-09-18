@@ -10,8 +10,6 @@
         hx-on::response-error="document.getElementById('failure').hidden = false"
         hx-on::send-error="document.getElementById('failure').hidden = false"{% endblock %}
 
-{#- Wrapped, because the masthead spreads its children to opposite ends of the measure and a
-    bare pair would leave the heading and the two links at three points across the page. -#}
 {% block nav %}
   <span class="nav-links">
     <a class="nav" href="{{ url_for('by_platform') }}">By platform</a>
@@ -30,18 +28,14 @@
     </label>
   </div>
 
-  {#- The add form is inside the fragment, as the grid's first row, so clearing it after an
-      add is the server's job rather than a client-side reset that could be skipped. -#}
   <div id="catalogue">
     {% include "_catalogue.html" %}
   </div>
   <p class="all-decided">Every game has a platform chosen.</p>
 
-  {#- Replaces the browser's own confirm, which can't be styled and on some browsers offers
-      to silence the page's dialogs — the one safety net in front of a delete, switched off
-      by a checkbox. A native `<dialog>` opened modally, so the focus trap, Escape and the
-      inert page behind it come from the browser. Cancel holds the focus, so Enter pressed
-      out of habit keeps the game. -#}
+  {#- Replaces the browser's own confirm, which can't be styled and on some browsers offers to
+      silence the page's dialogs — the one safety net in front of a delete. Cancel holds the
+      focus, so Enter pressed out of habit keeps the game. -#}
   <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-dialog-title"
           aria-describedby="confirm-dialog-question">
     <form method="dialog" class="confirm-dialog-body">

@@ -1,9 +1,7 @@
 {#- The badge a status is drawn with, shared by the catalogue and the by-platform table.
 
-    The design's four statuses and the catalogue's four are not the same four, so this is
-    where one vocabulary is translated into the other: finished and 100% both come to rest as
-    completed, and stay tellable apart as the outlined badge and the filled one. Nothing
-    recorded gets the muted badge, because a colour would claim a state nobody chose. -#}
+    The design's four statuses and the catalogue's four are not the same four: finished and
+    100% both map to completed, told apart as the outlined badge and the filled one. -#}
 {% macro badge_class(status) -%}
   sd-badge {{ {
     "playing": "sd-badge--playing",
