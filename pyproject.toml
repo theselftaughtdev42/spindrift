@@ -12,6 +12,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mutmut>=3.8.0",
     "prek>=0.5.3",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
@@ -72,3 +73,10 @@ exclude_lines = [
     "pragma: no cover",
     'if __name__ == "__main__":',
 ]
+
+[tool.mutmut]
+source_paths = ["spindrift"]
+# The same entry point coverage omits, and for the same reason: it builds an app against the
+# repository's own catalogue at import time.
+do_not_mutate = ["spindrift/wsgi.py"]
+pytest_add_cli_args_test_selection = ["tests/"]

@@ -27,6 +27,20 @@ hooks:
 hooks.run:
 	uv run prek run --all-files
 
+# Mutation testing: change the source in ways the suite ought to notice, and report the
+# changes it slept through. Not part of `check`, because a cold sweep is a minute and a half;
+# afterwards only mutants in changed code are re-run, which is seconds. `mutants.browse` is
+# the same results in a terminal UI, and `mutants.apply` puts one surviving mutant into the
+# working tree so you can write the test that kills it.
+mutants:
+	uv run mutmut run
+
+mutants.results:
+	uv run mutmut results
+
+mutants.browse:
+	uv run mutmut browse
+
 # Both, because `check --fix` and `format` each undo wrapping the other chose.
 format:
 	uv run ruff check --fix .

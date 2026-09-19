@@ -23,11 +23,18 @@ uv run pytest
 `make check` runs the lot: ruff, ty, then the suite. `make format` fixes what ruff can fix
 itself.
 
+`make mutants` is mutation testing, by [mutmut](https://github.com/boxed/mutmut): it changes
+the source in ways the suite ought to notice and reports what it slept through — coverage says
+a line ran, this says an assertion depended on it. A cold sweep is about ninety seconds and
+re-runs afterwards are seconds, since only mutants in changed code are checked again. Read the
+survivors with `make mutants.results`, or `make mutants.browse` for the same thing in a
+terminal UI. It isn't part of `make check`.
+
 `make hooks` installs the git hooks, which run ruff and ty on each commit, refuse a commit
-made on `main`, and run the suite on each push — once per clone. They're managed by [prek](https://github.com/j178/prek), a
-drop-in replacement for pre-commit that reads the same `.pre-commit-config.yaml`; it comes
-with the dev dependencies, so there's nothing else to install. `make hooks.run` runs every
-hook over the whole tree rather than the staged files.
+made on `main`, and run the suite on each push — once per clone. They're managed by
+[prek](https://github.com/j178/prek), a drop-in replacement for pre-commit that reads the same
+`.pre-commit-config.yaml`; it comes with the dev dependencies, so there's nothing else to
+install. `make hooks.run` runs every hook over the whole tree rather than the staged files.
 
 ## Container
 

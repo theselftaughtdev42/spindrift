@@ -10,6 +10,10 @@ catalogue.sqlite3
 catalogue.sqlite3-wal
 catalogue.sqlite3-shm
 
+# The copy of the tree mutmut mutates, holding its cache of which mutants died. Deleting it
+# only costs the next run the full sweep instead of the changed files.
+mutants/
+
 # Written into the source tree by the image build, never committed: a digested copy of each
 # static file and the manifest naming them. See spindrift/static_manifest.py.
 spindrift/static/*.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].*
