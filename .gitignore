@@ -18,3 +18,6 @@ mutants/
 # static file and the manifest naming them. See spindrift/static_manifest.py.
 spindrift/static/*.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].*
 spindrift/static_manifest.json
+
+# coverage file for CRAP
+lcov.info
