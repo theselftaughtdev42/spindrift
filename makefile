@@ -19,6 +19,14 @@ types:
 
 check: lint types test
 
+# Git hooks: ruff and ty on commit, the suite on push. Run once per clone, and again after
+# `default_install_hook_types` in .pre-commit-config.yaml changes.
+hooks:
+	uv run prek install
+
+hooks.run:
+	uv run prek run --all-files
+
 # Both, because `check --fix` and `format` each undo wrapping the other chose.
 format:
 	uv run ruff check --fix .

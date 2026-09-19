@@ -1,0 +1,67 @@
+# Git hooks, run by prek (`make hooks` installs them). prek reads this file exactly as
+# pre-commit does, so either manager can run these hooks.
+#
+# The Python tools are `local` hooks calling `uv run` rather than the astral-sh mirrors,
+# because then the versions that run here are the ones in uv.lock — the same ones the
+# makefile and CI use, with no second set of pins to bump in step.
+
+default_install_hook_types: [pre-commit, pre-push]
+# On commit unless a hook says otherwise: a hook that fixes files has no business
+# running mid-push, where there is nothing to stage the fix into.
+default_stages: [pre-commit]
+
+# Vendored upstream, and worth keeping byte-identical to the copy it was downloaded from.
+exclude: ^spindrift/static/htmx\.min\.js$
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # ruff covers Python; these are for everything else in the tree. The first three
+      # name their stage because their own manifest asks for pre-push as well, which
+      # default_stages above cannot overrule.
+      - id: trailing-whitespace
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: check-added-large-files
+        stages: [pre-commit]
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: no-commit-to-branch
+
+  - repo: local
+    hooks:
+      # `make format`'s two halves, in its order: check --fix and format each undo the
+      # wrapping the other chose, so a commit that trips both may need staging twice.
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      # Types and tests read the whole project, so neither takes the staged filenames.
+      - id: ty
+        name: ty check
+        entry: uv run ty check --error-on-warning
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+
+      # On push rather than commit: a half-finished commit is allowed to be red, a branch
+      # offered to CI is not.
+      - id: pytest
+        name: pytest
+        entry: uv run pytest tests
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

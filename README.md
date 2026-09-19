@@ -18,6 +18,17 @@ tablet. macOS will ask to allow incoming connections the first time.
 uv run pytest
 ```
 
+## Work on it
+
+`make check` runs the lot: ruff, ty, then the suite. `make format` fixes what ruff can fix
+itself.
+
+`make hooks` installs the git hooks, which run ruff and ty on each commit, refuse a commit
+made on `main`, and run the suite on each push — once per clone. They're managed by [prek](https://github.com/j178/prek), a
+drop-in replacement for pre-commit that reads the same `.pre-commit-config.yaml`; it comes
+with the dev dependencies, so there's nothing else to install. `make hooks.run` runs every
+hook over the whole tree rather than the staged files.
+
 ## Container
 
 The image is published to `ghcr.io/theselftaughtdev42/spindrift` for `linux/amd64`, and
