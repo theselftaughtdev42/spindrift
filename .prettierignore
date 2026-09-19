@@ -1,0 +1,10 @@
+# Vendored upstream, and worth keeping byte-identical to the copy it was downloaded from.
+spindrift/static/htmx.min.js
+
+# The copy of the tree mutmut mutates, and the digested static files the image build writes
+# into the source tree. Neither is anybody's source.
+mutants/
+spindrift/static_manifest.json
+
+.venv/
+node_modules/

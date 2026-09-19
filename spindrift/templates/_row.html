@@ -3,26 +3,37 @@
 
     The data attributes are absent rather than false, so CSS can ask whether they are there.
     `data-undecided` is derived here, which lets a re-rendered row leave a filtered page. -#}
-<div class="row" role="row"
-     {% if game.status %}data-status="{{ game.status }}"{% endif %}
-     {% if not intents.get(game.id) %}data-undecided{% endif %}>
+<div
+  class="row"
+  role="row"
+  {% if game.status %}data-status="{{ game.status }}"{% endif %}
+  {% if not intents.get(game.id) %}data-undecided{% endif %}>
   {#- `blur` rather than the `focusout` that would bubble from the search link too, and
       `changed` so tabbing through costs no requests. -#}
-  <form class="name rename" role="rowheader"
-        hx-post="{{ url_for('rename_game', game_id=game.id) }}"
-        hx-trigger="submit, blur changed from:find input"
-        hx-target="closest .row"
-        hx-swap="outerHTML">
+  <form
+    class="name rename"
+    role="rowheader"
+    hx-post="{{ url_for('rename_game', game_id=game.id) }}"
+    hx-trigger="submit, blur changed from:find input"
+    hx-target="closest .row"
+    hx-swap="outerHTML">
     {#- The `id` keeps focus here across the swap; `title` recovers a clipped name. -#}
-    <input id="name-{{ game.id }}" name="name" type="text" value="{{ game.name }}"
-           title="{{ game.name }}"
-           aria-label="Rename {{ game.name }}" autocomplete="off">
+    <input
+      id="name-{{ game.id }}"
+      name="name"
+      type="text"
+      value="{{ game.name }}"
+      title="{{ game.name }}"
+      aria-label="Rename {{ game.name }}"
+      autocomplete="off" />
     {#- `replace`, not `format`, which would read a URL's own braces as fields. -#}
     {% if active_search_url %}
-      <a class="search"
-         href="{{ active_search_url | replace('{}', game.name | urlencode) }}"
-         target="_blank" rel="noopener noreferrer"
-         aria-label="Search {{ active_search_host }} for {{ game.name }}">
+      <a
+        class="search"
+        href="{{ active_search_url | replace('{}', game.name | urlencode) }}"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Search {{ active_search_host }} for {{ game.name }}">
         <span aria-hidden="true">🔍</span>
       </a>
     {% endif %}
@@ -36,25 +47,32 @@
   <span class="status" role="cell">
     {#- Named by game: a column of identical dropdowns is one a screen reader cannot tell
         apart. The `id` keeps focus here across the swap. -#}
-    <select id="status-{{ game.id }}" name="status" class="{{ badge_class(game.status) }}"
-            aria-label="Status of {{ game.name }}"
-            hx-post="{{ url_for('set_status', game_id=game.id) }}"
-            hx-target="closest .row"
-            hx-swap="outerHTML">
+    <select
+      id="status-{{ game.id }}"
+      name="status"
+      class="{{ badge_class(game.status) }}"
+      aria-label="Status of {{ game.name }}"
+      hx-post="{{ url_for('set_status', game_id=game.id) }}"
+      hx-target="closest .row"
+      hx-swap="outerHTML">
       {#- The empty option is how a status is cleared. -#}
       <option value="" {% if not game.status %}selected{% endif %}>&mdash;</option>
       {% for status in statuses %}
-        <option value="{{ status }}"
-                {% if game.status == status %}selected{% endif %}>{{ status | capitalize }}</option>
+        <option value="{{ status }}" {% if game.status == status %}selected{% endif %}>
+          {{ status | capitalize }}
+        </option>
       {% endfor %}
     </select>
   </span>
   <span class="remove" role="cell">
     {#- Intercepted by the page's own dialog; see `page.html`. -#}
-    <button type="button"
-            aria-label="Delete {{ game.name }}"
-            hx-delete="{{ url_for('delete_game', game_id=game.id) }}"
-            hx-target="#catalogue"
-            hx-confirm="{{ game.name }} will be removed along with its platforms and status. This cannot be undone.">&times;</button>
+    <button
+      type="button"
+      aria-label="Delete {{ game.name }}"
+      hx-delete="{{ url_for('delete_game', game_id=game.id) }}"
+      hx-target="#catalogue"
+      hx-confirm="{{ game.name }} will be removed along with its platforms and status. This cannot be undone.">
+      &times;
+    </button>
   </span>
 </div>

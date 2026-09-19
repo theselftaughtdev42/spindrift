@@ -12,9 +12,52 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "crap4py>=0.1.1",
+    "mutmut>=3.8.0",
+    "prek>=0.5.3",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
+    "ruff>=0.16.8",
+    "ty>=0.0.82",
 ]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # import sorting
+    "UP",   # outdated idioms for the pinned Python
+    "B",    # bugbear
+    "SIM",  # simplifications
+    "C4",   # comprehensions
+    "RET",  # returns
+    "PTH",  # os.path where pathlib reads better
+    "ANN",  # every signature annotated, which ty itself will not insist on
+]
+
+[tool.ruff.lint.flake8-annotations]
+# `-> None` on every test and fixture says nothing a reader did not know.
+suppress-none-returning = true
+
+[tool.ty.rules]
+# ty ships these off by default. Each one is the strict reading of a case where it would
+# otherwise assume the code knows better than the types.
+possibly-unresolved-reference = "error"
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+missing-type-argument = "error"
+unsound-assignment = "error"
+unsound-return-statement = "error"
+unsound-yield = "error"
+division-by-zero = "error"
+disjoint-cast = "error"
+missing-override-decorator = "error"
+# A suppression names the rule it suppresses, or it is not a suppression but a blindfold.
+blanket-ignore-comment = "error"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -31,3 +74,10 @@ exclude_lines = [
     "pragma: no cover",
     'if __name__ == "__main__":',
 ]
+
+[tool.mutmut]
+source_paths = ["spindrift"]
+# The same entry point coverage omits, and for the same reason: it builds an app against the
+# repository's own catalogue at import time.
+do_not_mutate = ["spindrift/wsgi.py"]
+pytest_add_cli_args_test_selection = ["tests/"]

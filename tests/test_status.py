@@ -2,19 +2,21 @@
 
 import re
 
+from flask.testing import FlaskClient
+
 from tests.conftest import HTMX, add_game, row
 
 
-def selected_status(body, game):
+def selected_status(body: str, game: int) -> str:
     """The option one game's status dropdown opens on; the empty string is the blank one."""
-    match = re.search(rf'<select id="status-{game}".*?</select>', body, re.DOTALL)
+    match = re.search(rf'<select\s[^>]*id="status-{game}".*?</select>', body, re.DOTALL)
     assert match, f"no status control for game {game}"
     chosen = re.search(r'<option value="([^"]*)"\s*selected>', match[0])
     assert chosen, f"no option is selected for game {game}"
-    return chosen[1]
+    return str(chosen[1])
 
 
-def test_a_status_set_on_a_game_sticks(client):
+def test_a_status_set_on_a_game_sticks(client: FlaskClient):
     game = add_game(client, "Hades")
 
     client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
@@ -24,7 +26,7 @@ def test_a_status_set_on_a_game_sticks(client):
     assert selected_status(body, game) == "playing"
 
 
-def test_a_status_can_be_cleared_back_to_nothing_recorded(client):
+def test_a_status_can_be_cleared_back_to_nothing_recorded(client: FlaskClient):
     game = add_game(client, "Hades")
     client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
 
@@ -35,17 +37,15 @@ def test_a_status_can_be_cleared_back_to_nothing_recorded(client):
     assert selected_status(body, game) == ""
 
 
-def test_a_status_spindrift_does_not_have_is_rejected(client):
+def test_a_status_spindrift_does_not_have_is_rejected(client: FlaskClient):
     game = add_game(client, "Hades")
 
-    response = client.post(
-        f"/games/{game}/status", data={"status": "completed"}, headers=HTMX
-    )
+    response = client.post(f"/games/{game}/status", data={"status": "completed"}, headers=HTMX)
 
     assert response.status_code == 400
 
 
-def test_a_status_survives_renaming_the_game_and_changing_its_platforms(client):
+def test_a_status_survives_renaming_the_game_and_changing_its_platforms(client: FlaskClient):
     game = add_game(client, "Hades", ["Steam"])
     client.post(f"/games/{game}/status", data={"status": "100%"}, headers=HTMX)
 

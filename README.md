@@ -18,6 +18,14 @@ tablet. macOS will ask to allow incoming connections the first time.
 uv run pytest
 ```
 
+## Work on it
+
+`make check` runs the lot: ruff, prettier over the templates, ty, the suite, then the CRAP
+scores. `make format` fixes what ruff and prettier can fix themselves.
+
+The template formatting is the one check that wants node rather than uv: `npm ci` installs it,
+and without it the other four still run.
+
 ## Container
 
 The image is published to `ghcr.io/theselftaughtdev42/spindrift` for `linux/amd64`, and

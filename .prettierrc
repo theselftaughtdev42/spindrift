@@ -1,0 +1,13 @@
+{
+  "plugins": ["prettier-plugin-jinja-template"],
+  "overrides": [
+    {
+      "files": ["spindrift/templates/*.html"],
+      "options": { "parser": "jinja-template" }
+    }
+  ],
+  "printWidth": 120,
+  "tabWidth": 2,
+  "bracketSameLine": true,
+  "htmlWhitespaceSensitivity": "css"
+}

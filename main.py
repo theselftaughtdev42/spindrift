@@ -1,11 +1,12 @@
 import os
+from typing import NoReturn
 
 BIND = "0.0.0.0:8000"
 
 APP = "spindrift.wsgi:app"
 
 
-def main():
+def main() -> NoReturn:
     print("Spindrift on http://localhost:8000 (and this machine's LAN address)", flush=True)
     os.execvp("gunicorn", ["gunicorn", APP, "--bind", BIND])
 

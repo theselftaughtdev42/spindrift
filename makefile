@@ -1,3 +1,12 @@
+# Every target here is a command, not a file it builds. Without this, make compares the
+# target's name against the tree and skips any target that finds a match: `mutants` was a
+# silent no-op for as long as the mutmut cache directory existed, and `test`, `crap` and
+# `check` gate CI, where a target that does nothing and succeeds is the worst answer
+# available. Add new targets to this list.
+.PHONY: local static.clean test crap lint lint.templates types check \
+	hooks hooks.run mutants mutants.results mutants.browse format \
+	docker.build docker.run docker.latest release release.notes
+
 # A manifest left in the source tree names whatever some earlier build digested, so every
 # page goes on quoting those names and an edited stylesheet is served as it was. Cleared
 # rather than rebuilt, because the app reads it once when it is created.
@@ -8,7 +17,49 @@ static.clean:
 	python3 spindrift/static_manifest.py --clear
 
 test:
-	uv run pytest tests --cov
+	uv run pytest tests --cov --cov-branch --cov-report=lcov:lcov.info
+
+crap: test
+	uv run crap4py spindrift --lcov lcov.info --max-crap 10
+
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
+
+lint.templates:
+	npx prettier --check spindrift/templates
+
+types:
+	uv run ty check --error-on-warning
+
+check: lint lint.templates types test crap
+
+hooks:
+	uv run prek install
+
+hooks.run:
+	uv run prek run --all-files
+
+# Mutation testing: change the source in ways the suite ought to notice, and report the
+# changes it slept through. Not part of `check`, because a cold sweep is a minute and a half;
+# afterwards only mutants in changed code are re-run, which is seconds. `mutants.results` names
+# the survivors and `mutants.browse` is the same results in a terminal UI. There is no target
+# for applying one: `uv run mutmut apply <mutant>` takes the name of the mutant to put into the
+# working tree, which is a poor fit for a target that takes no arguments.
+mutants:
+	uv run mutmut run
+
+mutants.results:
+	uv run mutmut results
+
+mutants.browse:
+	uv run mutmut browse
+
+# Both, because `check --fix` and `format` each undo wrapping the other chose.
+format:
+	uv run ruff check --fix .
+	uv run ruff format .
+	npx prettier --write spindrift/templates
 
 docker.build:
 	docker build -t spindrift:local .

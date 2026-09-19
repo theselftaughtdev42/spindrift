@@ -2,12 +2,12 @@
 {#- The stylesheet lays out one grid track per platform and needs the count to do it. -#}
 <html lang="en" style="--platform-count: {{ platforms | length }}">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Spindrift{% endblock %}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='spindrift-mark.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='spindrift-mark.svg') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}" />
     {% block head %}{% endblock %}
   </head>
   <body {% block body_attributes %}{% endblock %}>
@@ -16,7 +16,7 @@
           page's web fonts. -#}
       <h1 class="logo">
         <a href="{{ url_for('page') }}">
-          <img src="{{ url_for('static', filename='spindrift-mark.svg') }}" alt="" width="40" height="40">
+          <img src="{{ url_for('static', filename='spindrift-mark.svg') }}" alt="" width="40" height="40" />
           Spindrift
         </a>
       </h1>

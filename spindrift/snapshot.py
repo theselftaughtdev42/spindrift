@@ -6,6 +6,7 @@ compatibility is ADR-0001.
 
 import json
 import re
+from typing import Self
 
 from pydantic import BaseModel, ValidationError, field_validator, model_validator
 
@@ -24,7 +25,7 @@ class SnapshotError(Exception):
     """A file refused as a snapshot. The message is what the cataloguer is shown."""
 
 
-def known_platform(platform):
+def known_platform(platform: str) -> str:
     if platform not in PLATFORMS:
         raise ValueError(f"{platform} is not a platform Spindrift has")
     return platform
@@ -38,7 +39,7 @@ class Game(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def name_not_blank(cls, name):
+    def name_not_blank(cls, name: str) -> str:
         name = name.strip()
         if not name:
             raise ValueError("a game needs a name")
@@ -46,26 +47,26 @@ class Game(BaseModel):
 
     @field_validator("status")
     @classmethod
-    def known_status(cls, status):
+    def known_status(cls, status: str | None) -> str | None:
         if status is not None and status not in STATUSES:
             raise ValueError(f"{status} is not a status Spindrift has")
         return status
 
     @field_validator("platforms")
     @classmethod
-    def known_platforms(cls, platforms):
+    def known_platforms(cls, platforms: list[str]) -> list[str]:
         for platform in platforms:
             known_platform(platform)
         return platforms
 
     @field_validator("intended")
     @classmethod
-    def known_intent(cls, intended):
+    def known_intent(cls, intended: str | None) -> str | None:
         return intended if intended is None else known_platform(intended)
 
     # The database cannot check this: a snapshot spells the two out separately.
     @model_validator(mode="after")
-    def intent_is_available(self):
+    def intent_is_available(self) -> Self:
         if self.intended is not None and self.intended not in self.platforms:
             raise ValueError(
                 f"{self.name} is meant to be played on {self.intended},"
@@ -80,7 +81,7 @@ class SearchUrl(BaseModel):
 
     @field_validator("url")
     @classmethod
-    def follows_rule(cls, url):
+    def follows_rule(cls, url: str) -> str:
         url = url.strip()
         problem = search_url_problem(url)
         if problem:
@@ -94,7 +95,7 @@ class Snapshot(BaseModel):
     search_urls: list[SearchUrl]
 
 
-def parse(data):
+def parse(data: str | bytes) -> Snapshot:
     """The snapshot in `data`, fully validated — or a `SnapshotError` saying why not.
 
     Strict rather than coercing, or a hand-written `"active": "no"` would quietly become true.
@@ -103,12 +104,12 @@ def parse(data):
     try:
         document = json.loads(data)
     except (ValueError, RecursionError):
-        raise SnapshotError(f"That file isn't a snapshot — it isn't valid JSON. {UNCHANGED}")
+        raise SnapshotError(
+            f"That file isn't a snapshot — it isn't valid JSON. {UNCHANGED}"
+        ) from None
 
     version = document.get("spindrift") if isinstance(document, dict) else None
-    match = (
-        re.fullmatch(r"([0-9]+)\.([0-9]+)", version) if isinstance(version, str) else None
-    )
+    match = re.fullmatch(r"([0-9]+)\.([0-9]+)", version) if isinstance(version, str) else None
     if match is None:
         raise SnapshotError(
             "That file doesn't say which snapshot format it is, so it can't be imported."
@@ -126,7 +127,7 @@ def parse(data):
         raise SnapshotError(describe(error)) from None
 
 
-def describe(error):
+def describe(error: ValidationError) -> str:
     """The first thing wrong with a snapshot, with positions counted from one."""
     problems = error.errors()
     first = problems[0]

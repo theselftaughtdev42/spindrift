@@ -1,9 +1,13 @@
+import os
 import sqlite3
 
 from flask import current_app, g
 
+# What `sqlite3.connect` will take, and so what every caller here may pass along.
+type DatabasePath = str | os.PathLike[str]
+
 # A migration's position is its version. Append-only once released, never edited in place.
-MIGRATIONS = [
+MIGRATIONS: list[str] = [
     """
     CREATE TABLE games (
         id INTEGER PRIMARY KEY,
@@ -39,7 +43,7 @@ MIGRATIONS = [
 ]
 
 
-def connect(database_path):
+def connect(database_path: DatabasePath) -> sqlite3.Connection:
     connection = sqlite3.connect(database_path)
     try:
         connection.row_factory = sqlite3.Row
@@ -52,19 +56,23 @@ def connect(database_path):
     return connection
 
 
-def get_connection():
-    if "connection" not in g:
-        g.connection = connect(current_app.config["DATABASE_PATH"])
-    return g.connection
+def get_connection() -> sqlite3.Connection:
+    # `isinstance` rather than a cast, because `g` hands back `Any` and the caller is owed
+    # a connection proved rather than promised.
+    connection = g.get("connection")
+    if not isinstance(connection, sqlite3.Connection):
+        connection = connect(current_app.config["DATABASE_PATH"])
+        g.connection = connection
+    return connection
 
 
-def close_connection(exception=None):
+def close_connection(exception: BaseException | None = None) -> None:
     connection = g.pop("connection", None)
     if connection is not None:
         connection.close()
 
 
-def migrate(database_path):
+def migrate(database_path: DatabasePath) -> None:
     connection = connect(database_path)
     try:
         version = connection.execute("PRAGMA user_version").fetchone()[0]

@@ -9,6 +9,10 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import cast
+
+# Each static file's own name to the digested copy beside it, which is what a page quotes.
+type Manifest = dict[str, str]
 
 # Beside the package rather than inside `static/`, which nginx is handed whole.
 MANIFEST_PATH = Path(__file__).resolve().parent / "static_manifest.json"
@@ -21,17 +25,17 @@ DIGEST_LENGTH = 12
 GENERATED = re.compile(rf"\.[0-9a-f]{{{DIGEST_LENGTH}}}\.[^.]+$")
 
 
-def digest_of(path):
+def digest_of(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:DIGEST_LENGTH]
 
 
-def digested_name(name, digest):
+def digested_name(name: str, digest: str) -> str:
     """`theme.css` and a digest become `theme.<digest>.css`, suffix last so the type reads."""
     path = Path(name)
     return f"{path.stem}.{digest}{path.suffix}"
 
 
-def clear(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
+def clear(static_dir: Path = STATIC_DIR, manifest_path: Path = MANIFEST_PATH):
     """Remove everything a build wrote, so a re-run cannot digest a digest.
 
     `make local` runs it alone: a manifest left behind pins every page to an old build.
@@ -42,10 +46,10 @@ def clear(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
     manifest_path.unlink(missing_ok=True)
 
 
-def build(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
+def build(static_dir: Path = STATIC_DIR, manifest_path: Path = MANIFEST_PATH) -> Manifest:
     clear(static_dir, manifest_path)
 
-    manifest = {}
+    manifest: Manifest = {}
     for source in sorted(static_dir.iterdir()):
         if not source.is_file():
             continue
@@ -57,10 +61,12 @@ def build(static_dir=STATIC_DIR, manifest_path=MANIFEST_PATH):
     return manifest
 
 
-def load(manifest_path=MANIFEST_PATH):
+def load(manifest_path: Path = MANIFEST_PATH) -> Manifest:
     """The manifest if a build wrote one, and an empty mapping if not."""
     try:
-        return json.loads(manifest_path.read_text())
+        # Cast: `isinstance` can prove a mapping, but not that its keys and values are the
+        # strings a build wrote.
+        return cast(Manifest, json.loads(manifest_path.read_text()))
     except (OSError, ValueError):
         return {}
 

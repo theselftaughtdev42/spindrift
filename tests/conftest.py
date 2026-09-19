@@ -8,25 +8,30 @@ import html
 import io
 import json
 import re
+from collections.abc import Iterable
+from pathlib import Path
 
 import pytest
+from flask import Flask
+from flask.testing import FlaskClient
+from werkzeug.test import TestResponse
 
 from spindrift import create_app
 from spindrift.snapshot import FORMAT_VERSION
 
 
 @pytest.fixture
-def catalogue_path(tmp_path):
+def catalogue_path(tmp_path: Path) -> Path:
     return tmp_path / "catalogue.sqlite3"
 
 
 @pytest.fixture
-def app(catalogue_path):
+def app(catalogue_path: Path) -> Flask:
     return create_app(catalogue_path)
 
 
 @pytest.fixture
-def client(app):
+def client(app: Flask) -> FlaskClient:
     return app.test_client()
 
 
@@ -34,9 +39,9 @@ def client(app):
 HTMX = {"HX-Request": "true"}
 
 
-def snapshot_data(**overrides):
+def snapshot_data(**overrides: object) -> dict[str, object]:
     """A snapshot this deployment accepts. A refusal test changes the one field it is about."""
-    data = {
+    data: dict[str, object] = {
         "spindrift": FORMAT_VERSION,
         "games": [
             {
@@ -52,22 +57,28 @@ def snapshot_data(**overrides):
     return data
 
 
-def import_snapshot(client, data, confirm=True, filename="snapshot.json"):
+def import_snapshot(
+    client: FlaskClient,
+    data: dict[str, object] | bytes,
+    confirm: bool = True,
+    filename: str = "snapshot.json",
+) -> TestResponse:
     """Upload a snapshot the way the settings page does.
 
     `data` is a dict to serialise, or the bytes of a file that may not be a snapshot at all.
     """
     body = data if isinstance(data, bytes) else json.dumps(data).encode()
-    form = {"snapshot": (io.BytesIO(body), filename)}
+    # Annotated, or the confirmation below would not fit beside the file it confirms.
+    form: dict[str, object] = {"snapshot": (io.BytesIO(body), filename)}
     if confirm:
         form["confirm"] = "yes"
     return client.post("/settings/import", data=form, content_type="multipart/form-data")
 
 
-def row(body, game):
+def row(body: str, game: int) -> str:
     """One game's row, as the page opens it — the attributes a cataloguer's page acts on."""
     match = re.search(
-        rf'<div class="row"[^>]*>(?:(?!<div class="row").)*?id="name-{game}"',
+        rf'<div\s[^>]*class="row"[^>]*>(?:(?!<div\s[^>]*class="row").)*?id="name-{game}"',
         body,
         re.DOTALL,
     )
@@ -75,13 +86,13 @@ def row(body, game):
     return match[0].split(">", 1)[0]
 
 
-def add_game(client, name, platforms=()):
+def add_game(client: FlaskClient, name: str, platforms: Iterable[str] = ()) -> int:
     """A game in the catalogue, and its id."""
     client.post("/games", data={"name": name, "platform": list(platforms)})
     return game_id(client, name)
 
 
-def game_id(client, name):
+def game_id(client: FlaskClient, name: str) -> int:
     """The id of a named game, read the way the page identifies its rows."""
     body = client.get("/").get_data(as_text=True)
     match = re.search(
