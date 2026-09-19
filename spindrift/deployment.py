@@ -1,8 +1,10 @@
+import sqlite3
+
 from spindrift.platforms import PLATFORMS
 from spindrift.snapshot import FORMAT_VERSION, Game, SearchUrl, Snapshot
 
 
-def export(connection):
+def export(connection: sqlite3.Connection) -> str:
     """A snapshot of the deployment, as JSON text in a fixed order, so exports are stable."""
     games = connection.execute(
         "SELECT id, name, status FROM games ORDER BY name COLLATE NOCASE"
@@ -36,7 +38,7 @@ def export(connection):
     return snapshot.model_dump_json(indent=2) + "\n"
 
 
-def replace(connection, snapshot):
+def replace(connection: sqlite3.Connection, snapshot: Snapshot):
     """Replace the deployment's entire state with a validated snapshot, all or nothing."""
     with connection:
         clear(connection)
@@ -58,12 +60,12 @@ def replace(connection, snapshot):
         )
 
 
-def reset(connection):
+def reset(connection: sqlite3.Connection):
     with connection:
         clear(connection)
 
 
-def clear(connection):
+def clear(connection: sqlite3.Connection):
     # Availabilities go with their games through the foreign key's cascade.
     connection.execute("DELETE FROM search_urls")
     connection.execute("DELETE FROM games")

@@ -7,7 +7,7 @@ SEARCH_PLACEHOLDER = "{}"
 SEARCH_SCHEMES = ("http", "https")
 
 
-def search_url_problem(url):
+def search_url_problem(url: str) -> str | None:
     """What is wrong with a search URL, in words for the cataloguer — or `None` if nothing.
 
     The one place a URL's shape is admitted from, so a typed one and an imported one agree.

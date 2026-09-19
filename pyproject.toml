@@ -15,6 +15,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.8",
+    "ty>=0.0.82",
 ]
 
 [tool.ruff]
@@ -32,7 +33,28 @@ select = [
     "C4",   # comprehensions
     "RET",  # returns
     "PTH",  # os.path where pathlib reads better
+    "ANN",  # every signature annotated, which ty itself will not insist on
 ]
+
+[tool.ruff.lint.flake8-annotations]
+# `-> None` on every test and fixture says nothing a reader did not know.
+suppress-none-returning = true
+
+[tool.ty.rules]
+# ty ships these off by default. Each one is the strict reading of a case where it would
+# otherwise assume the code knows better than the types.
+possibly-unresolved-reference = "error"
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+missing-type-argument = "error"
+unsound-assignment = "error"
+unsound-return-statement = "error"
+unsound-yield = "error"
+division-by-zero = "error"
+disjoint-cast = "error"
+missing-override-decorator = "error"
+# A suppression names the rule it suppresses, or it is not a suppression but a blindfold.
+blanket-ignore-comment = "error"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

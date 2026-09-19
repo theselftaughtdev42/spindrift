@@ -3,6 +3,8 @@
 import html
 
 import pytest
+from flask.testing import FlaskClient
+from werkzeug.test import TestResponse
 
 from spindrift.snapshot import FORMAT_MAJOR
 from tests.conftest import add_game, import_snapshot, snapshot_data
@@ -18,17 +20,17 @@ DUPLICATE_NAMES = snapshot_data(
 )
 
 
-def shown(response):
+def shown(response: TestResponse) -> str:
     """The words the cataloguer reads, with the template's escaping undone."""
     return html.unescape(response.get_data(as_text=True))
 
 
-def existing_data(client):
+def existing_data(client: FlaskClient):
     add_game(client, "Tunic", ["Switch"])
     client.post("/settings/urls", data={"url": KEPT_SEARCH_URL})
 
 
-def test_an_imported_snapshot_replaces_the_games_already_here(client):
+def test_an_imported_snapshot_replaces_the_games_already_here(client: FlaskClient):
     add_game(client, "Tunic", ["Switch"])
 
     import_snapshot(client, snapshot_data())
@@ -38,7 +40,7 @@ def test_an_imported_snapshot_replaces_the_games_already_here(client):
     assert "Hades" in catalogue
 
 
-def test_an_imported_snapshot_replaces_the_search_urls_already_here(client):
+def test_an_imported_snapshot_replaces_the_search_urls_already_here(client: FlaskClient):
     client.post("/settings/urls", data={"url": KEPT_SEARCH_URL})
 
     import_snapshot(client, snapshot_data())
@@ -48,13 +50,13 @@ def test_an_imported_snapshot_replaces_the_search_urls_already_here(client):
     assert SNAPSHOT_SEARCH_URL in settings
 
 
-def test_an_import_without_the_box_ticked_imports_nothing(client):
+def test_an_import_without_the_box_ticked_imports_nothing(client: FlaskClient):
     import_snapshot(client, snapshot_data(), confirm=False)
 
     assert "Hades" not in client.get("/").get_data(as_text=True)
 
 
-def test_a_stopped_import_says_nothing_was_imported(client):
+def test_a_stopped_import_says_nothing_was_imported(client: FlaskClient):
     response = import_snapshot(client, snapshot_data(), confirm=False)
 
     assert "Tick the box to confirm an import replaces everything. Nothing was imported." in shown(
@@ -62,13 +64,13 @@ def test_a_stopped_import_says_nothing_was_imported(client):
     )
 
 
-def test_an_import_with_no_file_chosen_is_refused(client):
+def test_an_import_with_no_file_chosen_is_refused(client: FlaskClient):
     response = import_snapshot(client, b"")
 
     assert "Choose a snapshot file to import. Nothing was imported." in shown(response)
 
 
-def test_a_file_that_is_not_valid_json_is_refused(client):
+def test_a_file_that_is_not_valid_json_is_refused(client: FlaskClient):
     response = import_snapshot(client, b"{ this is not JSON")
 
     assert "That file isn't a snapshot — it isn't valid JSON. Your data is unchanged." in shown(
@@ -76,7 +78,7 @@ def test_a_file_that_is_not_valid_json_is_refused(client):
     )
 
 
-def test_a_file_that_does_not_say_which_format_it_is_is_refused(client):
+def test_a_file_that_does_not_say_which_format_it_is_is_refused(client: FlaskClient):
     data = snapshot_data()
     del data["spindrift"]
 
@@ -88,7 +90,7 @@ def test_a_file_that_does_not_say_which_format_it_is_is_refused(client):
     )
 
 
-def test_a_snapshot_from_a_different_major_format_is_refused(client):
+def test_a_snapshot_from_a_different_major_format_is_refused(client: FlaskClient):
     response = import_snapshot(client, snapshot_data(spindrift="2.0"))
 
     assert (
@@ -97,14 +99,14 @@ def test_a_snapshot_from_a_different_major_format_is_refused(client):
     )
 
 
-def test_a_snapshot_from_a_later_minor_of_the_same_major_imports(client):
+def test_a_snapshot_from_a_later_minor_of_the_same_major_imports(client: FlaskClient):
     response = import_snapshot(client, snapshot_data(spindrift=f"{FORMAT_MAJOR}.7"))
 
     assert response.status_code == 302
     assert "Hades" in client.get("/").get_data(as_text=True)
 
 
-def test_an_intent_on_a_platform_the_game_is_not_available_on_is_refused(client):
+def test_an_intent_on_a_platform_the_game_is_not_available_on_is_refused(client: FlaskClient):
     response = import_snapshot(
         client,
         snapshot_data(
@@ -125,7 +127,7 @@ def test_an_intent_on_a_platform_the_game_is_not_available_on_is_refused(client)
     )
 
 
-def test_a_value_of_the_wrong_type_is_refused_rather_than_guessed_at(client):
+def test_a_value_of_the_wrong_type_is_refused_rather_than_guessed_at(client: FlaskClient):
     response = import_snapshot(
         client, snapshot_data(search_urls=[{"url": KEPT_SEARCH_URL, "active": "no"}])
     )
@@ -134,7 +136,7 @@ def test_a_value_of_the_wrong_type_is_refused_rather_than_guessed_at(client):
     assert KEPT_SEARCH_URL not in client.get("/settings").get_data(as_text=True)
 
 
-def test_a_refusal_names_the_first_problem_and_how_many_others(client):
+def test_a_refusal_names_the_first_problem_and_how_many_others(client: FlaskClient):
     response = import_snapshot(
         client,
         snapshot_data(
@@ -173,7 +175,7 @@ def test_a_refusal_names_the_first_problem_and_how_many_others(client):
     )
 
 
-def test_a_snapshot_that_breaks_a_catalogue_rule_is_refused(client):
+def test_a_snapshot_that_breaks_a_catalogue_rule_is_refused(client: FlaskClient):
     response = import_snapshot(client, DUPLICATE_NAMES)
 
     assert (
@@ -187,7 +189,7 @@ def test_a_snapshot_that_breaks_a_catalogue_rule_is_refused(client):
     [b"{ this is not JSON", snapshot_data(spindrift="2.0"), DUPLICATE_NAMES],
     ids=["not JSON", "another format", "a broken catalogue rule"],
 )
-def test_a_refused_import_deletes_nothing(client, refused):
+def test_a_refused_import_deletes_nothing(client: FlaskClient, refused: dict[str, object] | bytes):
     existing_data(client)
 
     import_snapshot(client, refused)
@@ -196,7 +198,7 @@ def test_a_refused_import_deletes_nothing(client, refused):
     assert KEPT_SEARCH_URL in client.get("/settings").get_data(as_text=True)
 
 
-def test_a_successful_import_lands_on_the_catalogue_saying_it_worked(client):
+def test_a_successful_import_lands_on_the_catalogue_saying_it_worked(client: FlaskClient):
     response = import_snapshot(client, snapshot_data())
 
     assert response.status_code == 302

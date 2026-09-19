@@ -14,6 +14,11 @@ lint:
 	uv run ruff check .
 	uv run ruff format --check .
 
+types:
+	uv run ty check --error-on-warning
+
+check: lint types test
+
 # Both, because `check --fix` and `format` each undo wrapping the other chose.
 format:
 	uv run ruff check --fix .

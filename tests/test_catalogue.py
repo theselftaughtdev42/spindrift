@@ -3,20 +3,21 @@
 import re
 
 import pytest
+from flask.testing import FlaskClient
 
 from tests.conftest import HTMX, add_game, game_id
 
 
-def catalogue(client):
+def catalogue(client: FlaskClient) -> str:
     return client.get("/").get_data(as_text=True)
 
 
-def names(body):
+def names(body: str) -> list[str]:
     """The names the catalogue shows, in the order it shows them."""
-    return re.findall(r'id="name-\d+"[^>]*value="([^"]*)"', body)
+    return [str(name) for name in re.findall(r'id="name-\d+"[^>]*value="([^"]*)"', body)]
 
 
-def cell(body, game, platform):
+def cell(body: str, game: int, platform: str) -> str:
     """The availability button for one game and platform, as it is rendered."""
     identifier = f"cell-{game}-{platform.replace(' ', '-')}"
     match = re.search(rf'<button[^>]*id="{identifier}"[^>]*>', body)
@@ -24,37 +25,38 @@ def cell(body, game, platform):
     return match[0]
 
 
-def available(body, game, platform):
+def available(body: str, game: int, platform: str) -> bool:
     return 'aria-pressed="true"' in cell(body, game, platform)
 
 
-def intended(body, game, platform):
+def intended(body: str, game: int, platform: str) -> bool:
     return "data-intended" in cell(body, game, platform)
 
 
-def status(body, game):
+def status(body: str, game: int) -> str | None:
     """The status shown for a game, or None when none is recorded."""
     control = re.search(rf'<select id="status-{game}".*?</select>', body, re.S)
     assert control, f"game {game} has no status control"
     chosen = re.search(r'<option value="([^"]*)"[^>]*selected', control[0])
-    return chosen[1] or None
+    assert chosen, f"no option is selected for game {game}"
+    return str(chosen[1]) or None
 
 
-def test_a_game_added_appears_in_the_catalogue(client):
+def test_a_game_added_appears_in_the_catalogue(client: FlaskClient):
     response = client.post("/games", data={"name": "Hades"}, headers=HTMX)
 
     assert response.status_code == 200
     assert names(catalogue(client)) == ["Hades"]
 
 
-def test_a_game_can_be_added_with_no_platforms(client):
+def test_a_game_can_be_added_with_no_platforms(client: FlaskClient):
     game = add_game(client, "Hades")
 
     body = catalogue(client)
     assert not any(available(body, game, platform) for platform in ("Steam", "Switch"))
 
 
-def test_a_game_added_with_platforms_comes_back_with_those_availabilities(client):
+def test_a_game_added_with_platforms_comes_back_with_those_availabilities(client: FlaskClient):
     game = add_game(client, "Hades", ["Steam", "Xbox 360"])
 
     body = catalogue(client)
@@ -64,7 +66,7 @@ def test_a_game_added_with_platforms_comes_back_with_those_availabilities(client
 
 
 @pytest.mark.parametrize("name", ["", "   "])
-def test_a_name_that_is_blank_or_only_spaces_is_refused_quietly(client, name):
+def test_a_name_that_is_blank_or_only_spaces_is_refused_quietly(client: FlaskClient, name: str):
     response = client.post("/games", data={"name": name}, headers=HTMX)
 
     body = response.get_data(as_text=True)
@@ -72,7 +74,7 @@ def test_a_name_that_is_blank_or_only_spaces_is_refused_quietly(client, name):
     assert "No games yet — add one above." in catalogue(client)
 
 
-def test_a_name_already_taken_is_refused_with_a_message_naming_it(client):
+def test_a_name_already_taken_is_refused_with_a_message_naming_it(client: FlaskClient):
     add_game(client, "Hades")
 
     response = client.post("/games", data={"name": "Hades"}, headers=HTMX)
@@ -80,7 +82,7 @@ def test_a_name_already_taken_is_refused_with_a_message_naming_it(client):
     assert "Hades is already in the catalogue." in response.get_data(as_text=True)
 
 
-def test_a_name_differing_only_in_capitalisation_is_already_taken(client):
+def test_a_name_differing_only_in_capitalisation_is_already_taken(client: FlaskClient):
     add_game(client, "Hades")
 
     response = client.post("/games", data={"name": "HADES"}, headers=HTMX)
@@ -89,7 +91,7 @@ def test_a_name_differing_only_in_capitalisation_is_already_taken(client):
     assert names(catalogue(client)) == ["Hades"]
 
 
-def test_a_refused_duplicate_leaves_the_game_already_there_untouched(client):
+def test_a_refused_duplicate_leaves_the_game_already_there_untouched(client: FlaskClient):
     game = add_game(client, "Hades", ["Steam", "Switch"])
     client.post(f"/games/{game}/platforms/Steam", headers=HTMX)
     client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
@@ -104,7 +106,7 @@ def test_a_refused_duplicate_leaves_the_game_already_there_untouched(client):
     assert status(body, game) == "playing"
 
 
-def test_the_catalogue_is_ordered_by_name_regardless_of_capitalisation(client):
+def test_the_catalogue_is_ordered_by_name_regardless_of_capitalisation(client: FlaskClient):
     add_game(client, "celeste")
     add_game(client, "Bastion")
     add_game(client, "apex")
@@ -112,7 +114,7 @@ def test_the_catalogue_is_ordered_by_name_regardless_of_capitalisation(client):
     assert names(catalogue(client)) == ["apex", "Bastion", "celeste"]
 
 
-def test_renaming_a_game_returns_just_that_row(client):
+def test_renaming_a_game_returns_just_that_row(client: FlaskClient):
     game = add_game(client, "Hades")
     add_game(client, "Celeste")
 
@@ -123,7 +125,7 @@ def test_renaming_a_game_returns_just_that_row(client):
     assert 'placeholder="Game name"' not in body
 
 
-def test_a_rename_to_a_blank_name_leaves_the_game_named_as_it_was(client):
+def test_a_rename_to_a_blank_name_leaves_the_game_named_as_it_was(client: FlaskClient):
     game = add_game(client, "Hades")
 
     response = client.post(f"/games/{game}/name", data={"name": "   "}, headers=HTMX)
@@ -132,7 +134,7 @@ def test_a_rename_to_a_blank_name_leaves_the_game_named_as_it_was(client):
     assert names(catalogue(client)) == ["Hades"]
 
 
-def test_a_rename_onto_a_name_already_taken_redraws_the_whole_catalogue(client):
+def test_a_rename_onto_a_name_already_taken_redraws_the_whole_catalogue(client: FlaskClient):
     add_game(client, "Hades")
     game = add_game(client, "Celeste")
 
@@ -143,7 +145,7 @@ def test_a_rename_onto_a_name_already_taken_redraws_the_whole_catalogue(client):
     assert "Hades is already in the catalogue." in response.get_data(as_text=True)
 
 
-def test_a_refused_rename_leaves_the_original_name_intact(client):
+def test_a_refused_rename_leaves_the_original_name_intact(client: FlaskClient):
     add_game(client, "Hades")
     game = add_game(client, "Celeste")
 
@@ -152,7 +154,7 @@ def test_a_refused_rename_leaves_the_original_name_intact(client):
     assert names(catalogue(client)) == ["Celeste", "Hades"]
 
 
-def test_deleting_a_game_removes_it_from_the_catalogue(client):
+def test_deleting_a_game_removes_it_from_the_catalogue(client: FlaskClient):
     game = add_game(client, "Hades")
     add_game(client, "Celeste")
 
@@ -162,7 +164,7 @@ def test_deleting_a_game_removes_it_from_the_catalogue(client):
     assert names(catalogue(client)) == ["Celeste"]
 
 
-def test_a_deleted_games_availabilities_intent_and_status_go_with_it(client):
+def test_a_deleted_games_availabilities_intent_and_status_go_with_it(client: FlaskClient):
     game = add_game(client, "Hades", ["Steam", "Switch"])
     client.post(f"/games/{game}/platforms/Steam", headers=HTMX)
     client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
@@ -177,7 +179,7 @@ def test_a_deleted_games_availabilities_intent_and_status_go_with_it(client):
     assert status(body, again) is None
 
 
-def test_deleting_a_game_already_deleted_is_treated_as_success(client):
+def test_deleting_a_game_already_deleted_is_treated_as_success(client: FlaskClient):
     game = add_game(client, "Hades")
     client.delete(f"/games/{game}", headers=HTMX)
 
@@ -186,7 +188,7 @@ def test_deleting_a_game_already_deleted_is_treated_as_success(client):
     assert response.status_code == 200
 
 
-def test_a_platform_spindrift_does_not_have_is_rejected_and_leaves_no_game(client):
+def test_a_platform_spindrift_does_not_have_is_rejected_and_leaves_no_game(client: FlaskClient):
     response = client.post(
         "/games", data={"name": "Hades", "platform": ["Dreamcast"]}, headers=HTMX
     )

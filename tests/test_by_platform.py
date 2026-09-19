@@ -2,16 +2,18 @@
 
 import re
 
+from flask.testing import FlaskClient
+
 from tests.conftest import HTMX, add_game
 
 
-def decide(client, game, platform):
+def decide(client: FlaskClient, game: int, platform: str):
     """Two taps: available there, then the way the game will be played."""
     client.post(f"/games/{game}/platforms/{platform}", headers=HTMX)
     client.post(f"/games/{game}/platforms/{platform}", headers=HTMX)
 
 
-def plan_row(body, name):
+def plan_row(body: str, name: str) -> str:
     match = re.search(
         rf"<tr[^>]*>(?:(?!<tr).)*?<td>{re.escape(name)}</td>.*?</tr>", body, re.DOTALL
     )
@@ -19,7 +21,7 @@ def plan_row(body, name):
     return match[0]
 
 
-def test_only_decided_games_are_shown(client):
+def test_only_decided_games_are_shown(client: FlaskClient):
     decided = add_game(client, "Hades")
     decide(client, decided, "Steam")
     available = add_game(client, "Celeste")
@@ -31,7 +33,7 @@ def test_only_decided_games_are_shown(client):
     assert "Celeste" not in body
 
 
-def test_platforms_are_listed_in_the_order_spindrift_lists_them(client):
+def test_platforms_are_listed_in_the_order_spindrift_lists_them(client: FlaskClient):
     for name, platform in [("Hades", "Switch"), ("Celeste", "PS1"), ("Bastion", "Steam")]:
         decide(client, add_game(client, name), platform)
 
@@ -44,7 +46,7 @@ def test_platforms_are_listed_in_the_order_spindrift_lists_them(client):
     )
 
 
-def test_games_on_a_platform_are_ordered_by_name_whatever_the_capitalisation(client):
+def test_games_on_a_platform_are_ordered_by_name_whatever_the_capitalisation(client: FlaskClient):
     for name in ["zelda", "Anno", "braid"]:
         decide(client, add_game(client, name), "Steam")
 
@@ -53,7 +55,7 @@ def test_games_on_a_platform_are_ordered_by_name_whatever_the_capitalisation(cli
     assert body.index("<td>Anno</td>") < body.index("<td>braid</td>") < body.index("<td>zelda</td>")
 
 
-def test_platforms_nothing_is_decided_on_are_absent(client):
+def test_platforms_nothing_is_decided_on_are_absent(client: FlaskClient):
     decide(client, add_game(client, "Hades"), "Steam")
 
     body = client.get("/by-platform").get_data(as_text=True)
@@ -64,7 +66,7 @@ def test_platforms_nothing_is_decided_on_are_absent(client):
         assert f'data-platform="{platform}"' not in body
 
 
-def test_each_game_shows_its_status_beside_it(client):
+def test_each_game_shows_its_status_beside_it(client: FlaskClient):
     playing = add_game(client, "Hades")
     decide(client, playing, "Steam")
     client.post(f"/games/{playing}/status", data={"status": "playing"}, headers=HTMX)
@@ -76,7 +78,7 @@ def test_each_game_shows_its_status_beside_it(client):
     assert "Playing" not in plan_row(body, "Celeste")
 
 
-def test_an_empty_deployment_is_told_nothing_is_decided_yet(client):
+def test_an_empty_deployment_is_told_nothing_is_decided_yet(client: FlaskClient):
     body = client.get("/by-platform").get_data(as_text=True)
 
     assert "Nothing decided yet" in body

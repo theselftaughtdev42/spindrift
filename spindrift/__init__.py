@@ -1,9 +1,11 @@
 import sqlite3
 from datetime import date
+from typing import Any, cast
 from urllib.parse import urlsplit
 
 from flask import (
     Flask,
+    Response,
     abort,
     make_response,
     redirect,
@@ -11,6 +13,7 @@ from flask import (
     request,
     url_for,
 )
+from flask.typing import ResponseReturnValue
 
 from spindrift import db, deployment, snapshot
 from spindrift import static_manifest as manifest
@@ -19,32 +22,39 @@ from spindrift.search_urls import search_url_problem
 from spindrift.statuses import STATUSES
 from spindrift.version import resolve_version
 
+# What a template is handed. The values are rows, sets and strings a template reads and
+# nothing here does, so naming them would say more than the code knows.
+type Context = dict[str, Any]
+
 FINISHED = {
     "imported": "Snapshot imported",
     "reset": "Data reset completed",
 }
 
 
-def search_host(url):
+def search_host(url: str) -> str:
     host = urlsplit(url).hostname or url
     return host.removeprefix("www.")
 
 
-def create_app(database_path):
+def create_app(database_path: db.DatabasePath) -> Flask:
     app = Flask(__name__)
     app.config["DATABASE_PATH"] = str(database_path)
-    app.config["VERSION"] = resolve_version()
+    build_version = resolve_version()
+    app.config["VERSION"] = build_version
 
-    app.jinja_env.globals["platforms"] = PLATFORMS
-    app.jinja_env.globals["statuses"] = STATUSES
-    app.jinja_env.globals["search_host"] = search_host
-    app.jinja_env.globals["version"] = app.config["VERSION"]
+    # jinja2 types `globals` from the defaults it ships, which admit nothing an app adds.
+    jinja_globals = cast("dict[str, Any]", app.jinja_env.globals)
+    jinja_globals["platforms"] = PLATFORMS
+    jinja_globals["statuses"] = STATUSES
+    jinja_globals["search_host"] = search_host
+    jinja_globals["version"] = build_version
 
     # nginx serves /static/ in deployment, so the filename is the only cache-busting lever.
     static_manifest = manifest.load()
 
     @app.url_defaults
-    def digest_static_filename(endpoint, values):
+    def digest_static_filename(endpoint: str, values: dict[str, Any]):
         if endpoint == "static":
             filename = values.get("filename")
             if filename in static_manifest:
@@ -52,7 +62,7 @@ def create_app(database_path):
 
     # Digested names are only as fresh as the HTML quoting them.
     @app.after_request
-    def revalidate_documents(response):
+    def revalidate_documents(response: Response) -> Response:
         if response.mimetype == "text/html":
             response.cache_control.no_cache = True
         return response
@@ -61,7 +71,7 @@ def create_app(database_path):
     app.teardown_appcontext(db.close_connection)
 
     @app.context_processor
-    def active_search_link():
+    def active_search_link() -> Context:
         row = db.get_connection().execute("SELECT url FROM search_urls WHERE active").fetchone()
         return {
             "active_search_url": row["url"] if row else None,
@@ -70,21 +80,21 @@ def create_app(database_path):
 
     # The SELECT makes a green check mean the database is reachable too.
     @app.get("/health")
-    def health():
+    def health() -> ResponseReturnValue:
         db.get_connection().execute("SELECT 1")
         return "ok", 200
 
     @app.get("/version")
-    def version():
-        return app.config["VERSION"], 200, {"Content-Type": "text/plain; charset=utf-8"}
+    def version() -> ResponseReturnValue:
+        return build_version, 200, {"Content-Type": "text/plain; charset=utf-8"}
 
     @app.get("/")
-    def page():
+    def page() -> str:
         finished = FINISHED.get(request.args.get("finished"))
         return render_template("page.html", finished=finished, **catalogue())
 
     @app.get("/by-platform")
-    def by_platform():
+    def by_platform() -> str:
         connection = db.get_connection()
         decisions = connection.execute(
             "SELECT game_platforms.platform, games.name, games.status"
@@ -100,7 +110,7 @@ def create_app(database_path):
         return render_template("by_platform.html", groups=groups)
 
     @app.post("/games")
-    def add_game():
+    def add_game() -> str:
         name = request.form["name"].strip()
         platforms = request.form.getlist("platform")
         # Checked first, so a bad platform leaves no game behind.
@@ -124,7 +134,7 @@ def create_app(database_path):
         return render_template("_catalogue.html", **catalogue())
 
     @app.post("/games/<int:game_id>/name")
-    def rename_game(game_id):
+    def rename_game(game_id: int) -> ResponseReturnValue:
         name = request.form["name"].strip()
         if not name:
             return render_template("_row.html", **game_row(game_id))
@@ -139,7 +149,7 @@ def create_app(database_path):
         return render_template("_row.html", **game_row(game_id))
 
     @app.post("/games/<int:game_id>/platforms/<platform>")
-    def cycle_platform(game_id, platform):
+    def cycle_platform(game_id: int, platform: str) -> str:
         """Advance one cell through: not playable → playable → the way I'll play it."""
         if platform not in PLATFORMS:
             abort(404)
@@ -181,7 +191,7 @@ def create_app(database_path):
         return render_template("_row.html", **game_row(game_id))
 
     @app.post("/games/<int:game_id>/status")
-    def set_status(game_id):
+    def set_status(game_id: int) -> str:
         status = request.form["status"]
         # The empty string is the control saying nothing is recorded, not a status.
         if status and status not in STATUSES:
@@ -193,7 +203,7 @@ def create_app(database_path):
         return render_template("_row.html", **game_row(game_id))
 
     @app.delete("/games/<int:game_id>")
-    def delete_game(game_id):
+    def delete_game(game_id: int) -> str:
         connection = db.get_connection()
         # No row check: a game already gone is the outcome asked for.
         connection.execute("DELETE FROM games WHERE id = ?", (game_id,))
@@ -201,11 +211,11 @@ def create_app(database_path):
         return render_template("_catalogue.html", **catalogue())
 
     @app.get("/settings")
-    def settings():
+    def settings() -> str:
         return render_template("settings.html", **saved_search_urls())
 
     @app.post("/settings/urls")
-    def add_search_url():
+    def add_search_url() -> ResponseReturnValue:
         url = request.form["url"].strip()
         if not url:
             return search_group()
@@ -222,17 +232,18 @@ def create_app(database_path):
         return search_group(note=f"{search_host(url)} added.")
 
     @app.post("/settings/urls/<int:url_id>/delete")
-    def delete_search_url(url_id):
+    def delete_search_url(url_id: int) -> ResponseReturnValue:
         connection = db.get_connection()
         connection.execute("DELETE FROM search_urls WHERE id = ?", (url_id,))
         connection.commit()
         return search_group(note="Search URL deleted.")
 
     @app.post("/settings/active")
-    def set_active_search_url():
+    def set_active_search_url() -> ResponseReturnValue:
         """Point the search control somewhere, or nowhere; the empty value turns it off."""
         active = request.form["active"]
         connection = db.get_connection()
+        note = "Search button turned off."
         if active:
             # Checked before clearing, or a URL another device deleted turns the control off.
             chosen = connection.execute(
@@ -240,20 +251,16 @@ def create_app(database_path):
             ).fetchone()
             if chosen is None:
                 return search_group()
+            note = f"Searching with {search_host(chosen['url'])}."
         # Cleared first, then set: the partial index allows only one active row.
         connection.execute("UPDATE search_urls SET active = 0 WHERE active")
         if active:
             connection.execute("UPDATE search_urls SET active = 1 WHERE id = ?", (active,))
         connection.commit()
-        note = (
-            f"Searching with {search_host(chosen['url'])}."
-            if active
-            else "Search button turned off."
-        )
         return search_group(note=note)
 
     @app.get("/settings/export")
-    def export_snapshot():
+    def export_snapshot() -> ResponseReturnValue:
         filename = f"spindrift-{date.today().isoformat()}.json"
         return (
             deployment.export(db.get_connection()),
@@ -265,7 +272,7 @@ def create_app(database_path):
         )
 
     @app.post("/settings/import")
-    def import_snapshot():
+    def import_snapshot() -> ResponseReturnValue:
         """Replace the deployment's entire state with an uploaded snapshot.
 
         Everything that can refuse runs before anything is deleted.
@@ -294,7 +301,7 @@ def create_app(database_path):
         return redirect(url_for("page", finished="imported"))
 
     @app.post("/settings/reset")
-    def reset_deployment():
+    def reset_deployment() -> ResponseReturnValue:
         if not request.form.get("confirm"):
             return refused(
                 "reset",
@@ -303,13 +310,15 @@ def create_app(database_path):
         deployment.reset(db.get_connection())
         return redirect(url_for("page", finished="reset"))
 
-    def refused(group, error):
+    def refused(group: str, error: str) -> str:
         """The settings page again, reopened at the group that refused."""
         return render_template(
             "settings.html", error=error, open_group=group, **saved_search_urls()
         )
 
-    def search_group(error=None, draft=None, note=None):
+    def search_group(
+        error: str | None = None, draft: str | None = None, note: str | None = None
+    ) -> ResponseReturnValue:
         """The search URL group on its own, for htmx; the whole page for anything else.
 
         An error renders rather than redirects, because a redirect cannot carry the message.
@@ -326,7 +335,7 @@ def create_app(database_path):
             return render_template("settings.html", open_group="search", **group)
         return redirect(url_for("settings"))
 
-    def saved_search_urls():
+    def saved_search_urls() -> Context:
         connection = db.get_connection()
         return {
             "search_urls": connection.execute(
@@ -334,7 +343,7 @@ def create_app(database_path):
             ).fetchall()
         }
 
-    def retargeted_catalogue(error):
+    def retargeted_catalogue(error: str) -> Response:
         """The whole list, answering a request that asked for a single row.
 
         It carries its own target, which no longer matches the one the request declared.
@@ -344,7 +353,7 @@ def create_app(database_path):
         response.headers["HX-Reswap"] = "innerHTML"
         return response
 
-    def catalogue():
+    def catalogue() -> Context:
         connection = db.get_connection()
         games = connection.execute(
             "SELECT id, name, status FROM games ORDER BY name COLLATE NOCASE"
@@ -357,7 +366,7 @@ def create_app(database_path):
                 intents[row["game_id"]] = row["platform"]
         return {"games": games, "availability": availability, "intents": intents}
 
-    def game_row(game_id):
+    def game_row(game_id: int) -> Context:
         """What `catalogue()` returns, narrowed to one game."""
         connection = db.get_connection()
         game = connection.execute(
