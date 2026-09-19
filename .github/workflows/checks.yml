@@ -30,11 +30,8 @@ jobs:
       - name: Install dev dependencies
         run: uv sync --locked --dev
 
-      - name: Check the rules
-        run: uv run ruff check .
-
-      - name: Check the formatting
-        run: uv run ruff format --check .
+      - name: Check the rules and the formatting
+        run: make lint
 
   ty:
     runs-on: ubuntu-latest
@@ -59,4 +56,4 @@ jobs:
         run: uv sync --locked --dev
 
       - name: Check the types
-        run: uv run ty check --error-on-warning
+        run: make types
