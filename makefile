@@ -3,7 +3,7 @@
 # silent no-op for as long as the mutmut cache directory existed, and `test`, `crap` and
 # `check` gate CI, where a target that does nothing and succeeds is the worst answer
 # available. Add new targets to this list.
-.PHONY: local static.clean test crap lint types check \
+.PHONY: local static.clean test crap lint lint.templates types check \
 	hooks hooks.run mutants mutants.results mutants.browse format \
 	docker.build docker.run docker.latest release release.notes
 
@@ -26,13 +26,14 @@ lint:
 	uv run ruff check .
 	uv run ruff format --check .
 
+lint.templates:
+	npx prettier --check spindrift/templates
+
 types:
 	uv run ty check --error-on-warning
 
-check: lint types test crap
+check: lint lint.templates types test crap
 
-# Git hooks: ruff and ty on commit, the suite on push. Run once per clone, and again after
-# `default_install_hook_types` in .pre-commit-config.yaml changes.
 hooks:
 	uv run prek install
 
@@ -57,6 +58,7 @@ mutants.browse:
 format:
 	uv run ruff check --fix .
 	uv run ruff format .
+	npx prettier --write spindrift/templates
 
 docker.build:
 	docker build -t spindrift:local .

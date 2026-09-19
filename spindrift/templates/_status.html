@@ -1,11 +1,18 @@
 {#- The badge a status is drawn with, shared by the catalogue and the by-platform table.
 
-    The design's status names and the catalogue's are not the same. -#}
+    The design's status names and the catalogue's are not the same.
+
+    The mapping is bound first and emitted on a line of its own so that the macro yields a
+    single-line class attribute: prettier wraps a long expression, and a wrap here would put
+    a newline inside every `class="..."` this renders into. -#}
 {% macro badge_class(status) -%}
-  sd-badge {{ {
-    "playing": "sd-badge--playing",
-    "finished": "sd-badge--completed",
-    "100%": "sd-badge--100 sd-badge--filled",
-    "abandoned": "sd-badge--dropped",
-  }.get(status, "sd-badge--none") }}
+  {%-
+    set modifiers = {
+      "playing": "sd-badge--playing",
+      "finished": "sd-badge--completed",
+      "100%": "sd-badge--100 sd-badge--filled",
+      "abandoned": "sd-badge--dropped",
+    }
+  -%}
+  sd-badge {{ modifiers.get(status, "sd-badge--none") }}
 {%- endmacro %}

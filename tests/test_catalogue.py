@@ -35,7 +35,7 @@ def intended(body: str, game: int, platform: str) -> bool:
 
 def status(body: str, game: int) -> str | None:
     """The status shown for a game, or None when none is recorded."""
-    control = re.search(rf'<select id="status-{game}".*?</select>', body, re.S)
+    control = re.search(rf'<select\s[^>]*id="status-{game}".*?</select>', body, re.S)
     assert control, f"game {game} has no status control"
     chosen = re.search(r'<option value="([^"]*)"[^>]*selected', control[0])
     assert chosen, f"no option is selected for game {game}"

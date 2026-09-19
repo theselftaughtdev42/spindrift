@@ -78,7 +78,7 @@ def import_snapshot(
 def row(body: str, game: int) -> str:
     """One game's row, as the page opens it — the attributes a cataloguer's page acts on."""
     match = re.search(
-        rf'<div class="row"[^>]*>(?:(?!<div class="row").)*?id="name-{game}"',
+        rf'<div\s[^>]*class="row"[^>]*>(?:(?!<div\s[^>]*class="row").)*?id="name-{game}"',
         body,
         re.DOTALL,
     )

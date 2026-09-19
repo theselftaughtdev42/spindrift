@@ -37,7 +37,7 @@ def words(response: TestResponse) -> str:
 def checked(response: TestResponse) -> list[str]:
     """The values of the radios shown checked; the empty one is the search button off."""
     shown = re.findall(
-        r'<input type="radio" name="active" value="([^"]*)"\s*checked>',
+        r'<input\s[^>]*name="active"[^>]*value="([^"]*)"[^>]*\bchecked',
         response.get_data(as_text=True),
     )
     return [str(value) for value in shown]

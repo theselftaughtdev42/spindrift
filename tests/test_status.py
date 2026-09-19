@@ -9,7 +9,7 @@ from tests.conftest import HTMX, add_game, row
 
 def selected_status(body: str, game: int) -> str:
     """The option one game's status dropdown opens on; the empty string is the blank one."""
-    match = re.search(rf'<select id="status-{game}".*?</select>', body, re.DOTALL)
+    match = re.search(rf'<select\s[^>]*id="status-{game}".*?</select>', body, re.DOTALL)
     assert match, f"no status control for game {game}"
     chosen = re.search(r'<option value="([^"]*)"\s*selected>', match[0])
     assert chosen, f"no option is selected for game {game}"

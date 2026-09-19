@@ -48,6 +48,12 @@ repos:
         types_or: [python, pyi]
         require_serial: true
 
+      - id: prettier
+        name: prettier
+        entry: npx prettier --write
+        language: system
+        files: ^spindrift/templates/.*\.html$
+
       # Types and tests read the whole project, so neither takes the staged filenames.
       - id: ty
         name: ty check

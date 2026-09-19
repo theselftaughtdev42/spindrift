@@ -5,9 +5,11 @@
 {% endblock %}
 
 {#- htmx's error events bubble to the body, so one handler covers every request. -#}
-{% block body_attributes %}hx-on::before-request="document.getElementById('failure').hidden = true; document.getElementById('finished')?.remove()"
-        hx-on::response-error="document.getElementById('failure').hidden = false"
-        hx-on::send-error="document.getElementById('failure').hidden = false"{% endblock %}
+{% block body_attributes %}
+  hx-on::before-request="document.getElementById('failure').hidden = true;
+  document.getElementById('finished')?.remove()" hx-on::response-error="document.getElementById('failure').hidden =
+  false" hx-on::send-error="document.getElementById('failure').hidden = false"
+{% endblock %}
 
 {% block nav %}
   <span class="nav-links">
@@ -20,29 +22,33 @@
   {% if finished %}
     <p id="finished" class="finished" role="status">
       <span>{{ finished }}</span>
-      <button type="button" class="finished-close" aria-label="Dismiss this message"
-              onclick="this.closest('.finished').remove()">&times;</button>
+      <button
+        type="button"
+        class="finished-close"
+        aria-label="Dismiss this message"
+        onclick="this.closest('.finished').remove()">
+        &times;
+      </button>
     </p>
   {% endif %}
-  <p id="failure" class="failure" role="alert" hidden>
-    That change wasn’t saved — the server didn’t respond.
-  </p>
+  <p id="failure" class="failure" role="alert" hidden>That change wasn’t saved — the server didn’t respond.</p>
   <div class="filter">
     <label>
-      <input type="checkbox">
+      <input type="checkbox" />
       <span>Undecided only</span>
     </label>
   </div>
 
-  <div id="catalogue">
-    {% include "_catalogue.html" %}
-  </div>
+  <div id="catalogue">{% include "_catalogue.html" %}</div>
   <p class="all-decided">Every game has a platform chosen.</p>
 
   {#- Replaces the browser's own confirm, which some browsers offer to silence. Cancel holds
       focus, so Enter pressed out of habit keeps the game. -#}
-  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-dialog-title"
-          aria-describedby="confirm-dialog-question">
+  <dialog
+    id="confirm-dialog"
+    class="confirm-dialog"
+    aria-labelledby="confirm-dialog-title"
+    aria-describedby="confirm-dialog-question">
     <form method="dialog" class="confirm-dialog-body">
       <h2 id="confirm-dialog-title">Delete game</h2>
       <p id="confirm-dialog-question"></p>

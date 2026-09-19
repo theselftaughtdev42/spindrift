@@ -21,3 +21,6 @@ spindrift/static_manifest.json
 
 # coverage file for CRAP
 lcov.info
+
+# js
+node_modules/

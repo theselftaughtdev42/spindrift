@@ -15,9 +15,7 @@
 {% set open_group = open_group|default(none, true) %}
 
 {% block content %}
-  <p class="lede">
-    Settings
-  </p>
+  <p class="lede">Settings</p>
 
   {% if error %}
     <p class="error" role="alert">{{ error }}</p>
@@ -45,26 +43,25 @@
       <section class="deployment">
         <h3>Export</h3>
         <p class="hint">
-          Download a snapshot: every game, where it’s playable, what became of it, and every
-          search URL, in one file.
+          Download a snapshot: every game, where it’s playable, what became of it, and every search URL, in one file.
         </p>
-        <a class="sd-button sd-button--ghost deployment-action" href="{{ url_for('export_snapshot') }}">Export snapshot</a>
+        <a class="sd-button sd-button--ghost deployment-action" href="{{ url_for('export_snapshot') }}"
+          >Export snapshot</a
+        >
       </section>
 
-      <hr class="rule">
+      <hr class="rule" />
 
       {#- `required` is only a convenience; the endpoint refuses an unticked request. -#}
-      <form class="deployment" method="post" action="{{ url_for('import_snapshot') }}"
-            enctype="multipart/form-data">
+      <form class="deployment" method="post" action="{{ url_for('import_snapshot') }}" enctype="multipart/form-data">
         <h3>Import</h3>
         <p class="hint">
-          Replace everything here with a snapshot. Nothing already here survives, and there’s no
-          undo — export first if you might want it back.
+          Replace everything here with a snapshot. Nothing already here survives, and there’s no undo — export first if
+          you might want it back.
         </p>
-        <input type="file" name="snapshot" accept=".json,application/json"
-               aria-label="Snapshot file" required>
+        <input type="file" name="snapshot" accept=".json,application/json" aria-label="Snapshot file" required />
         <label class="confirm">
-          <input type="checkbox" name="confirm" value="yes" required>
+          <input type="checkbox" name="confirm" value="yes" required />
           I understand this replaces everything
         </label>
         <button type="submit" class="sd-button sd-button--ghost sd-button--danger deployment-action">Import</button>
@@ -82,11 +79,10 @@
     <div class="group-body">
       <form class="deployment" method="post" action="{{ url_for('reset_deployment') }}">
         <p class="hint">
-          Leaves an empty catalogue with no search URLs. There’s no undo — export first if
-          you might want it back.
+          Leaves an empty catalogue with no search URLs. There’s no undo — export first if you might want it back.
         </p>
         <label class="confirm">
-          <input type="checkbox" name="confirm" value="yes" required>
+          <input type="checkbox" name="confirm" value="yes" required />
           I understand this deletes everything
         </label>
         <button type="submit" class="sd-button sd-button--ghost sd-button--danger deployment-action">Reset</button>

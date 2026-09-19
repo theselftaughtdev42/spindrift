@@ -14,6 +14,15 @@ catalogue.sqlite3-shm
 tests/
 docs/
 scratch
+lcov.info
+mutants/
+
+# Template formatting, which happens before a build and never inside one.
+node_modules/
+package.json
+package-lock.json
+.prettierrc
+.prettierignore
 Dockerfile
 .dockerignore
 .github/

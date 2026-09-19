@@ -13,18 +13,22 @@
   </div>
 
   {#- Re-rendered on every add, which is what clears the fields. -#}
-  <form class="add" role="row"
-        hx-post="{{ url_for('add_game') }}"
-        hx-target="#catalogue">
+  <form class="add" role="row" hx-post="{{ url_for('add_game') }}" hx-target="#catalogue">
     <span class="name entry" role="cell">
-      <input name="name" type="text" placeholder="Game name" aria-label="Game name"
-             class="sd-input" autocomplete="off" autofocus>
+      <input
+        name="name"
+        type="text"
+        placeholder="Game name"
+        aria-label="Game name"
+        class="sd-input"
+        autocomplete="off"
+        autofocus />
       <button type="submit" class="sd-button">Add</button>
     </span>
     {% for platform in platforms %}
       <span class="cell entry" role="cell" data-platform="{{ platform }}">
         <label>
-          <input type="checkbox" name="platform" value="{{ platform }}">
+          <input type="checkbox" name="platform" value="{{ platform }}" />
           <span class="cell-label">{{ platform }}</span>
         </label>
       </span>
