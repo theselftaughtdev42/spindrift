@@ -42,9 +42,10 @@ hooks.run:
 
 # Mutation testing: change the source in ways the suite ought to notice, and report the
 # changes it slept through. Not part of `check`, because a cold sweep is a minute and a half;
-# afterwards only mutants in changed code are re-run, which is seconds. `mutants.browse` is
-# the same results in a terminal UI, and `mutants.apply` puts one surviving mutant into the
-# working tree so you can write the test that kills it.
+# afterwards only mutants in changed code are re-run, which is seconds. `mutants.results` names
+# the survivors and `mutants.browse` is the same results in a terminal UI. There is no target
+# for applying one: `uv run mutmut apply <mutant>` takes the name of the mutant to put into the
+# working tree, which is a poor fit for a target that takes no arguments.
 mutants:
 	uv run mutmut run
 

@@ -20,8 +20,11 @@ uv run pytest
 
 ## Work on it
 
-`make check` runs the lot: ruff, ty, the suite, then the CRAP scores. `make format` fixes what
-ruff can fix itself.
+`make check` runs the lot: ruff, prettier over the templates, ty, the suite, then the CRAP
+scores. `make format` fixes what ruff and prettier can fix themselves.
+
+The template formatting is the one check that wants node rather than uv: `npm ci` installs it,
+and without it the other four still run.
 
 ## Container
 
