@@ -34,6 +34,17 @@ def words(response: TestResponse) -> str:
     return html.unescape(response.get_data(as_text=True))
 
 
+def refusal(response: TestResponse) -> str:
+    """The whole sentence a refusal is put in, so a test reads what the cataloguer reads.
+
+    Matched on the alert itself rather than searched for in the page, because a message with
+    something extra on either end still contains the sentence it was supposed to be.
+    """
+    match = re.search(r'<p class="error" role="alert">([^<]*)</p>', response.get_data(as_text=True))
+    assert match, "nothing was refused"
+    return html.unescape(match[1])
+
+
 def checked(response: TestResponse) -> list[str]:
     """The values of the radios shown checked; the empty one is the search button off."""
     shown = re.findall(
@@ -64,7 +75,7 @@ def test_a_search_url_without_the_placeholder_says_where_the_games_name_goes(cli
         "/settings/urls", data={"url": "https://example.com/search"}, headers=HTMX
     )
 
-    assert "That URL needs {} in it, where the game's name goes." in words(response)
+    assert refusal(response) == "That URL needs {} in it, where the game's name goes."
 
 
 def test_a_refused_search_url_is_left_in_the_field(client: FlaskClient):
@@ -78,7 +89,7 @@ def test_a_refused_search_url_is_left_in_the_field(client: FlaskClient):
 def test_a_search_url_that_is_not_http_or_https_is_refused(client: FlaskClient):
     response = client.post("/settings/urls", data={"url": "javascript:alert(1){}"}, headers=HTMX)
 
-    assert "That URL needs to start with http:// or https://." in words(response)
+    assert refusal(response) == "That URL needs to start with http:// or https://."
 
 
 def test_a_blank_search_url_saves_nothing(client: FlaskClient):

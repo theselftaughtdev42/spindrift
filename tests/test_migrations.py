@@ -90,6 +90,16 @@ def test_starting_twice_over_the_same_catalogue_changes_nothing(catalogue_path: 
     assert "Hades" in page(second)
 
 
+def test_an_upgraded_catalogue_records_one_version_per_migration(catalogue_path: Path):
+    """The version is a count of what has run, not a marker that something did: a release
+    that appends a migration expects every deployment to run that one and no other."""
+    half_migrated(catalogue_path, 2).close()
+
+    create_app(catalogue_path)
+
+    assert catalogue_version(catalogue_path) == len(MIGRATIONS)
+
+
 def test_a_second_start_leaves_the_catalogue_version_alone(catalogue_path: Path):
     create_app(catalogue_path)
     after_first = catalogue_version(catalogue_path)

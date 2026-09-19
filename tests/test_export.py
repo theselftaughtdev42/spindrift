@@ -126,3 +126,34 @@ def test_an_export_carrying_a_platform_this_spindrift_no_longer_has_imports_back
     snapshot = client.get("/settings/export").get_data()
 
     assert import_snapshot(client, snapshot).status_code == 302
+
+
+def test_a_platform_this_spindrift_no_longer_has_does_not_cut_the_export_short(
+    client: FlaskClient, catalogue_path: Path
+):
+    # Only that one availability is left out. Everything recorded after it is still a game's to
+    # export, so one unknown platform cannot quietly empty the rest of the catalogue.
+    hades = add_game(client, "Hades", ["Steam"])
+    connection = sqlite3.connect(catalogue_path)
+    with connection:
+        connection.execute(
+            "INSERT INTO game_platforms (game_id, platform) VALUES (?, 'Dreamcast')", (hades,)
+        )
+    connection.close()
+    add_game(client, "Tunic", ["Switch"])
+
+    assert exported(client)["games"] == [
+        {"name": "Hades", "status": None, "platforms": ["Steam"], "intended": None},
+        {"name": "Tunic", "status": None, "platforms": ["Switch"], "intended": None},
+    ]
+
+
+def test_an_export_is_indented_so_two_snapshots_can_be_read_and_compared(client: FlaskClient):
+    # A snapshot is a file a cataloguer keeps. All on one line, every edit to it reads as the
+    # same single change; nested two spaces at a time, a diff points at the game that moved.
+    add_game(client, "Hades", ["Steam"])
+
+    body = client.get("/settings/export").get_data(as_text=True)
+
+    depths = {len(line) - len(line.lstrip(" ")) for line in body.splitlines() if line.strip()}
+    assert depths == {0, 2, 4, 6, 8}

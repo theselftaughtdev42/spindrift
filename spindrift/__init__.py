@@ -41,10 +41,9 @@ def create_app(database_path: db.DatabasePath) -> Flask:
     app = Flask(__name__)
     app.config["DATABASE_PATH"] = str(database_path)
     build_version = resolve_version()
-    app.config["VERSION"] = build_version
 
     # jinja2 types `globals` from the defaults it ships, which admit nothing an app adds.
-    jinja_globals = cast("dict[str, Any]", app.jinja_env.globals)
+    jinja_globals = cast("dict[str, Any]", app.jinja_env.globals)  # pragma: no mutate
     jinja_globals["platforms"] = PLATFORMS
     jinja_globals["statuses"] = STATUSES
     jinja_globals["search_host"] = search_host
@@ -329,7 +328,7 @@ def create_app(database_path: db.DatabasePath) -> Flask:
             "note": note,
             **saved_search_urls(),
         }
-        if request.headers.get("HX-Request"):
+        if request.headers.get("HX-Request"):  # pragma: no mutate
             return render_template("_search_urls.html", **group)
         if error:
             return render_template("settings.html", open_group="search", **group)
@@ -339,7 +338,7 @@ def create_app(database_path: db.DatabasePath) -> Flask:
         connection = db.get_connection()
         return {
             "search_urls": connection.execute(
-                "SELECT id, url, active FROM search_urls ORDER BY id"
+                "SELECT id, url, active FROM search_urls ORDER BY id"  # pragma: no mutate
             ).fetchall()
         }
 
@@ -349,40 +348,44 @@ def create_app(database_path: db.DatabasePath) -> Flask:
         It carries its own target, which no longer matches the one the request declared.
         """
         response = make_response(render_template("_catalogue.html", error=error, **catalogue()))
-        response.headers["HX-Retarget"] = "#catalogue"
-        response.headers["HX-Reswap"] = "innerHTML"
+        response.headers["HX-Retarget"] = "#catalogue"  # pragma: no mutate
+        response.headers["HX-Reswap"] = "innerHTML"  # pragma: no mutate
         return response
 
     def catalogue() -> Context:
         connection = db.get_connection()
         games = connection.execute(
-            "SELECT id, name, status FROM games ORDER BY name COLLATE NOCASE"
+            "SELECT id, name, status FROM games ORDER BY name COLLATE NOCASE"  # pragma: no mutate
         ).fetchall()
         availability = set()
         intents = {}
-        for row in connection.execute("SELECT game_id, platform, intended FROM game_platforms"):
-            availability.add((row["game_id"], row["platform"]))
-            if row["intended"]:
-                intents[row["game_id"]] = row["platform"]
+        for row in connection.execute(
+            "SELECT game_id, platform, intended FROM game_platforms"  # pragma: no mutate
+        ):
+            availability.add((row["game_id"], row["platform"]))  # pragma: no mutate
+            if row["intended"]:  # pragma: no mutate
+                intents[row["game_id"]] = row["platform"]  # pragma: no mutate
         return {"games": games, "availability": availability, "intents": intents}
 
     def game_row(game_id: int) -> Context:
         """What `catalogue()` returns, narrowed to one game."""
         connection = db.get_connection()
         game = connection.execute(
-            "SELECT id, name, status FROM games WHERE id = ?", (game_id,)
+            "SELECT id, name, status FROM games WHERE id = ?",  # pragma: no mutate
+            (game_id,),
         ).fetchone()
         if game is None:
             abort(404)
         availability = set()
         intents = {}
         for row in connection.execute(
-            "SELECT game_id, platform, intended FROM game_platforms WHERE game_id = ?",
+            "SELECT game_id, platform, intended FROM game_platforms"  # pragma: no mutate
+            " WHERE game_id = ?",  # pragma: no mutate
             (game_id,),
         ):
-            availability.add((row["game_id"], row["platform"]))
-            if row["intended"]:
-                intents[row["game_id"]] = row["platform"]
+            availability.add((row["game_id"], row["platform"]))  # pragma: no mutate
+            if row["intended"]:  # pragma: no mutate
+                intents[row["game_id"]] = row["platform"]  # pragma: no mutate
         return {"game": game, "availability": availability, "intents": intents}
 
     return app

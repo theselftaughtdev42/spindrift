@@ -145,6 +145,15 @@ def test_a_rename_onto_a_name_already_taken_redraws_the_whole_catalogue(client: 
     assert "Hades is already in the catalogue." in response.get_data(as_text=True)
 
 
+def test_a_refused_rename_redraws_the_whole_catalogue_not_an_empty_one(client: FlaskClient):
+    add_game(client, "Hades")
+    game = add_game(client, "Celeste")
+
+    response = client.post(f"/games/{game}/name", data={"name": "Hades"}, headers=HTMX)
+
+    assert names(response.get_data(as_text=True)) == ["Celeste", "Hades"]
+
+
 def test_a_refused_rename_leaves_the_original_name_intact(client: FlaskClient):
     add_game(client, "Hades")
     game = add_game(client, "Celeste")
@@ -186,6 +195,15 @@ def test_deleting_a_game_already_deleted_is_treated_as_success(client: FlaskClie
     response = client.delete(f"/games/{game}", headers=HTMX)
 
     assert response.status_code == 200
+
+
+def test_renaming_a_game_another_device_deleted_is_refused(client: FlaskClient):
+    game = add_game(client, "Hades")
+    client.delete(f"/games/{game}", headers=HTMX)
+
+    response = client.post(f"/games/{game}/name", data={"name": "Hades II"}, headers=HTMX)
+
+    assert response.status_code == 404
 
 
 def test_a_platform_spindrift_does_not_have_is_rejected_and_leaves_no_game(client: FlaskClient):

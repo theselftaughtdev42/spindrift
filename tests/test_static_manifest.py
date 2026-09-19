@@ -5,12 +5,13 @@ in a real directory, and only the names it writes ever show up in a page.
 """
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from flask.testing import FlaskClient
 
-from spindrift.static_manifest import DIGEST_LENGTH, build, clear, load
+from spindrift.static_manifest import DIGEST_LENGTH, MANIFEST_PATH, build, clear, load
 
 DIGEST = re.compile(rf"\.[0-9a-f]{{{DIGEST_LENGTH}}}(?=\.)")
 
@@ -25,6 +26,23 @@ def static_dir(tmp_path: Path) -> Path:
 @pytest.fixture
 def manifest_path(tmp_path: Path) -> Path:
     return tmp_path / "static_manifest.json"
+
+
+@pytest.fixture
+def deployments_own_manifest() -> Iterator[Path]:
+    """A manifest at the path the build defaults to, put back however the test leaves it.
+
+    Empty, so a page built while it exists still quotes the plain names.
+    """
+    before = MANIFEST_PATH.read_text() if MANIFEST_PATH.exists() else None
+    MANIFEST_PATH.write_text("{}\n")
+
+    yield MANIFEST_PATH
+
+    if before is None:
+        MANIFEST_PATH.unlink(missing_ok=True)
+    else:
+        MANIFEST_PATH.write_text(before)
 
 
 def expected_name(name: str, digested: str) -> re.Match[str] | None:
@@ -47,6 +65,34 @@ def test_a_build_digests_every_static_file_and_records_the_mapping(
     for name, digested in manifest.items():
         assert expected_name(name, digested)
         assert (static_dir / digested).read_bytes() == (static_dir / name).read_bytes()
+
+
+# The manifest lands in the source tree during an image build, so it is written to be read
+# and diffed: one entry a line, in a settled order, ending in a newline.
+def test_a_build_writes_the_manifest_one_indented_entry_to_a_line(
+    static_dir: Path, manifest_path: Path
+):
+    for name, contents in [("theme.css", b":root { color: red }"), ("htmx.min.js", b"htmx")]:
+        (static_dir / name).write_bytes(contents)
+
+    manifest = build(static_dir, manifest_path)
+
+    assert manifest_path.read_text() == (
+        "{\n"
+        f'  "htmx.min.js": "{manifest["htmx.min.js"]}",\n'
+        f'  "theme.css": "{manifest["theme.css"]}"\n'
+        "}\n"
+    )
+
+
+def test_a_build_told_where_to_put_its_manifest_leaves_the_deployments_own_alone(
+    static_dir: Path, manifest_path: Path, deployments_own_manifest: Path
+):
+    (static_dir / "theme.css").write_bytes(b":root { color: red }")
+
+    build(static_dir, manifest_path)
+
+    assert deployments_own_manifest.exists()
 
 
 def test_a_stylesheet_whose_contents_change_gets_a_different_digested_name(

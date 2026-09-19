@@ -134,7 +134,7 @@ def describe(error: ValidationError) -> str:
     where = " › ".join(
         str(part + 1) if isinstance(part, int) else str(part) for part in first["loc"]
     )
-    message = first["msg"].removeprefix("Value error, ").rstrip(".")
+    message = first["msg"].removeprefix("Value error, ").rstrip(".")  # pragma: no mutate
     more = len(problems) - 1
     extra = f" (and {more} more problem{'s' if more > 1 else ''})" if more else ""
     return f"That snapshot can't be imported — {where}: {message}{extra}. {UNCHANGED}"

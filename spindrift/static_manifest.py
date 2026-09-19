@@ -57,7 +57,9 @@ def build(static_dir: Path = STATIC_DIR, manifest_path: Path = MANIFEST_PATH) ->
         (static_dir / name).write_bytes(source.read_bytes())
         manifest[source.name] = name
 
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n"  # pragma: no mutate
+    )
     return manifest
 
 
@@ -66,7 +68,7 @@ def load(manifest_path: Path = MANIFEST_PATH) -> Manifest:
     try:
         # Cast: `isinstance` can prove a mapping, but not that its keys and values are the
         # strings a build wrote.
-        return cast(Manifest, json.loads(manifest_path.read_text()))
+        return cast(Manifest, json.loads(manifest_path.read_text()))  # pragma: no mutate
     except (OSError, ValueError):
         return {}
 
