@@ -4,7 +4,7 @@
 # `check` gate CI, where a target that does nothing and succeeds is the worst answer
 # available. Add new targets to this list.
 .PHONY: local static.clean test crap lint lint.templates types check \
-	hooks hooks.run mutants mutants.results mutants.browse format \
+	hooks hooks.run mutants mutants.results mutants.browse mutants.check format \
 	docker.build docker.run docker.latest release release.notes
 
 # A manifest left in the source tree names whatever some earlier build digested, so every
@@ -54,6 +54,20 @@ mutants.results:
 
 mutants.browse:
 	uv run mutmut browse
+
+# What the weekly workflow runs. `mutmut run` names the survivors but exits 0 whether there
+# are any or not, so the count has to be read back out: `export-cicd-stats` writes the tally
+# mutmut already holds to mutants/mutmut-cicd-stats.json. Only survivors fail. A timeout or a
+# suspicious verdict says more about how loaded the runner was than about the tests.
+#
+# Worth running on Linux, which is where the weekly sweep runs it. A mutant that changes nothing
+# but the case of a filename survives on a case-insensitive filesystem — macOS by default —
+# because the filesystem resolves `SETTINGS.HTML` back to the template that exists. Locally
+# those are noise; on ext4 they are kills.
+mutants.check: mutants
+	uv run mutmut export-cicd-stats
+	@survived=$$(python3 -c "import json; print(json.load(open('mutants/mutmut-cicd-stats.json'))['survived'])"); \
+		test "$$survived" = 0 || { echo "$$survived mutant(s) survived; 'make mutants.results' names them"; exit 1; }
 
 # Both, because `check --fix` and `format` each undo wrapping the other chose.
 format:

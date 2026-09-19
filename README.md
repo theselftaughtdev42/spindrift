@@ -26,6 +26,17 @@ scores. `make format` fixes what ruff and prettier can fix themselves.
 The template formatting is the one check that wants node rather than uv: `npm ci` installs it,
 and without it the other four still run.
 
+Mutation testing sits outside `make check`, because a cold sweep is minutes where the suite is
+seconds. `make mutants` runs it, `make mutants.results` names whatever survived and
+`make mutants.browse` is the same results in a terminal UI.
+
+`make mutants.check` is the same sweep with a verdict: it fails if anything survived. A
+scheduled workflow runs it against `main` at 03:00 UTC each Monday, rather than on pull
+requests — a survivor is worth picking up at the start of the week, not worth holding a PR
+behind. Its verdict is the one to believe, because on a case-insensitive filesystem, which is
+macOS by default, a mutant that changes nothing but the case of a filename survives every
+local run and dies on Linux.
+
 ## Container
 
 The image is published to `ghcr.io/theselftaughtdev42/spindrift` for `linux/amd64`, and

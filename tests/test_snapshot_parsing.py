@@ -195,6 +195,35 @@ def test_one_problem_reports_no_further_problems():
     assert "more problem" not in refusal(snapshot_data(games=[game(status="beaten")]))
 
 
+def test_a_lone_problem_is_rendered_whole_with_nothing_standing_in_for_the_rest():
+    message = refusal(snapshot_data(games=[game(status="beaten")]))
+
+    assert message == (
+        "That snapshot can't be imported — games › 1 › status: beaten is not a status"
+        f" Spindrift has. {UNCHANGED}"
+    )
+
+
+# `search_url_problem` writes whole sentences, because a typed URL is shown its problem on
+# its own, whereas a snapshot's problem is a clause inside a longer sentence.
+@pytest.mark.parametrize(
+    "url, problem",
+    [
+        ("https://example.com/search", "That URL needs {} in it, where the game's name goes"),
+        ("javascript:search('{}')", "That URL needs to start with http:// or https://"),
+    ],
+    ids=["no-placeholder", "not-http"],
+)
+def test_a_problem_that_already_ends_in_a_full_stop_is_not_given_a_second_one(
+    url: str, problem: str
+):
+    message = refusal(snapshot_data(search_urls=[{"url": url, "active": True}]))
+
+    assert message == (
+        f"That snapshot can't be imported — search_urls › 1 › url: {problem}. {UNCHANGED}"
+    )
+
+
 def test_two_problems_report_one_more_problem():
     message = refusal(snapshot_data(games=[game(status="beaten"), game(platforms=["Dreamcast"])]))
 

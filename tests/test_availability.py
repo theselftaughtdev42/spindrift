@@ -92,3 +92,15 @@ def test_tapping_a_cell_on_a_deleted_game_is_refused(client: FlaskClient):
     again = add_game(client, "Hades")
     assert again == game
     assert 'aria-pressed="true"' not in cell(client.get("/").get_data(as_text=True), again, "Steam")
+
+
+def test_a_row_sent_back_on_its_own_still_shows_where_the_game_is_playable(client: FlaskClient):
+    game = add_game(client, "Hades", ["Steam", "Switch"])
+
+    # A rename, because it touches no availability: whatever the row says, it read back.
+    renamed = client.post(f"/games/{game}/name", data={"name": "Hades II"}, headers=HTMX)
+
+    body = renamed.get_data(as_text=True)
+    assert 'aria-pressed="true"' in cell(body, game, "Steam")
+    assert 'aria-pressed="true"' in cell(body, game, "Switch")
+    assert 'aria-pressed="false"' in cell(body, game, "GoG")

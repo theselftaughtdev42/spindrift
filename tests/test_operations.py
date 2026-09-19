@@ -1,4 +1,5 @@
-"""What a deployment reports about itself: health, version, and revalidated pages."""
+"""What a deployment reports about itself: health, version, revalidated pages, and the
+settings page a refused operation hands back."""
 
 import tomllib
 from pathlib import Path
@@ -71,3 +72,27 @@ def test_an_exported_snapshot_is_not_asked_to_revalidate(client: FlaskClient):
     response = client.get("/settings/export")
 
     assert "no-cache" not in response.headers.get("Cache-Control", "")
+
+
+def test_a_refused_operation_hands_back_a_settings_page_still_holding_its_search_urls(
+    client: FlaskClient,
+):
+    # Not the host the empty field suggests, which would be in the page either way.
+    client.post("/settings/urls", data={"url": "https://protondb.com/search?q={}"})
+
+    response = client.post("/settings/reset", data={})
+
+    body = response.get_data(as_text=True)
+    assert "Nothing was deleted." in body
+    assert "https://protondb.com/search?q={}" in body
+
+
+def test_without_javascript_a_refused_search_url_comes_back_with_the_message_and_the_draft(
+    client: FlaskClient,
+):
+    # No HX-Request header, so the whole page has to carry what the group alone would.
+    response = client.post("/settings/urls", data={"url": "https://example.com/search"})
+
+    body = response.get_data(as_text=True)
+    assert "That URL needs {} in it" in body
+    assert 'value="https://example.com/search"' in body

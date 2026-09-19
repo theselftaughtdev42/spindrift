@@ -81,3 +81,8 @@ source_paths = ["spindrift"]
 # repository's own catalogue at import time.
 do_not_mutate = ["spindrift/wsgi.py"]
 pytest_add_cli_args_test_selection = ["tests/"]
+# mutmut's own `# pragma: no mutate` is only read off the end of a whole statement, so it
+# silently does nothing on an argument inside a multi-line call — which is where most of
+# the reviewed-and-equivalent mutants live. Matching the comment as a line pattern instead
+# gives it the meaning it reads as: this line is not mutated, wherever the line sits.
+do_not_mutate_patterns = ["# pragma: no mutate"]

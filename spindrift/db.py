@@ -47,9 +47,9 @@ def connect(database_path: DatabasePath) -> sqlite3.Connection:
     connection = sqlite3.connect(database_path)
     try:
         connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA journal_mode = WAL")
-        connection.execute("PRAGMA busy_timeout = 5000")
-        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA journal_mode = WAL")  # pragma: no mutate
+        connection.execute("PRAGMA busy_timeout = 5000")  # pragma: no mutate
+        connection.execute("PRAGMA foreign_keys = ON")  # pragma: no mutate
     except Exception:
         connection.close()
         raise
@@ -75,7 +75,7 @@ def close_connection(exception: BaseException | None = None) -> None:
 def migrate(database_path: DatabasePath) -> None:
     connection = connect(database_path)
     try:
-        version = connection.execute("PRAGMA user_version").fetchone()[0]
+        version = connection.execute("PRAGMA user_version").fetchone()[0]  # pragma: no mutate
         for index, migration in enumerate(MIGRATIONS[version:], start=version + 1):
             connection.executescript(migration)
             connection.execute(f"PRAGMA user_version = {index}")
