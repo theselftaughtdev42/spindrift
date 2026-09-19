@@ -19,9 +19,7 @@ def test_the_health_check_is_green_when_the_catalogue_is_reachable(client):
     assert response.get_data(as_text=True) == "ok"
 
 
-def test_the_health_check_goes_red_when_the_catalogue_stops_being_readable(
-    client, catalogue_path
-):
+def test_the_health_check_goes_red_when_the_catalogue_stops_being_readable(client, catalogue_path):
     # After creation, so the failure can only come from the check's own read.
     catalogue_path.write_bytes(b"this is not a catalogue")
 
@@ -36,9 +34,7 @@ def test_the_version_endpoint_reports_the_running_build_as_plain_text(client):
     assert response.get_data(as_text=True) == released_version()
 
 
-def test_the_version_baked_into_an_image_wins_over_the_source_tree(
-    monkeypatch, catalogue_path
-):
+def test_the_version_baked_into_an_image_wins_over_the_source_tree(monkeypatch, catalogue_path):
     monkeypatch.setenv("SPINDRIFT_VERSION", "1.2.3-baked")
 
     client = create_app(catalogue_path).test_client()
@@ -46,9 +42,7 @@ def test_the_version_baked_into_an_image_wins_over_the_source_tree(
     assert client.get("/version").get_data(as_text=True) == "1.2.3-baked"
 
 
-def test_the_footer_shows_the_version_the_deployment_is_running(
-    monkeypatch, catalogue_path
-):
+def test_the_footer_shows_the_version_the_deployment_is_running(monkeypatch, catalogue_path):
     monkeypatch.setenv("SPINDRIFT_VERSION", "1.2.3-baked")
 
     client = create_app(catalogue_path).test_client()

@@ -11,7 +11,6 @@ import pytest
 
 from spindrift.static_manifest import DIGEST_LENGTH, build, clear, load
 
-
 DIGEST = re.compile(rf"\.[0-9a-f]{{{DIGEST_LENGTH}}}(?=\.)")
 
 
@@ -59,9 +58,7 @@ def test_a_stylesheet_whose_contents_change_gets_a_different_digested_name(
     assert build(static_dir, manifest_path)["theme.css"] != before
 
 
-def test_a_script_whose_contents_are_unchanged_keeps_its_digested_name(
-    static_dir, manifest_path
-):
+def test_a_script_whose_contents_are_unchanged_keeps_its_digested_name(static_dir, manifest_path):
     (static_dir / "htmx.min.js").write_bytes(b"htmx")
     before = build(static_dir, manifest_path)["htmx.min.js"]
 
@@ -84,14 +81,10 @@ def test_a_second_build_never_digests_its_own_output(static_dir, manifest_path):
     second = build(static_dir, manifest_path)
 
     assert second == first
-    assert not [
-        again.name for again in static_dir.iterdir() if len(DIGEST.findall(again.name)) > 1
-    ]
+    assert not [again.name for again in static_dir.iterdir() if len(DIGEST.findall(again.name)) > 1]
 
 
-def test_clearing_removes_what_a_build_wrote_and_leaves_the_originals(
-    static_dir, manifest_path
-):
+def test_clearing_removes_what_a_build_wrote_and_leaves_the_originals(static_dir, manifest_path):
     (static_dir / "theme.css").write_bytes(b":root { color: red }")
     (static_dir / "htmx.min.js").write_bytes(b"htmx")
     build(static_dir, manifest_path)

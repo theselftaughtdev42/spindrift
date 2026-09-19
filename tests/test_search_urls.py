@@ -5,7 +5,6 @@ import re
 
 from tests.conftest import HTMX, add_game, import_snapshot, snapshot_data
 
-
 SEARCH_URL = "https://example.com/search?q={}"
 OTHER_SEARCH_URL = "https://protondb.com/search?q={}"
 
@@ -73,9 +72,7 @@ def test_a_refused_search_url_is_left_in_the_field(client):
 
 
 def test_a_search_url_that_is_not_http_or_https_is_refused(client):
-    response = client.post(
-        "/settings/urls", data={"url": "javascript:alert(1){}"}, headers=HTMX
-    )
+    response = client.post("/settings/urls", data={"url": "javascript:alert(1){}"}, headers=HTMX)
 
     assert "That URL needs to start with http:// or https://." in words(response)
 

@@ -38,9 +38,7 @@ def test_a_status_can_be_cleared_back_to_nothing_recorded(client):
 def test_a_status_spindrift_does_not_have_is_rejected(client):
     game = add_game(client, "Hades")
 
-    response = client.post(
-        f"/games/{game}/status", data={"status": "completed"}, headers=HTMX
-    )
+    response = client.post(f"/games/{game}/status", data={"status": "completed"}, headers=HTMX)
 
     assert response.status_code == 400
 

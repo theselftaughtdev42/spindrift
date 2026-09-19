@@ -1,8 +1,8 @@
 """How a catalogue is built and upgraded, and the rules it goes on enforcing (stories 77-80)."""
 
 import gc
-import os
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -11,7 +11,7 @@ from spindrift.db import MIGRATIONS, connect
 from tests.conftest import HTMX, add_game, game_id
 
 # Every open file the process holds, on both this machine and CI.
-OPEN_FILES = "/dev/fd"
+OPEN_FILES = Path("/dev/fd")
 
 
 def half_migrated(catalogue_path, versions):
@@ -131,8 +131,7 @@ def test_a_game_has_at_most_one_intent(catalogue):
 
     with pytest.raises(sqlite3.IntegrityError):
         catalogue.execute(
-            "INSERT INTO game_platforms (game_id, platform, intended)"
-            " VALUES (1, 'Switch', 1)"
+            "INSERT INTO game_platforms (game_id, platform, intended) VALUES (1, 'Switch', 1)"
         )
 
 
@@ -141,16 +140,12 @@ def test_a_search_url_is_unique_regardless_of_capitalisation(catalogue):
     catalogue.execute("INSERT INTO search_urls (url) VALUES ('https://Example.com/{}')")
 
     with pytest.raises(sqlite3.IntegrityError):
-        catalogue.execute(
-            "INSERT INTO search_urls (url) VALUES ('https://example.com/{}')"
-        )
+        catalogue.execute("INSERT INTO search_urls (url) VALUES ('https://example.com/{}')")
 
 
 def test_at_most_one_search_url_is_active(catalogue):
     assert "search_urls_one_active" in indexes(catalogue)
-    catalogue.execute(
-        "INSERT INTO search_urls (url, active) VALUES ('https://one.example/{}', 1)"
-    )
+    catalogue.execute("INSERT INTO search_urls (url, active) VALUES ('https://one.example/{}', 1)")
 
     with pytest.raises(sqlite3.IntegrityError):
         catalogue.execute(
@@ -160,9 +155,7 @@ def test_at_most_one_search_url_is_active(catalogue):
 
 def test_deleting_a_game_deletes_its_availabilities(catalogue):
     catalogue.execute("INSERT INTO games (id, name) VALUES (1, 'Hades')")
-    catalogue.execute(
-        "INSERT INTO game_platforms (game_id, platform) VALUES (1, 'Steam')"
-    )
+    catalogue.execute("INSERT INTO game_platforms (game_id, platform) VALUES (1, 'Steam')")
 
     catalogue.execute("DELETE FROM games WHERE id = 1")
 
@@ -182,11 +175,11 @@ def test_a_catalogue_that_cannot_be_opened_leaves_no_connection_behind(tmp_path)
     catalogue_path.write_bytes(b"this is not a catalogue")
     gc.disable()
     try:
-        open_files = len(os.listdir(OPEN_FILES))
+        open_files = len(list(OPEN_FILES.iterdir()))
         for _ in range(50):
             with pytest.raises(sqlite3.DatabaseError):
                 connect(catalogue_path)
 
-        assert len(os.listdir(OPEN_FILES)) == open_files
+        assert len(list(OPEN_FILES.iterdir())) == open_files
     finally:
         gc.enable()

@@ -19,7 +19,6 @@ from spindrift.search_urls import search_url_problem
 from spindrift.statuses import STATUSES
 from spindrift.version import resolve_version
 
-
 FINISHED = {
     "imported": "Snapshot imported",
     "reset": "Data reset completed",
@@ -63,11 +62,7 @@ def create_app(database_path):
 
     @app.context_processor
     def active_search_link():
-        row = (
-            db.get_connection()
-            .execute("SELECT url FROM search_urls WHERE active")
-            .fetchone()
-        )
+        row = db.get_connection().execute("SELECT url FROM search_urls WHERE active").fetchone()
         return {
             "active_search_url": row["url"] if row else None,
             "active_search_host": search_host(row["url"]) if row else None,
@@ -101,11 +96,7 @@ def create_app(database_path):
         games = {}
         for decision in decisions:
             games.setdefault(decision["platform"], []).append(decision)
-        groups = [
-            (platform, games[platform])
-            for platform in PLATFORMS
-            if platform in games
-        ]
+        groups = [(platform, games[platform]) for platform in PLATFORMS if platform in games]
         return render_template("by_platform.html", groups=groups)
 
     @app.post("/games")
@@ -140,9 +131,7 @@ def create_app(database_path):
 
         connection = db.get_connection()
         try:
-            connection.execute(
-                "UPDATE games SET name = ? WHERE id = ?", (name, game_id)
-            )
+            connection.execute("UPDATE games SET name = ? WHERE id = ?", (name, game_id))
         except sqlite3.IntegrityError:
             return retargeted_catalogue(f"{name} is already in the catalogue.")
         connection.commit()
@@ -171,7 +160,6 @@ def create_app(database_path):
             except sqlite3.IntegrityError:
                 # The foreign key refusing a game another device deleted.
                 abort(404)
-            available, intended = True, False
         elif not row["intended"]:
             # Cleared first: the one-intent index rejects the pair mid-statement.
             connection.execute(
@@ -179,8 +167,7 @@ def create_app(database_path):
                 (game_id,),
             )
             connection.execute(
-                "UPDATE game_platforms SET intended = 1"
-                " WHERE game_id = ? AND platform = ?",
+                "UPDATE game_platforms SET intended = 1 WHERE game_id = ? AND platform = ?",
                 (game_id, platform),
             )
         else:
@@ -201,9 +188,7 @@ def create_app(database_path):
             abort(400)
 
         connection = db.get_connection()
-        connection.execute(
-            "UPDATE games SET status = ? WHERE id = ?", (status or None, game_id)
-        )
+        connection.execute("UPDATE games SET status = ? WHERE id = ?", (status or None, game_id))
         connection.commit()
         return render_template("_row.html", **game_row(game_id))
 
@@ -258,9 +243,7 @@ def create_app(database_path):
         # Cleared first, then set: the partial index allows only one active row.
         connection.execute("UPDATE search_urls SET active = 0 WHERE active")
         if active:
-            connection.execute(
-                "UPDATE search_urls SET active = 1 WHERE id = ?", (active,)
-            )
+            connection.execute("UPDATE search_urls SET active = 1 WHERE id = ?", (active,))
         connection.commit()
         note = (
             f"Searching with {search_host(chosen['url'])}."
@@ -290,15 +273,12 @@ def create_app(database_path):
         if not request.form.get("confirm"):
             return refused(
                 "snapshot",
-                "Tick the box to confirm an import replaces everything."
-                " Nothing was imported.",
+                "Tick the box to confirm an import replaces everything. Nothing was imported.",
             )
         upload = request.files.get("snapshot")
         data = upload.read() if upload else b""
         if not data:
-            return refused(
-                "snapshot", "Choose a snapshot file to import. Nothing was imported."
-            )
+            return refused("snapshot", "Choose a snapshot file to import. Nothing was imported.")
         try:
             parsed = snapshot.parse(data)
         except snapshot.SnapshotError as error:
@@ -359,9 +339,7 @@ def create_app(database_path):
 
         It carries its own target, which no longer matches the one the request declared.
         """
-        response = make_response(
-            render_template("_catalogue.html", error=error, **catalogue())
-        )
+        response = make_response(render_template("_catalogue.html", error=error, **catalogue()))
         response.headers["HX-Retarget"] = "#catalogue"
         response.headers["HX-Reswap"] = "innerHTML"
         return response
@@ -373,9 +351,7 @@ def create_app(database_path):
         ).fetchall()
         availability = set()
         intents = {}
-        for row in connection.execute(
-            "SELECT game_id, platform, intended FROM game_platforms"
-        ):
+        for row in connection.execute("SELECT game_id, platform, intended FROM game_platforms"):
             availability.add((row["game_id"], row["platform"]))
             if row["intended"]:
                 intents[row["game_id"]] = row["platform"]

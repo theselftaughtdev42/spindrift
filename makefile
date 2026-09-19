@@ -10,6 +10,15 @@ static.clean:
 test:
 	uv run pytest tests --cov
 
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
+
+# Both, because `check --fix` and `format` each undo wrapping the other chose.
+format:
+	uv run ruff check --fix .
+	uv run ruff format .
+
 docker.build:
 	docker build -t spindrift:local .
 

@@ -7,7 +7,6 @@ import pytest
 from spindrift.snapshot import FORMAT_MAJOR
 from tests.conftest import add_game, import_snapshot, snapshot_data
 
-
 KEPT_SEARCH_URL = "https://kept.example/search?q={}"
 SNAPSHOT_SEARCH_URL = "https://example.com/search?q={}"
 
@@ -58,9 +57,8 @@ def test_an_import_without_the_box_ticked_imports_nothing(client):
 def test_a_stopped_import_says_nothing_was_imported(client):
     response = import_snapshot(client, snapshot_data(), confirm=False)
 
-    assert (
-        "Tick the box to confirm an import replaces everything. Nothing was imported."
-        in shown(response)
+    assert "Tick the box to confirm an import replaces everything. Nothing was imported." in shown(
+        response
     )
 
 
@@ -73,9 +71,8 @@ def test_an_import_with_no_file_chosen_is_refused(client):
 def test_a_file_that_is_not_valid_json_is_refused(client):
     response = import_snapshot(client, b"{ this is not JSON")
 
-    assert (
-        "That file isn't a snapshot — it isn't valid JSON. Your data is unchanged."
-        in shown(response)
+    assert "That file isn't a snapshot — it isn't valid JSON. Your data is unchanged." in shown(
+        response
     )
 
 
@@ -87,8 +84,7 @@ def test_a_file_that_does_not_say_which_format_it_is_is_refused(client):
 
     assert (
         "That file doesn't say which snapshot format it is, so it can't be imported."
-        f" This Spindrift reads format {FORMAT_MAJOR}.x. Your data is unchanged."
-        in shown(response)
+        f" This Spindrift reads format {FORMAT_MAJOR}.x. Your data is unchanged." in shown(response)
     )
 
 
@@ -173,8 +169,7 @@ def test_a_refusal_names_the_first_problem_and_how_many_others(client):
 
     assert (
         "That snapshot can't be imported — games › 2 › status: someday is not a status"
-        " Spindrift has (and 2 more problems). Your data is unchanged."
-        in shown(response)
+        " Spindrift has (and 2 more problems). Your data is unchanged." in shown(response)
     )
 
 

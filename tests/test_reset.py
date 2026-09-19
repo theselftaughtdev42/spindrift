@@ -2,7 +2,6 @@
 
 from tests.conftest import add_game
 
-
 SEARCH_URL = "https://kept.example/search?q={}"
 
 
@@ -32,9 +31,7 @@ def test_a_stopped_reset_says_nothing_was_deleted(client):
 def test_a_stopped_reset_reopens_the_reset_group(client):
     response = reset(client, confirm=False)
 
-    assert '<details class="group group--danger" open>' in response.get_data(
-        as_text=True
-    )
+    assert '<details class="group group--danger" open>' in response.get_data(as_text=True)
 
 
 def test_a_confirmed_reset_leaves_an_empty_catalogue(client):
@@ -62,6 +59,4 @@ def test_a_reset_lands_on_the_catalogue_saying_it_happened(client):
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/?finished=reset"
-    assert "Data reset completed" in client.get(
-        response.headers["Location"]
-    ).get_data(as_text=True)
+    assert "Data reset completed" in client.get(response.headers["Location"]).get_data(as_text=True)

@@ -18,7 +18,7 @@ def names(body):
 
 def cell(body, game, platform):
     """The availability button for one game and platform, as it is rendered."""
-    identifier = f'cell-{game}-{platform.replace(" ", "-")}'
+    identifier = f"cell-{game}-{platform.replace(' ', '-')}"
     match = re.search(rf'<button[^>]*id="{identifier}"[^>]*>', body)
     assert match, f"{platform} is not shown for game {game}"
     return match[0]
@@ -116,9 +116,7 @@ def test_renaming_a_game_returns_just_that_row(client):
     game = add_game(client, "Hades")
     add_game(client, "Celeste")
 
-    response = client.post(
-        f"/games/{game}/name", data={"name": "Hades II"}, headers=HTMX
-    )
+    response = client.post(f"/games/{game}/name", data={"name": "Hades II"}, headers=HTMX)
 
     body = response.get_data(as_text=True)
     assert names(body) == ["Hades II"]

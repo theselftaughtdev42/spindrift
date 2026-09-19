@@ -9,18 +9,14 @@ def export(connection):
     ).fetchall()
     availability = set()
     intents = {}
-    for row in connection.execute(
-        "SELECT game_id, platform, intended FROM game_platforms"
-    ):
+    for row in connection.execute("SELECT game_id, platform, intended FROM game_platforms"):
         # Left out: this deployment would refuse to import them back.
         if row["platform"] not in PLATFORMS:
             continue
         availability.add((row["game_id"], row["platform"]))
         if row["intended"]:
             intents[row["game_id"]] = row["platform"]
-    search_urls = connection.execute(
-        "SELECT url, active FROM search_urls ORDER BY id"
-    ).fetchall()
+    search_urls = connection.execute("SELECT url, active FROM search_urls ORDER BY id").fetchall()
 
     snapshot = Snapshot(
         spindrift=FORMAT_VERSION,
@@ -29,17 +25,13 @@ def export(connection):
                 name=game["name"],
                 status=game["status"],
                 platforms=[
-                    platform
-                    for platform in PLATFORMS
-                    if (game["id"], platform) in availability
+                    platform for platform in PLATFORMS if (game["id"], platform) in availability
                 ],
                 intended=intents.get(game["id"]),
             )
             for game in games
         ],
-        search_urls=[
-            SearchUrl(url=row["url"], active=bool(row["active"])) for row in search_urls
-        ],
+        search_urls=[SearchUrl(url=row["url"], active=bool(row["active"])) for row in search_urls],
     )
     return snapshot.model_dump_json(indent=2) + "\n"
 
@@ -54,8 +46,7 @@ def replace(connection, snapshot):
                 (game.name, game.status),
             )
             connection.executemany(
-                "INSERT INTO game_platforms (game_id, platform, intended)"
-                " VALUES (?, ?, ?)",
+                "INSERT INTO game_platforms (game_id, platform, intended) VALUES (?, ?, ?)",
                 [
                     (cursor.lastrowid, platform, platform == game.intended)
                     for platform in game.platforms

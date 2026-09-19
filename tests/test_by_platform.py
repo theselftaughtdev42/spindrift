@@ -12,8 +12,9 @@ def decide(client, game, platform):
 
 
 def plan_row(body, name):
-    match = re.search(rf"<tr[^>]*>(?:(?!<tr).)*?<td>{re.escape(name)}</td>.*?</tr>",
-                      body, re.DOTALL)
+    match = re.search(
+        rf"<tr[^>]*>(?:(?!<tr).)*?<td>{re.escape(name)}</td>.*?</tr>", body, re.DOTALL
+    )
     assert match, f"{name} is not in the by-platform view"
     return match[0]
 
@@ -49,9 +50,7 @@ def test_games_on_a_platform_are_ordered_by_name_whatever_the_capitalisation(cli
 
     body = client.get("/by-platform").get_data(as_text=True)
 
-    assert body.index("<td>Anno</td>") < body.index("<td>braid</td>") < body.index(
-        "<td>zelda</td>"
-    )
+    assert body.index("<td>Anno</td>") < body.index("<td>braid</td>") < body.index("<td>zelda</td>")
 
 
 def test_platforms_nothing_is_decided_on_are_absent(client):

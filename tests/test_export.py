@@ -8,7 +8,6 @@ from datetime import date
 from spindrift.snapshot import FORMAT_VERSION
 from tests.conftest import add_game, import_snapshot, snapshot_data
 
-
 SEARCH_URL = "https://example.com/search?q={}"
 OTHER_SEARCH_URL = "https://other.example/find?q={}"
 
@@ -46,9 +45,7 @@ def test_an_export_holds_every_game_with_its_availabilities_intent_and_status(cl
 def test_an_export_holds_every_search_url_and_which_one_is_active(client):
     client.post("/settings/urls", data={"url": SEARCH_URL})
     client.post("/settings/urls", data={"url": OTHER_SEARCH_URL})
-    client.post(
-        "/settings/active", data={"active": search_url_id(client, OTHER_SEARCH_URL)}
-    )
+    client.post("/settings/active", data={"active": search_url_id(client, OTHER_SEARCH_URL)})
 
     assert exported(client)["search_urls"] == [
         {"url": SEARCH_URL, "active": False},
@@ -64,10 +61,7 @@ def test_exports_of_unchanged_data_are_identical(client):
     add_game(client, "Hades", ["Steam"])
     client.post("/settings/urls", data={"url": SEARCH_URL})
 
-    assert (
-        client.get("/settings/export").get_data()
-        == client.get("/settings/export").get_data()
-    )
+    assert client.get("/settings/export").get_data() == client.get("/settings/export").get_data()
 
 
 def test_an_export_is_named_with_todays_date(client):
@@ -80,8 +74,7 @@ def test_an_export_is_named_with_todays_date(client):
 
 def test_an_export_is_sent_as_json(client):
     assert (
-        client.get("/settings/export").headers["Content-Type"]
-        == "application/json; charset=utf-8"
+        client.get("/settings/export").headers["Content-Type"] == "application/json; charset=utf-8"
     )
 
 
@@ -92,9 +85,7 @@ def test_an_empty_deployment_exports_an_empty_snapshot(client):
     assert snapshot["search_urls"] == []
 
 
-def test_a_platform_this_spindrift_no_longer_has_is_left_out_of_an_export(
-    client, catalogue_path
-):
+def test_a_platform_this_spindrift_no_longer_has_is_left_out_of_an_export(client, catalogue_path):
     # Decided on the unknown platform: an export carrying that intent would name a platform
     # it had left out of the game's availabilities, which is a snapshot nothing can import.
     import_snapshot(client, snapshot_data())

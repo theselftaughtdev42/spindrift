@@ -103,12 +103,12 @@ def parse(data):
     try:
         document = json.loads(data)
     except (ValueError, RecursionError):
-        raise SnapshotError(f"That file isn't a snapshot — it isn't valid JSON. {UNCHANGED}")
+        raise SnapshotError(
+            f"That file isn't a snapshot — it isn't valid JSON. {UNCHANGED}"
+        ) from None
 
     version = document.get("spindrift") if isinstance(document, dict) else None
-    match = (
-        re.fullmatch(r"([0-9]+)\.([0-9]+)", version) if isinstance(version, str) else None
-    )
+    match = re.fullmatch(r"([0-9]+)\.([0-9]+)", version) if isinstance(version, str) else None
     if match is None:
         raise SnapshotError(
             "That file doesn't say which snapshot format it is, so it can't be imported."

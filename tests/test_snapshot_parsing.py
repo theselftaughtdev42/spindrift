@@ -53,9 +53,7 @@ def test_a_file_that_is_not_json_is_refused_as_not_valid_json():
     assert "isn't valid JSON" in refusal(b"this was never a snapshot")
 
 
-@pytest.mark.parametrize(
-    "document", [b"[1, 2, 3]", b'"1.0"'], ids=["a-list", "a-bare-string"]
-)
+@pytest.mark.parametrize("document", [b"[1, 2, 3]", b'"1.0"'], ids=["a-list", "a-bare-string"])
 def test_a_json_file_that_is_not_an_object_does_not_say_which_format_it_is(document):
     assert "doesn't say which snapshot format it is" in refusal(document)
 
@@ -116,9 +114,7 @@ def test_a_platform_spindrift_does_not_have_is_refused():
 
 
 def test_an_intent_on_a_platform_spindrift_does_not_have_is_refused():
-    message = refusal(
-        snapshot_data(games=[game(platforms=["Dreamcast"], intended="Dreamcast")])
-    )
+    message = refusal(snapshot_data(games=[game(platforms=["Dreamcast"], intended="Dreamcast")]))
 
     assert "Dreamcast is not a platform Spindrift has" in message
 
@@ -200,18 +196,14 @@ def test_one_problem_reports_no_further_problems():
 
 
 def test_two_problems_report_one_more_problem():
-    message = refusal(
-        snapshot_data(games=[game(status="beaten"), game(platforms=["Dreamcast"])])
-    )
+    message = refusal(snapshot_data(games=[game(status="beaten"), game(platforms=["Dreamcast"])]))
 
     assert "(and 1 more problem)" in message
 
 
 def test_three_problems_report_two_more_problems():
     message = refusal(
-        snapshot_data(
-            games=[game(status="beaten"), game(platforms=["Dreamcast"]), game(name=" ")]
-        )
+        snapshot_data(games=[game(status="beaten"), game(platforms=["Dreamcast"]), game(name=" ")])
     )
 
     assert "(and 2 more problems)" in message

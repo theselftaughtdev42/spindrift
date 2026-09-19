@@ -20,9 +20,7 @@ def test_one_tap_makes_the_game_available_on_that_platform(client):
 
     client.post(f"/games/{game}/platforms/Steam", headers=HTMX)
 
-    assert 'aria-pressed="true"' in cell(
-        client.get("/").get_data(as_text=True), game, "Steam"
-    )
+    assert 'aria-pressed="true"' in cell(client.get("/").get_data(as_text=True), game, "Steam")
 
 
 def test_a_second_tap_makes_that_platform_the_intent(client):
@@ -67,9 +65,7 @@ def test_tapping_a_cell_answers_with_the_whole_row(client):
     client.post(f"/games/{game}/platforms/Steam", headers=HTMX)
     client.post(f"/games/{game}/platforms/Switch", headers=HTMX)
 
-    body = client.post(
-        f"/games/{game}/platforms/Switch", headers=HTMX
-    ).get_data(as_text=True)
+    body = client.post(f"/games/{game}/platforms/Switch", headers=HTMX).get_data(as_text=True)
 
     assert "data-intended" in cell(body, game, "Switch")
     assert "data-intended" not in cell(body, game, "Steam")
@@ -93,6 +89,4 @@ def test_tapping_a_cell_on_a_deleted_game_is_refused(client):
     # The next game takes the deleted one's id, so an orphaned availability would show here.
     again = add_game(client, "Hades")
     assert again == game
-    assert 'aria-pressed="true"' not in cell(
-        client.get("/").get_data(as_text=True), again, "Steam"
-    )
+    assert 'aria-pressed="true"' not in cell(client.get("/").get_data(as_text=True), again, "Steam")
