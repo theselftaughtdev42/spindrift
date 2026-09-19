@@ -55,15 +55,15 @@ mutants.results:
 mutants.browse:
 	uv run mutmut browse
 
-# The gate CI runs. `mutmut run` names the survivors but exits 0 whether there are any or
-# not, so the count has to be read back out: `export-cicd-stats` writes the tally mutmut
-# already holds to mutants/mutmut-cicd-stats.json. Only survivors fail the build. A timeout
-# or a suspicious verdict says more about how loaded the runner was than about the tests.
+# What the nightly workflow runs. `mutmut run` names the survivors but exits 0 whether there
+# are any or not, so the count has to be read back out: `export-cicd-stats` writes the tally
+# mutmut already holds to mutants/mutmut-cicd-stats.json. Only survivors fail. A timeout or a
+# suspicious verdict says more about how loaded the runner was than about the tests.
 #
-# Worth running on Linux, which is where CI runs it. A mutant that changes nothing but the
-# case of a filename survives on a case-insensitive filesystem — macOS by default — because
-# the filesystem resolves `SETTINGS.HTML` back to the template that exists. Locally those
-# are noise; on ext4 they are kills.
+# Worth running on Linux, which is where the nightly runs it. A mutant that changes nothing
+# but the case of a filename survives on a case-insensitive filesystem — macOS by default —
+# because the filesystem resolves `SETTINGS.HTML` back to the template that exists. Locally
+# those are noise; on ext4 they are kills.
 mutants.check: mutants
 	uv run mutmut export-cicd-stats
 	@survived=$$(python3 -c "import json; print(json.load(open('mutants/mutmut-cicd-stats.json'))['survived'])"); \
