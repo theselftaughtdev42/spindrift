@@ -12,7 +12,7 @@ test:
 
 crap:
 	uv run pytest tests --cov --cov-branch --cov-report=lcov:lcov.info
-	uvx crap4py spindrift --lcov lcov.info
+	uv run crap4py spindrift --lcov lcov.info
 
 lint:
 	uv run ruff check .
