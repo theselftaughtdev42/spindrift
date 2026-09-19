@@ -55,12 +55,12 @@ mutants.results:
 mutants.browse:
 	uv run mutmut browse
 
-# What the nightly workflow runs. `mutmut run` names the survivors but exits 0 whether there
+# What the weekly workflow runs. `mutmut run` names the survivors but exits 0 whether there
 # are any or not, so the count has to be read back out: `export-cicd-stats` writes the tally
 # mutmut already holds to mutants/mutmut-cicd-stats.json. Only survivors fail. A timeout or a
 # suspicious verdict says more about how loaded the runner was than about the tests.
 #
-# Worth running on Linux, which is where the nightly runs it. A mutant that changes nothing
+# Worth running on Linux, which is where the weekly sweep runs it. A mutant that changes nothing
 # but the case of a filename survives on a case-insensitive filesystem — macOS by default —
 # because the filesystem resolves `SETTINGS.HTML` back to the template that exists. Locally
 # those are noise; on ext4 they are kills.

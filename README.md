@@ -31,11 +31,11 @@ seconds. `make mutants` runs it, `make mutants.results` names whatever survived 
 `make mutants.browse` is the same results in a terminal UI.
 
 `make mutants.check` is the same sweep with a verdict: it fails if anything survived. A
-scheduled workflow runs it against `main` at 03:00 UTC, rather than on pull requests — a
-survivor is worth knowing about the next morning, not worth holding a PR behind. Its verdict
-is the one to believe, because on a case-insensitive filesystem, which is macOS by default, a
-mutant that changes nothing but the case of a filename survives every local run and dies on
-Linux.
+scheduled workflow runs it against `main` at 03:00 UTC each Monday, rather than on pull
+requests — a survivor is worth picking up at the start of the week, not worth holding a PR
+behind. Its verdict is the one to believe, because on a case-insensitive filesystem, which is
+macOS by default, a mutant that changes nothing but the case of a filename survives every
+local run and dies on Linux.
 
 ## Container
 

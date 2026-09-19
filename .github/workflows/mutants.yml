@@ -1,6 +1,6 @@
 # Mutation testing runs on a schedule rather than per pull request. A cold sweep is minutes
 # where the suite is seconds, and survivors are a slow-moving signal about the shape of the
-# tests — worth knowing about the next morning, not worth holding every PR behind.
+# tests — worth picking up at the start of the week, not worth holding every PR behind.
 #
 # It has to run on Linux to mean anything. A mutant that changes nothing but the case of a
 # filename survives on a case-insensitive filesystem — macOS by default — because the
@@ -14,8 +14,8 @@ name: Mutants
 
 on:
   schedule:
-    # 03:00 UTC daily.
-    - cron: "0 3 * * *"
+    # 03:00 UTC every Monday.
+    - cron: "0 3 * * 1"
   workflow_dispatch:
 
 jobs:
