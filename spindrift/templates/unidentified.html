@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+
+{% block title %}Sign in — Spindrift{% endblock %}
+
+{% block content %}
+  <p class="lede">This Spindrift sits behind a sign-in, and this request didn’t come through it.</p>
+  {% if auth_hub %}
+    <p>Sign in at <a href="{{ auth_hub }}">the application hub</a>, then open Spindrift from there.</p>
+  {% else %}
+    <p>Open Spindrift at the address the proxy serves it on, rather than reaching the app directly.</p>
+  {% endif %}
+{% endblock %}

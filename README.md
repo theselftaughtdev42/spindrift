@@ -91,6 +91,7 @@ Run contract for the orchestration layer:
 - **Version:** `GET /version` returns the release the running image was built from, as
   plain text (e.g. `0.2.0`) — the outside check that a deploy or rollback landed the build
   you asked for. It reads nothing and touches no database, so it's safe to poll.
+- **Identity:** off unless `SPINDRIFT_PROXY_AUTH` is set — see below.
 
 ```
 docker run -d --name spindrift \
@@ -98,3 +99,23 @@ docker run -d --name spindrift \
   -v spindrift-data:/data \
   ghcr.io/theselftaughtdev42/spindrift:latest
 ```
+
+### Behind a sign-in
+
+Spindrift authenticates nobody. A proxy in front does — Authentik's outpost, oauth2-proxy,
+anything speaking forward auth — and Spindrift reads its verdict from the headers to show
+whose request it is. That is as far as identity goes: nothing in the catalogue belongs to
+anyone. The reasoning is ADR-0002.
+
+- `SPINDRIFT_PROXY_AUTH=1` turns it on. Without it the headers aren't read at all, and a
+  deployment with nothing in front works exactly as it always has.
+- `SPINDRIFT_AUTH_HUB` is the proxy's application hub, if it has one; the name in the
+  masthead links there.
+
+Map `X-authentik-uid` through, and any of `X-authentik-name`, `X-authentik-username` or
+`X-authentik-email` for something to display.
+
+**With this on, the loopback bind is a security boundary rather than tidiness** — anything
+that can reach port 8000 directly can set those headers itself and be whoever it likes. A
+request arriving without them is answered `401`. `/health` and `/version` are exempt,
+because the image's `HEALTHCHECK` polls `/health` on localhost and never passes the proxy.

@@ -1,3 +1,4 @@
+import logging
 import sqlite3
 from datetime import date
 from typing import Any, cast
@@ -7,6 +8,7 @@ from flask import (
     Flask,
     Response,
     abort,
+    g,
     make_response,
     redirect,
     render_template,
@@ -15,8 +17,9 @@ from flask import (
 )
 from flask.typing import ResponseReturnValue
 
-from spindrift import db, deployment, snapshot
+from spindrift import db, deployment, identity, snapshot
 from spindrift import static_manifest as manifest
+from spindrift.identity import ProxyAuth
 from spindrift.platforms import PLATFORMS
 from spindrift.search_urls import search_url_problem
 from spindrift.statuses import STATUSES
@@ -31,13 +34,22 @@ FINISHED = {
     "reset": "Data reset completed",
 }
 
+# The checks the orchestration layer polls, and the files a page is built from. The
+# container's own HEALTHCHECK reaches `/health` on localhost, going round the proxy
+# entirely, so no identity can be asked of anything here.
+UNGUARDED = frozenset({"health", "version", "static"})
+
+# Methods that only read. Everything else changes the catalogue, and is logged with a
+# name against it.
+READS = frozenset({"GET", "HEAD", "OPTIONS"})
+
 
 def search_host(url: str) -> str:
     host = urlsplit(url).hostname or url
     return host.removeprefix("www.")
 
 
-def create_app(database_path: db.DatabasePath) -> Flask:
+def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = None) -> Flask:
     app = Flask(__name__)
     app.config["DATABASE_PATH"] = str(database_path)
     build_version = resolve_version()
@@ -68,6 +80,52 @@ def create_app(database_path: db.DatabasePath) -> Flask:
 
     db.migrate(app.config["DATABASE_PATH"])
     app.teardown_appcontext(db.close_connection)
+
+    # Only where a deployment says a proxy is in front. Without that statement the
+    # identity headers are never read, and this is the app it has always been: no
+    # sign-in, nobody's name on anything, every device on the network equal.
+    if proxy_auth is not None:
+        # Flask's own handler is already on the logger; what it will pass is the question.
+        app.logger.setLevel(logging.INFO)
+        app.logger.info("Identity comes from the proxy in front")
+
+        @app.before_request
+        def identify_cataloguer() -> ResponseReturnValue | None:
+            if request.endpoint in UNGUARDED:
+                return None
+            cataloguer = identity.identify(request.headers)
+            if cataloguer is None:
+                return unidentified()
+            g.cataloguer = cataloguer
+            if request.method not in READS:
+                # The uid as well as the name, because the name is the one that changes.
+                app.logger.info(
+                    "%s %s by %s (%s)",
+                    request.method,
+                    request.path,
+                    cataloguer.name,
+                    cataloguer.uid,
+                )
+            return None
+
+    def unidentified() -> ResponseReturnValue:
+        """A request that arrived without passing the proxy the deployment promised.
+
+        Only a whole navigation can be sent to sign in, because the proxy answers that
+        one itself. An htmx request is told to become one rather than swapping whatever
+        a sign-in page says into a table row.
+        """
+        if request.headers.get("HX-Request"):
+            return "", 401, {"HX-Redirect": url_for("page")}
+        return render_template("unidentified.html"), 401
+
+    @app.context_processor
+    def signed_in_as() -> Context:
+        return {
+            "cataloguer": g.get("cataloguer"),
+            "auth_hub": proxy_auth.hub_url if proxy_auth else None,
+            "behind_proxy": proxy_auth is not None,
+        }
 
     @app.context_processor
     def active_search_link() -> Context:

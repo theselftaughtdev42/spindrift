@@ -9,6 +9,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}" />
     {% block head %}{% endblock %}
+    {%- if behind_proxy %}
+      {#- Only where a proxy answers for the session, because only then can one lapse. -#}
+      <script src="{{ url_for('static', filename='session.js') }}" defer></script>
+    {%- endif %}
   </head>
   <body {% block body_attributes %}{% endblock %}>
     <header class="masthead">
@@ -20,7 +24,18 @@
           Spindrift
         </a>
       </h1>
-      {% block nav %}{% endblock %}
+      <div class="masthead-end">
+        {% block nav %}{% endblock %}
+        {%- if cataloguer %}
+          {#- A label, not a control: nothing here belongs to anyone yet. Where the hub is
+              configured it is also the way back out to whatever shares the sign-in. -#}
+          {% if auth_hub %}
+            <a class="whoami" href="{{ auth_hub }}">{{ cataloguer.name }}</a>
+          {% else %}
+            <span class="whoami">{{ cataloguer.name }}</span>
+          {% endif %}
+        {%- endif %}
+      </div>
     </header>
 
     {% block content %}{% endblock %}

@@ -17,6 +17,7 @@ from flask.testing import FlaskClient
 from werkzeug.test import TestResponse
 
 from spindrift import create_app
+from spindrift.identity import ProxyAuth
 from spindrift.snapshot import FORMAT_VERSION
 
 
@@ -35,8 +36,31 @@ def client(app: Flask) -> FlaskClient:
     return app.test_client()
 
 
+# Where the proxy's application hub lives, for the deployments that name one.
+HUB = "https://auth.example.com/hub"
+
+
+@pytest.fixture
+def guarded_app(catalogue_path: Path) -> Flask:
+    """A deployment that has been told a proxy stands in front of it."""
+    return create_app(catalogue_path, ProxyAuth(hub_url=HUB))
+
+
+@pytest.fixture
+def guarded_client(guarded_app: Flask) -> FlaskClient:
+    return guarded_app.test_client()
+
+
 # htmx sends this on every request it makes; its absence is a browser without JavaScript.
 HTMX = {"HX-Request": "true"}
+
+# What Authentik's outpost puts on a request it has let through.
+AUTHENTIK = {
+    "X-authentik-uid": "6f1c1e2a",
+    "X-authentik-name": "Tim MacKay",
+    "X-authentik-username": "tim",
+    "X-authentik-email": "tim@example.com",
+}
 
 
 def snapshot_data(**overrides: object) -> dict[str, object]:
