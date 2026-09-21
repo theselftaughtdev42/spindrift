@@ -103,9 +103,15 @@ docker run -d --name spindrift \
 ### Behind a sign-in
 
 Spindrift authenticates nobody. A proxy in front does — Authentik's outpost, oauth2-proxy,
-anything speaking forward auth — and Spindrift reads its verdict from the headers to show
-whose request it is. That is as far as identity goes: nothing in the catalogue belongs to
-anyone. The reasoning is ADR-0002.
+anything speaking forward auth — and Spindrift reads its verdict from the headers to know
+whose request it is. Each person signed in gets a catalogue of their own, and sees nothing
+of anyone else's. The reasoning is ADR-0002 and ADR-0003.
+
+- The first person to sign in adopts whatever catalogue the deployment already had. Everyone
+  after starts with an empty one.
+- A snapshot is one person's catalogue. Export gives you yours; import and reset replace or
+  empty yours and leave everyone else's alone. A snapshot from any earlier version imports
+  into whoever's catalogue imports it.
 
 - `SPINDRIFT_PROXY_AUTH=1` turns it on. Without it the headers aren't read at all, and a
   deployment with nothing in front works exactly as it always has.

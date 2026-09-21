@@ -22,3 +22,6 @@ nowhere. Nothing in the catalogue belongs to a cataloguer.
   database and to the snapshot format, and ADR-0001 says a snapshot format major is refused
   rather than upgraded — so that change has to settle how a pre-ownership snapshot imports
   before it is made.
+
+Ownership has since been decided in ADR-0003. The uid is now stored, as the key a catalogue
+belongs to; names still are not.

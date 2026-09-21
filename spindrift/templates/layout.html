@@ -27,8 +27,8 @@
       <div class="masthead-end">
         {% block nav %}{% endblock %}
         {%- if cataloguer %}
-          {#- A label, not a control: nothing here belongs to anyone yet. Where the hub is
-              configured it is also the way back out to whatever shares the sign-in. -#}
+          {#- A label, not a control: whose catalogue this is. Where the hub is configured
+              it is also the way back out to whatever shares the sign-in. -#}
           {% if auth_hub %}
             <a class="whoami" href="{{ auth_hub }}">{{ cataloguer.name }}</a>
           {% else %}
