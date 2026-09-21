@@ -62,6 +62,21 @@ AUTHENTIK = {
     "X-authentik-email": "tim@example.com",
 }
 
+# A second cataloguer on the same deployment, with a catalogue of their own.
+SOMEONE_ELSE = {
+    "X-authentik-uid": "9b04d7c3",
+    "X-authentik-name": "Sam Rivera",
+}
+
+
+def signed_in(app: Flask, headers: dict[str, str]) -> FlaskClient:
+    """A client every request from which comes through the proxy as one cataloguer."""
+    client = app.test_client()
+    client.environ_base.update(
+        {f"HTTP_{header.upper().replace('-', '_')}": value for header, value in headers.items()}
+    )
+    return client
+
 
 def snapshot_data(**overrides: object) -> dict[str, object]:
     """A snapshot this deployment accepts. A refusal test changes the one field it is about."""

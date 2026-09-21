@@ -81,6 +81,60 @@ def test_an_upgraded_catalogue_records_what_the_later_migrations_added(catalogue
     assert "example.com" in client.get("/settings").get_data(as_text=True)
 
 
+def test_availabilities_survive_the_upgrade_that_gives_a_catalogue_an_owner(
+    catalogue_path: Path,
+):
+    """That upgrade rebuilds the games table, and a rebuild that let the foreign key's
+    cascade run would take every availability and intent with the old table."""
+    connection = half_migrated(catalogue_path, 5)
+    connection.execute("INSERT INTO games (id, name, status) VALUES (1, 'Hades', 'playing')")
+    connection.execute(
+        "INSERT INTO game_platforms (game_id, platform, intended) VALUES (1, 'Steam', 1)"
+    )
+    connection.execute("INSERT INTO game_platforms (game_id, platform) VALUES (1, 'Switch')")
+    connection.execute(
+        "INSERT INTO search_urls (url, active) VALUES ('https://example.com/search?q={}', 1)"
+    )
+    connection.commit()
+    connection.close()
+
+    client = create_app(catalogue_path).test_client()
+
+    exported = client.get("/settings/export").get_json()
+    assert exported["games"] == [
+        {
+            "name": "Hades",
+            "status": "playing",
+            "platforms": ["Steam", "Switch"],
+            "intended": "Steam",
+        }
+    ]
+    assert exported["search_urls"] == [{"url": "https://example.com/search?q={}", "active": True}]
+
+
+def test_a_migration_that_fails_leaves_the_catalogue_at_the_version_before_it(
+    catalogue_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    half_migrated(catalogue_path, len(MIGRATIONS)).close()
+    monkeypatch.setattr(
+        "spindrift.db.MIGRATIONS",
+        [*MIGRATIONS, "CREATE TABLE half_done (id INTEGER); INSERT INTO nowhere VALUES (1);"],
+    )
+
+    with pytest.raises(sqlite3.OperationalError):
+        create_app(catalogue_path)
+
+    assert catalogue_version(catalogue_path) == len(MIGRATIONS)
+    connection = connect(catalogue_path)
+    try:
+        tables = connection.execute(
+            "SELECT name FROM sqlite_master WHERE name = 'half_done'"
+        ).fetchall()
+    finally:
+        connection.close()
+    assert tables == []
+
+
 def test_starting_twice_over_the_same_catalogue_changes_nothing(catalogue_path: Path):
     first = create_app(catalogue_path).test_client()
     add_game(first, "Hades", ["Steam"])
@@ -126,17 +180,63 @@ def indexes(connection: sqlite3.Connection) -> set[str]:
     }
 
 
+def another_owner(catalogue: sqlite3.Connection) -> int:
+    cursor = catalogue.execute("INSERT INTO cataloguers (uid) VALUES ('someone-else')")
+    assert cursor.lastrowid is not None
+    return cursor.lastrowid
+
+
 def test_a_game_name_is_unique_regardless_of_capitalisation(catalogue: sqlite3.Connection):
     assert "games_name_unique" in indexes(catalogue)
-    catalogue.execute("INSERT INTO games (name) VALUES ('Hades')")
+    catalogue.execute("INSERT INTO games (owner_id, name) VALUES (1, 'Hades')")
 
     with pytest.raises(sqlite3.IntegrityError):
-        catalogue.execute("INSERT INTO games (name) VALUES ('hades')")
+        catalogue.execute("INSERT INTO games (owner_id, name) VALUES (1, 'hades')")
+
+
+def test_a_game_name_is_unique_only_within_its_owners_catalogue(catalogue: sqlite3.Connection):
+    other = another_owner(catalogue)
+    catalogue.execute("INSERT INTO games (owner_id, name) VALUES (1, 'Hades')")
+
+    catalogue.execute("INSERT INTO games (owner_id, name) VALUES (?, 'hades')", (other,))
+
+    assert catalogue.execute("SELECT COUNT(*) FROM games").fetchone()[0] == 2
+
+
+def test_a_game_needs_an_owner(catalogue: sqlite3.Connection):
+    """No default: a query that forgot to say whose would otherwise hand it to row 1."""
+    with pytest.raises(sqlite3.IntegrityError):
+        catalogue.execute("INSERT INTO games (name) VALUES ('Hades')")
+
+
+def test_a_game_needs_an_owner_that_exists(catalogue: sqlite3.Connection):
+    with pytest.raises(sqlite3.IntegrityError):
+        catalogue.execute("INSERT INTO games (owner_id, name) VALUES (99, 'Hades')")
+
+
+def test_a_search_url_needs_an_owner(catalogue: sqlite3.Connection):
+    with pytest.raises(sqlite3.IntegrityError):
+        catalogue.execute("INSERT INTO search_urls (url) VALUES ('https://example.com/{}')")
+
+
+def test_only_the_default_owner_goes_without_a_uid(catalogue: sqlite3.Connection):
+    owners = catalogue.execute("SELECT id, uid FROM cataloguers").fetchall()
+    assert [tuple(owner) for owner in owners] == [(1, None)]
+
+    with pytest.raises(sqlite3.IntegrityError):
+        catalogue.execute("INSERT INTO cataloguers (uid) VALUES (NULL)")
+
+
+def test_a_uid_names_one_owner(catalogue: sqlite3.Connection):
+    another_owner(catalogue)
+
+    with pytest.raises(sqlite3.IntegrityError):
+        another_owner(catalogue)
 
 
 def test_a_game_has_at_most_one_intent(catalogue: sqlite3.Connection):
     assert "game_platforms_one_intent" in indexes(catalogue)
-    catalogue.execute("INSERT INTO games (id, name) VALUES (1, 'Hades')")
+    catalogue.execute("INSERT INTO games (id, owner_id, name) VALUES (1, 1, 'Hades')")
     catalogue.execute(
         "INSERT INTO game_platforms (game_id, platform, intended) VALUES (1, 'Steam', 1)"
     )
@@ -149,24 +249,58 @@ def test_a_game_has_at_most_one_intent(catalogue: sqlite3.Connection):
 
 def test_a_search_url_is_unique_regardless_of_capitalisation(catalogue: sqlite3.Connection):
     assert "search_urls_url_unique" in indexes(catalogue)
-    catalogue.execute("INSERT INTO search_urls (url) VALUES ('https://Example.com/{}')")
+    catalogue.execute(
+        "INSERT INTO search_urls (owner_id, url) VALUES (1, 'https://Example.com/{}')"
+    )
 
     with pytest.raises(sqlite3.IntegrityError):
-        catalogue.execute("INSERT INTO search_urls (url) VALUES ('https://example.com/{}')")
+        catalogue.execute(
+            "INSERT INTO search_urls (owner_id, url) VALUES (1, 'https://example.com/{}')"
+        )
+
+
+def test_a_search_url_is_unique_only_within_its_owners_catalogue(catalogue: sqlite3.Connection):
+    other = another_owner(catalogue)
+    catalogue.execute(
+        "INSERT INTO search_urls (owner_id, url) VALUES (1, 'https://example.com/{}')"
+    )
+
+    catalogue.execute(
+        "INSERT INTO search_urls (owner_id, url) VALUES (?, 'https://example.com/{}')", (other,)
+    )
+
+    assert catalogue.execute("SELECT COUNT(*) FROM search_urls").fetchone()[0] == 2
 
 
 def test_at_most_one_search_url_is_active(catalogue: sqlite3.Connection):
     assert "search_urls_one_active" in indexes(catalogue)
-    catalogue.execute("INSERT INTO search_urls (url, active) VALUES ('https://one.example/{}', 1)")
+    catalogue.execute(
+        "INSERT INTO search_urls (owner_id, url, active) VALUES (1, 'https://one.example/{}', 1)"
+    )
 
     with pytest.raises(sqlite3.IntegrityError):
         catalogue.execute(
-            "INSERT INTO search_urls (url, active) VALUES ('https://two.example/{}', 1)"
+            "INSERT INTO search_urls (owner_id, url, active)"
+            " VALUES (1, 'https://two.example/{}', 1)"
         )
 
 
+def test_each_owner_has_an_active_search_url_of_their_own(catalogue: sqlite3.Connection):
+    other = another_owner(catalogue)
+    catalogue.execute(
+        "INSERT INTO search_urls (owner_id, url, active) VALUES (1, 'https://one.example/{}', 1)"
+    )
+
+    catalogue.execute(
+        "INSERT INTO search_urls (owner_id, url, active) VALUES (?, 'https://two.example/{}', 1)",
+        (other,),
+    )
+
+    assert catalogue.execute("SELECT COUNT(*) FROM search_urls WHERE active").fetchone()[0] == 2
+
+
 def test_deleting_a_game_deletes_its_availabilities(catalogue: sqlite3.Connection):
-    catalogue.execute("INSERT INTO games (id, name) VALUES (1, 'Hades')")
+    catalogue.execute("INSERT INTO games (id, owner_id, name) VALUES (1, 1, 'Hades')")
     catalogue.execute("INSERT INTO game_platforms (game_id, platform) VALUES (1, 'Steam')")
 
     catalogue.execute("DELETE FROM games WHERE id = 1")
@@ -176,8 +310,8 @@ def test_deleting_a_game_deletes_its_availabilities(catalogue: sqlite3.Connectio
 
 # Append-only once released: changing this number is the deliberate step in front of
 # editing a migration that deployments have already run.
-def test_the_catalogue_has_five_migrations():
-    assert len(MIGRATIONS) == 5
+def test_the_catalogue_has_six_migrations():
+    assert len(MIGRATIONS) == 6
 
 
 def test_a_catalogue_that_cannot_be_opened_leaves_no_connection_behind(tmp_path: Path):

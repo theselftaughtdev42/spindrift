@@ -17,7 +17,7 @@ from flask import (
 )
 from flask.typing import ResponseReturnValue
 
-from spindrift import db, deployment, identity, snapshot
+from spindrift import db, deployment, identity, ownership, snapshot
 from spindrift import static_manifest as manifest
 from spindrift.identity import ProxyAuth
 from spindrift.platforms import PLATFORMS
@@ -97,6 +97,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
             if cataloguer is None:
                 return unidentified()
             g.cataloguer = cataloguer
+            g.owner = ownership.owner_of(db.get_connection(), cataloguer.uid)
             if request.method not in READS:
                 # The uid as well as the name, because the name is the one that changes.
                 app.logger.info(
@@ -107,6 +108,18 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
                     cataloguer.uid,
                 )
             return None
+
+    else:
+
+        @app.before_request
+        def no_cataloguer():
+            # Nobody to own anything, so the deployment's one catalogue is the default owner's.
+            g.owner = ownership.DEFAULT_OWNER
+
+    def owner() -> int:
+        """Whose catalogue this request reads and writes, settled before any route runs."""
+        # `int` because `g` hands back `Any`; a request with no owner settled fails here.
+        return int(g.owner)
 
     def unidentified() -> ResponseReturnValue:
         """A request that arrived without passing the proxy the deployment promised.
@@ -129,7 +142,15 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
 
     @app.context_processor
     def active_search_link() -> Context:
-        row = db.get_connection().execute("SELECT url FROM search_urls WHERE active").fetchone()
+        # No owner is a request refused before it was identified, which has nobody's link.
+        owner = g.get("owner")
+        row = (
+            None
+            if owner is None
+            else db.get_connection()
+            .execute("SELECT url FROM search_urls WHERE owner_id = ? AND active", (owner,))
+            .fetchone()
+        )
         return {
             "active_search_url": row["url"] if row else None,
             "active_search_host": search_host(row["url"]) if row else None,
@@ -156,8 +177,9 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         decisions = connection.execute(
             "SELECT game_platforms.platform, games.name, games.status"
             " FROM game_platforms JOIN games ON games.id = game_platforms.game_id"
-            " WHERE game_platforms.intended"
-            " ORDER BY games.name COLLATE NOCASE"
+            " WHERE games.owner_id = ? AND game_platforms.intended"
+            " ORDER BY games.name COLLATE NOCASE",
+            (owner(),),
         ).fetchall()
 
         games = {}
@@ -178,7 +200,9 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
 
         connection = db.get_connection()
         try:
-            cursor = connection.execute("INSERT INTO games (name) VALUES (?)", (name,))
+            cursor = connection.execute(
+                "INSERT INTO games (owner_id, name) VALUES (?, ?)", (owner(), name)
+            )
         except sqlite3.IntegrityError:
             error = f"{name} is already in the catalogue."
             return render_template("_catalogue.html", error=error, **catalogue())
@@ -198,7 +222,10 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
 
         connection = db.get_connection()
         try:
-            connection.execute("UPDATE games SET name = ? WHERE id = ?", (name, game_id))
+            connection.execute(
+                "UPDATE games SET name = ? WHERE id = ? AND owner_id = ?",
+                (name, game_id, owner()),
+            )
         except sqlite3.IntegrityError:
             return retargeted_catalogue(f"{name} is already in the catalogue.")
         connection.commit()
@@ -213,12 +240,17 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
 
         connection = db.get_connection()
         # Read first: which way a third state goes cannot be inferred from a blind delete.
+        # Through the game, so another cataloguer's is as absent as one that never was.
         row = connection.execute(
-            "SELECT intended FROM game_platforms WHERE game_id = ? AND platform = ?",
-            (game_id, platform),
+            "SELECT game_platforms.intended FROM games LEFT JOIN game_platforms"
+            " ON game_platforms.game_id = games.id AND game_platforms.platform = ?"
+            " WHERE games.id = ? AND games.owner_id = ?",
+            (platform, game_id, owner()),
         ).fetchone()
-
         if row is None:
+            abort(404)
+
+        if row["intended"] is None:
             try:
                 connection.execute(
                     "INSERT INTO game_platforms (game_id, platform) VALUES (?, ?)",
@@ -255,7 +287,10 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
             abort(400)
 
         connection = db.get_connection()
-        connection.execute("UPDATE games SET status = ? WHERE id = ?", (status or None, game_id))
+        connection.execute(
+            "UPDATE games SET status = ? WHERE id = ? AND owner_id = ?",
+            (status or None, game_id, owner()),
+        )
         connection.commit()
         return render_template("_row.html", **game_row(game_id))
 
@@ -263,7 +298,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     def delete_game(game_id: int) -> str:
         connection = db.get_connection()
         # No row check: a game already gone is the outcome asked for.
-        connection.execute("DELETE FROM games WHERE id = ?", (game_id,))
+        connection.execute("DELETE FROM games WHERE id = ? AND owner_id = ?", (game_id, owner()))
         connection.commit()
         return render_template("_catalogue.html", **catalogue())
 
@@ -282,7 +317,9 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
 
         connection = db.get_connection()
         try:
-            connection.execute("INSERT INTO search_urls (url) VALUES (?)", (url,))
+            connection.execute(
+                "INSERT INTO search_urls (owner_id, url) VALUES (?, ?)", (owner(), url)
+            )
         except sqlite3.IntegrityError:
             return search_group(error="That URL is already saved.", draft=url)
         connection.commit()
@@ -291,7 +328,9 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     @app.post("/settings/urls/<int:url_id>/delete")
     def delete_search_url(url_id: int) -> ResponseReturnValue:
         connection = db.get_connection()
-        connection.execute("DELETE FROM search_urls WHERE id = ?", (url_id,))
+        connection.execute(
+            "DELETE FROM search_urls WHERE id = ? AND owner_id = ?", (url_id, owner())
+        )
         connection.commit()
         return search_group(note="Search URL deleted.")
 
@@ -304,15 +343,20 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         if active:
             # Checked before clearing, or a URL another device deleted turns the control off.
             chosen = connection.execute(
-                "SELECT url FROM search_urls WHERE id = ?", (active,)
+                "SELECT url FROM search_urls WHERE id = ? AND owner_id = ?", (active, owner())
             ).fetchone()
             if chosen is None:
                 return search_group()
             note = f"Searching with {search_host(chosen['url'])}."
         # Cleared first, then set: the partial index allows only one active row.
-        connection.execute("UPDATE search_urls SET active = 0 WHERE active")
+        connection.execute(
+            "UPDATE search_urls SET active = 0 WHERE owner_id = ? AND active", (owner(),)
+        )
         if active:
-            connection.execute("UPDATE search_urls SET active = 1 WHERE id = ?", (active,))
+            connection.execute(
+                "UPDATE search_urls SET active = 1 WHERE id = ? AND owner_id = ?",
+                (active, owner()),
+            )
         connection.commit()
         return search_group(note=note)
 
@@ -320,7 +364,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     def export_snapshot() -> ResponseReturnValue:
         filename = f"spindrift-{date.today().isoformat()}.json"
         return (
-            deployment.export(db.get_connection()),
+            deployment.export(db.get_connection(), owner()),
             200,
             {
                 "Content-Type": "application/json; charset=utf-8",
@@ -330,7 +374,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
 
     @app.post("/settings/import")
     def import_snapshot() -> ResponseReturnValue:
-        """Replace the deployment's entire state with an uploaded snapshot.
+        """Replace this cataloguer's catalogue with an uploaded snapshot.
 
         Everything that can refuse runs before anything is deleted.
         """
@@ -348,7 +392,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         except snapshot.SnapshotError as error:
             return refused("snapshot", str(error))
         try:
-            deployment.replace(db.get_connection(), parsed)
+            deployment.replace(db.get_connection(), owner(), parsed)
         except sqlite3.IntegrityError:
             return refused(
                 "snapshot",
@@ -364,7 +408,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
                 "reset",
                 "Tick the box to confirm a reset deletes everything. Nothing was deleted.",
             )
-        deployment.reset(db.get_connection())
+        deployment.reset(db.get_connection(), owner())
         return redirect(url_for("page", finished="reset"))
 
     def refused(group: str, error: str) -> str:
@@ -396,7 +440,9 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         connection = db.get_connection()
         return {
             "search_urls": connection.execute(
-                "SELECT id, url, active FROM search_urls ORDER BY id"  # pragma: no mutate
+                "SELECT id, url, active FROM search_urls WHERE owner_id = ?"  # pragma: no mutate
+                " ORDER BY id",  # pragma: no mutate
+                (owner(),),
             ).fetchall()
         }
 
@@ -413,12 +459,17 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     def catalogue() -> Context:
         connection = db.get_connection()
         games = connection.execute(
-            "SELECT id, name, status FROM games ORDER BY name COLLATE NOCASE"  # pragma: no mutate
+            "SELECT id, name, status FROM games WHERE owner_id = ?"  # pragma: no mutate
+            " ORDER BY name COLLATE NOCASE",  # pragma: no mutate
+            (owner(),),
         ).fetchall()
         availability = set()
         intents = {}
         for row in connection.execute(
             "SELECT game_id, platform, intended FROM game_platforms"  # pragma: no mutate
+            " JOIN games ON games.id = game_platforms.game_id"  # pragma: no mutate
+            " WHERE games.owner_id = ?",  # pragma: no mutate
+            (owner(),),
         ):
             availability.add((row["game_id"], row["platform"]))  # pragma: no mutate
             if row["intended"]:  # pragma: no mutate
@@ -429,8 +480,8 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         """What `catalogue()` returns, narrowed to one game."""
         connection = db.get_connection()
         game = connection.execute(
-            "SELECT id, name, status FROM games WHERE id = ?",  # pragma: no mutate
-            (game_id,),
+            "SELECT id, name, status FROM games WHERE id = ? AND owner_id = ?",  # pragma: no mutate
+            (game_id, owner()),
         ).fetchone()
         if game is None:
             abort(404)

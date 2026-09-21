@@ -8,12 +8,14 @@ every device on it.
 ### The catalogue
 
 **Catalogue**:
-The whole collection of games one Spindrift deployment keeps.
+The whole collection of games one cataloguer keeps, with the search URLs they search them
+with. A deployment keeps one for each of its cataloguers, and a deployment with no proxy
+keeps exactly one.
 _Avoid_: library, collection, list
 
 **Game**:
-One entry in the catalogue, identified by its name, which no other game shares regardless of
-capitalisation.
+One entry in a catalogue, identified by its name, which no other game in the same catalogue
+shares regardless of capitalisation. Two cataloguers can each have a game of the same name.
 _Avoid_: title, entry
 
 **Platform**:
@@ -44,39 +46,45 @@ has. A cataloguer is identified by the account's own id, which survives a rename
 name is only ever displayed and logged.
 _Avoid_: user, account, player, profile
 
-Nothing in the catalogue belongs to a cataloguer. Every game, availability, intent, status
-and search URL is the deployment's, shared by everyone behind the sign-in.
+A cataloguer owns a catalogue and sees nothing of anyone else's. Every game, availability,
+intent, status and search URL is one cataloguer's. The catalogue a deployment had before a
+proxy went in front of it is adopted by the first cataloguer to sign in.
 
 ### Configuration
 
 **Search URL**:
-A saved web address the catalogue's search control can send a game's name to.
+A saved web address a catalogue's search control can send a game's name to. Each catalogue
+has its own.
 _Avoid_: search engine, search link
 
 **Active search URL**:
-The one search URL the search control currently points at. With none active, there is no
-search control.
+The one search URL a catalogue's search control currently points at. With none active,
+there is no search control.
 _Avoid_: default, selected URL
 
 ### Moving between deployments
 
 **Deployment**:
-One running instance of Spindrift with its own catalogue and configuration.
+One running instance of Spindrift, keeping a catalogue for each of its cataloguers — or,
+with no proxy in front, just the one.
 _Avoid_: install, server, instance
 
 **Snapshot**:
-The entire persisted state of a deployment — every game with its availabilities, intent and
-status, and every search URL with which one is active — captured as a single file.
+One catalogue — every game with its availabilities, intent and status, and every search URL
+with which one is active — captured as a single file. A snapshot says nothing of whose
+catalogue it was.
 _Avoid_: backup, dump, export file
 
 **Export**:
-Taking a snapshot of a deployment.
+Taking a snapshot of the cataloguer's own catalogue.
 
 **Import**:
-Replacing a deployment's entire state with the contents of a snapshot. Nothing already there
-survives; an import never merges.
+Replacing the cataloguer's catalogue with the contents of a snapshot, which becomes theirs
+whoever's it was. Nothing already in that catalogue survives; an import never merges, and
+never touches anyone else's.
 _Avoid_: restore, merge, load
 
 **Reset**:
-Deleting a deployment's entire state, leaving an empty catalogue with no search URLs.
+Deleting everything in the cataloguer's catalogue, leaving it empty with no search URLs.
+Nobody else's is touched.
 _Avoid_: wipe, clear, factory reset

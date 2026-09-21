@@ -1,7 +1,6 @@
-"""Identity as a label: who the proxy says this is, shown and logged and nothing more.
+"""Identity: who the proxy says this is, and what the app reads, refuses and shows of it.
 
-Nothing in the catalogue belongs to anyone yet, so every test here is about what the app
-reads, what it refuses to read, and what it puts on the page.
+What a cataloguer owns once identified is test_ownership.
 """
 
 import logging
