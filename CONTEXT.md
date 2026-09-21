@@ -35,6 +35,18 @@ What became of a game: playing, finished, 100% or abandoned. A game with no stat
 nothing has been recorded about, which is not the same as not started.
 _Avoid_: progress, state, outcome
 
+### Who is using it
+
+**Cataloguer**:
+The person a request is from, as the proxy in front says — never as the request itself
+claims. A deployment with no proxy has no cataloguer at all, and works exactly as it always
+has. A cataloguer is identified by the account's own id, which survives a rename; their
+name is only ever displayed and logged.
+_Avoid_: user, account, player, profile
+
+Nothing in the catalogue belongs to a cataloguer. Every game, availability, intent, status
+and search URL is the deployment's, shared by everyone behind the sign-in.
+
 ### Configuration
 
 **Search URL**:

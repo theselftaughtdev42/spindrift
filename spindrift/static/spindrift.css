@@ -68,6 +68,35 @@ input[type="file"]::file-selector-button {
   image-rendering: pixelated;
 }
 
+/* The nav and whoever is signed in travel together at the far end of the masthead, so the
+   logo keeps the space between them to itself. */
+.masthead-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sd-space-4);
+}
+
+/* Who the proxy in front says this is. Muted, because it is a fact about the page rather
+   than somewhere to go — until the hub is configured, and then it is quietly both. */
+.whoami {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 44px;
+  font-size: var(--sd-text-sm);
+  color: var(--sd-text-muted);
+}
+
+a.whoami {
+  text-decoration: none;
+}
+
+a.whoami:hover {
+  color: var(--sd-accent);
+  text-decoration: underline;
+}
+
 .nav {
   display: inline-flex;
   align-items: center;
