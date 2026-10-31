@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Spindrift{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='spindrift-mark.svg') }}" />
+    {#- Credentials, or a proxy that checks sign-in would refuse the manifest request. -#}
+    <link rel="manifest" href="{{ url_for('web_manifest') }}" crossorigin="use-credentials" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />
+    <meta name="theme-color" content="{{ theme_colour }}" />
+    <script
+      src="{{ url_for('static', filename='pwa.js') }}"
+      data-service-worker="{{ url_for('service_worker') }}"
+      defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='spindrift.css') }}" />
     {% block head %}{% endblock %}

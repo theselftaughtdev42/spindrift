@@ -17,7 +17,7 @@ from flask import (
 )
 from flask.typing import ResponseReturnValue
 
-from spindrift import db, deployment, identity, ownership, snapshot
+from spindrift import db, deployment, identity, ownership, pwa, snapshot
 from spindrift import static_manifest as manifest
 from spindrift.identity import ProxyAuth
 from spindrift.platforms import PLATFORMS
@@ -36,8 +36,9 @@ FINISHED = {
 
 # The checks the orchestration layer polls, and the files a page is built from. The
 # container's own HEALTHCHECK reaches `/health` on localhost, going round the proxy
-# entirely, so no identity can be asked of anything here.
-UNGUARDED = frozenset({"health", "version", "static"})
+# entirely, so no identity can be asked of anything here. The manifest and service worker
+# are files a page is built from too, and say nothing about anyone's catalogue.
+UNGUARDED = frozenset({"health", "version", "static", "web_manifest", "service_worker"})
 
 # Methods that only read. Everything else changes the catalogue, and is logged with a
 # name against it.
@@ -60,6 +61,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     jinja_globals["statuses"] = STATUSES
     jinja_globals["search_host"] = search_host
     jinja_globals["version"] = build_version
+    jinja_globals["theme_colour"] = pwa.theme_colour()
 
     # nginx serves /static/ in deployment, so the filename is the only cache-busting lever.
     static_manifest = manifest.load()
@@ -165,6 +167,47 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     @app.get("/version")
     def version() -> ResponseReturnValue:
         return build_version, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+    @app.get("/manifest.webmanifest")
+    def web_manifest() -> ResponseReturnValue:
+        """What an installed Spindrift is called, where it opens, and the icons it shows."""
+        icons = [
+            ("icon-192.png", "192x192", "any"),
+            ("icon-512.png", "512x512", "any"),
+            ("icon-maskable-512.png", "512x512", "maskable"),
+        ]
+        manifest = {
+            "id": url_for("page"),
+            "name": "Spindrift",
+            "short_name": "Spindrift",
+            "description": "A catalogue of games and the ways they can be played.",
+            "start_url": url_for("page"),
+            "scope": url_for("page"),
+            "display": "standalone",
+            "background_color": pwa.theme_colour(),
+            "theme_color": pwa.theme_colour(),
+            "icons": [
+                {
+                    "src": url_for("static", filename=filename),
+                    "sizes": sizes,
+                    "type": "image/png",
+                    "purpose": purpose,
+                }
+                for filename, sizes, purpose in icons
+            ],
+        }
+        return manifest, 200, {"Content-Type": "application/manifest+json"}
+
+    # At the root, not under /static/: a service worker only reaches pages at or below the
+    # path it was served from. Revalidated every time, so a new one is never stuck behind a
+    # cache.
+    @app.get("/sw.js")
+    def service_worker() -> ResponseReturnValue:
+        return (
+            pwa.service_worker(),
+            200,
+            {"Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-cache"},
+        )
 
     @app.get("/")
     def page() -> str:
