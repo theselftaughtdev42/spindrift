@@ -204,7 +204,13 @@ def test_changes_to_your_own_game_leave_a_namesake_in_another_catalogue_alone(
 
     assert game_id(sam, "Hades") == theirs
     assert exported(sam)["games"] == [
-        {"name": "Hades", "status": None, "platforms": ["Switch"], "intended": None}
+        {
+            "name": "Hades",
+            "status": None,
+            "platforms": ["Switch"],
+            "intended": None,
+            "wishlisted": [],
+        }
     ]
 
 

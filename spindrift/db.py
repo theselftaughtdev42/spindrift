@@ -77,6 +77,12 @@ MIGRATIONS: list[str] = [
     CREATE UNIQUE INDEX search_urls_url_unique ON search_urls (owner_id, url COLLATE NOCASE);
     CREATE UNIQUE INDEX search_urls_one_active ON search_urls (owner_id) WHERE active;
     """,
+    # The wishlist (ADR-0004): a mark on an availability, and whether its cataloguer has the
+    # feature on at all. Off by default, and turning it off keeps the marks.
+    """
+    ALTER TABLE game_platforms ADD COLUMN wishlisted INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE cataloguers ADD COLUMN wishlist INTEGER NOT NULL DEFAULT 0;
+    """,
 ]
 
 

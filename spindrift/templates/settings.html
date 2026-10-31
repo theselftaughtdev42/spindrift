@@ -31,6 +31,31 @@
     {% include "_search_urls.html" %}
   </details>
 
+  {#- A plain form: the setting changes what other pages show, so there is nothing here to swap. -#}
+  <details class="group" {% if open_group == "wishlist" %}open{% endif %}>
+    <summary>
+      <span class="group-marker" aria-hidden="true"></span>
+      <h2 class="group-name">Wishlist</h2>
+      <span class="group-note">Mark which games are on each platform’s store wishlist</span>
+    </summary>
+
+    <div class="group-body">
+      {% if open_group == "wishlist" %}
+        <p class="saved" role="status">Wishlist turned {{ "on" if wishlist else "off" }}.</p>
+      {% endif %}
+      <form class="deployment" method="post" action="{{ url_for('set_wishlist') }}">
+        <p class="hint">
+          Adds a Wishlisted column to the by-platform page. Turning it off hides the column but keeps every mark.
+        </p>
+        <label class="confirm wishlist-toggle">
+          <input type="checkbox" name="enabled" value="yes" {% if wishlist %}checked{% endif %} />
+          Show the wishlist
+        </label>
+        <button type="submit" class="sd-button deployment-action">Save</button>
+      </form>
+    </div>
+  </details>
+
   {#- Separate forms: a button reaching the wrong endpoint here would cost a catalogue. -#}
   <details class="group" {% if open_group == "snapshot" %}open{% endif %}>
     <summary>

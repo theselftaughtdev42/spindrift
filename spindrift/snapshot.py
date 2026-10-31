@@ -15,7 +15,7 @@ from spindrift.search_urls import search_url_problem
 from spindrift.statuses import STATUSES
 
 # What this build writes, and whose major it reads. See ADR-0001.
-FORMAT_VERSION = "1.0"
+FORMAT_VERSION = "1.1"
 FORMAT_MAJOR = int(FORMAT_VERSION.split(".")[0])
 
 UNCHANGED = "Your data is unchanged."
@@ -36,6 +36,8 @@ class Game(BaseModel):
     status: str | None
     platforms: list[str]
     intended: str | None
+    # Added in 1.1, so a 1.0 snapshot has nothing on its wishlist.
+    wishlisted: list[str] = []
 
     @field_validator("name")
     @classmethod
@@ -64,6 +66,13 @@ class Game(BaseModel):
     def known_intent(cls, intended: str | None) -> str | None:
         return intended if intended is None else known_platform(intended)
 
+    @field_validator("wishlisted")
+    @classmethod
+    def known_wishlisted(cls, wishlisted: list[str]) -> list[str]:
+        for platform in wishlisted:
+            known_platform(platform)
+        return wishlisted
+
     # The database cannot check this: a snapshot spells the two out separately.
     @model_validator(mode="after")
     def intent_is_available(self) -> Self:
@@ -72,6 +81,16 @@ class Game(BaseModel):
                 f"{self.name} is meant to be played on {self.intended},"
                 " which isn't one of its platforms"
             )
+        return self
+
+    # A mark is on an availability, so it can't be somewhere the game isn't playable.
+    @model_validator(mode="after")
+    def wishlisted_is_available(self) -> Self:
+        for platform in self.wishlisted:
+            if platform not in self.platforms:
+                raise ValueError(
+                    f"{self.name} is wishlisted on {platform}, which isn't one of its platforms"
+                )
         return self
 
 
@@ -93,6 +112,8 @@ class Snapshot(BaseModel):
     spindrift: str
     games: list[Game]
     search_urls: list[SearchUrl]
+    # Added in 1.1: whether the catalogue shows its wishlist. A 1.0 snapshot didn't.
+    wishlist: bool = False
 
 
 def parse(data: str | bytes) -> Snapshot:

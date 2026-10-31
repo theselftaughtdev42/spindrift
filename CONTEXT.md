@@ -37,6 +37,13 @@ What became of a game: playing, finished, 100% or abandoned. A game with no stat
 nothing has been recorded about, which is not the same as not started.
 _Avoid_: progress, state, outcome
 
+**Wishlist**:
+The availabilities a cataloguer has marked as on that platform's store wishlist, so the
+store tells them when the game goes on sale. A mark belongs to a game on one platform, not
+to the game, and goes when that availability does. Each cataloguer turns the wishlist on or
+off for themselves; it starts off, and turning it off hides the marks without deleting them.
+_Avoid_: watchlist, favourite
+
 ### Who is using it
 
 **Cataloguer**:
@@ -70,8 +77,9 @@ with no proxy in front, just the one.
 _Avoid_: install, server, instance
 
 **Snapshot**:
-One catalogue — every game with its availabilities, intent and status, and every search URL
-with which one is active — captured as a single file. A snapshot says nothing of whose
+One catalogue — every game with its availabilities, intent, status and wishlist marks, every
+search URL with which one is active, and whether the wishlist is on — captured as a single
+file. A snapshot says nothing of whose
 catalogue it was.
 _Avoid_: backup, dump, export file
 
@@ -85,6 +93,7 @@ never touches anyone else's.
 _Avoid_: restore, merge, load
 
 **Reset**:
-Deleting everything in the cataloguer's catalogue, leaving it empty with no search URLs.
+Deleting everything in the cataloguer's catalogue, leaving it empty with no search URLs and
+the wishlist off.
 Nobody else's is touched.
 _Avoid_: wipe, clear, factory reset

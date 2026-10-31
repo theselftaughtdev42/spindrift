@@ -43,8 +43,15 @@ def test_an_export_holds_every_game_with_its_availabilities_intent_and_status(cl
             "status": "playing",
             "platforms": ["Steam", "Switch"],
             "intended": "Steam",
+            "wishlisted": [],
         },
-        {"name": "Tunic", "status": None, "platforms": ["Switch"], "intended": None},
+        {
+            "name": "Tunic",
+            "status": None,
+            "platforms": ["Switch"],
+            "intended": None,
+            "wishlisted": [],
+        },
     ]
 
 
@@ -143,8 +150,20 @@ def test_a_platform_this_spindrift_no_longer_has_does_not_cut_the_export_short(
     add_game(client, "Tunic", ["Switch"])
 
     assert exported(client)["games"] == [
-        {"name": "Hades", "status": None, "platforms": ["Steam"], "intended": None},
-        {"name": "Tunic", "status": None, "platforms": ["Switch"], "intended": None},
+        {
+            "name": "Hades",
+            "status": None,
+            "platforms": ["Steam"],
+            "intended": None,
+            "wishlisted": [],
+        },
+        {
+            "name": "Tunic",
+            "status": None,
+            "platforms": ["Switch"],
+            "intended": None,
+            "wishlisted": [],
+        },
     ]
 
 
