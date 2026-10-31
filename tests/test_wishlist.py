@@ -89,7 +89,33 @@ def test_a_toggle_without_htmx_goes_back_to_the_page(client: FlaskClient):
     response = client.post(f"/games/{game}/platforms/Steam/wishlist")
 
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/by-platform")
+    assert response.headers["Location"].endswith(f"/by-platform#wishlisted-{game}-Steam")
+
+
+def test_a_toggle_without_htmx_returns_to_a_platform_with_a_space_in_its_name(
+    client: FlaskClient,
+):
+    game = add_game(client, "Halo")
+    decide(client, game, "Xbox 360")
+    turn_on(client)
+
+    response = client.post(f"/games/{game}/platforms/Xbox 360/wishlist")
+
+    assert response.headers["Location"].endswith(f"#wishlisted-{game}-Xbox-360")
+
+
+def test_a_toggle_answers_with_just_its_cell_keeping_the_buttons_id(client: FlaskClient):
+    game = add_game(client, "Hades")
+    decide(client, game, "Steam")
+    turn_on(client)
+
+    body = toggle(client, game).get_data(as_text=True).strip()
+
+    # One cell and the same id, so htmx can swap it in place and give focus back.
+    assert body.startswith('<td class="wishlisted">')
+    assert body.endswith("</td>")
+    assert body.count("<td") == 1
+    assert f'id="wishlisted-{game}-Steam"' in body
 
 
 def test_turning_it_off_hides_the_marks_but_keeps_them(client: FlaskClient):
@@ -117,7 +143,19 @@ def test_a_toggle_is_refused_where_the_game_is_not_available(client: FlaskClient
     turn_on(client)
 
     assert toggle(client, game, "Switch").status_code == 404
+
+
+def test_a_toggle_on_a_platform_spindrift_does_not_have_is_refused(client: FlaskClient):
+    game = add_game(client, "Hades", ["Steam"])
+    turn_on(client)
+
     assert toggle(client, game, "Nowhere").status_code == 404
+
+
+def test_a_toggle_on_a_game_that_does_not_exist_is_refused(client: FlaskClient):
+    turn_on(client)
+
+    assert toggle(client, 999).status_code == 404
 
 
 def test_a_mark_belongs_to_its_platform_not_the_game(client: FlaskClient):

@@ -216,7 +216,9 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         )
         connection.commit()
         if not request.headers.get("HX-Request"):
-            return redirect(url_for("by_platform"))
+            # Back to the row, or a long page would land at the top.
+            anchor = f"wishlisted-{game_id}-{platform.replace(' ', '-')}"
+            return redirect(url_for("by_platform", _anchor=anchor))
         return render_template(
             "_wishlisted.html",
             game={"id": game_id, "name": row["name"], "wishlisted": wishlisted},
@@ -340,7 +342,9 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     @app.get("/settings")
     def settings() -> str:
         open_group = "wishlist" if request.args.get("saved") == "wishlist" else None
-        return render_template("settings.html", open_group=open_group, **saved_search_urls())
+        return render_template(
+            "settings.html", open_group=open_group, **saved_search_urls(), **wishlist_setting()
+        )
 
     @app.post("/settings/wishlist")
     def set_wishlist() -> ResponseReturnValue:
@@ -458,7 +462,11 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     def refused(group: str, error: str) -> str:
         """The settings page again, reopened at the group that refused."""
         return render_template(
-            "settings.html", error=error, open_group=group, **saved_search_urls()
+            "settings.html",
+            error=error,
+            open_group=group,
+            **saved_search_urls(),
+            **wishlist_setting(),
         )
 
     def search_group(
@@ -477,13 +485,17 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         if request.headers.get("HX-Request"):  # pragma: no mutate
             return render_template("_search_urls.html", **group)
         if error:
-            return render_template("settings.html", open_group="search", **group)
+            return render_template(
+                "settings.html", open_group="search", **group, **wishlist_setting()
+            )
         return redirect(url_for("settings"))
+
+    def wishlist_setting() -> Context:
+        return {"wishlist": deployment.wishlist_enabled(db.get_connection(), owner())}
 
     def saved_search_urls() -> Context:
         connection = db.get_connection()
         return {
-            "wishlist": deployment.wishlist_enabled(connection, owner()),
             "search_urls": connection.execute(
                 "SELECT id, url, active FROM search_urls WHERE owner_id = ?"  # pragma: no mutate
                 " ORDER BY id",  # pragma: no mutate

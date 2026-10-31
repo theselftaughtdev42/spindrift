@@ -263,3 +263,14 @@ def test_a_wishlist_mark_on_a_platform_spindrift_does_not_have_is_refused():
     game = {"name": "Hades", "status": None, "platforms": [], "intended": None}
     with pytest.raises(SnapshotError, match="Nowhere is not a platform Spindrift has"):
         parse(json.dumps(snapshot_data(games=[{**game, "wishlisted": ["Nowhere"]}])))
+
+
+def test_a_wishlist_written_as_null_is_refused_rather_than_becoming_empty():
+    game = {"name": "Hades", "status": None, "platforms": ["Steam"], "intended": None}
+    with pytest.raises(SnapshotError, match="wishlisted: Input should be a valid list"):
+        parse(json.dumps(snapshot_data(games=[{**game, "wishlisted": None}])))
+
+
+def test_a_wishlist_setting_written_as_a_word_is_refused_rather_than_becoming_true():
+    with pytest.raises(SnapshotError, match="wishlist: Input should be a valid boolean"):
+        parse(json.dumps(snapshot_data(wishlist="yes")))

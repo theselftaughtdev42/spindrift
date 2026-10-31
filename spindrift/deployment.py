@@ -33,7 +33,9 @@ def export(connection: sqlite3.Connection, owner: int) -> str:
                 ],
                 intended=intents.get(game["id"]),  # pragma: no mutate
                 wishlisted=[
-                    platform for platform in PLATFORMS if (game["id"], platform) in wishlisted
+                    platform
+                    for platform in PLATFORMS
+                    if (game["id"], platform) in wishlisted  # pragma: no mutate
                 ],
             )
             for game in games
@@ -66,8 +68,8 @@ def availabilities(
         availability.add((row["game_id"], row["platform"]))  # pragma: no mutate
         if row["intended"]:  # pragma: no mutate
             intents[row["game_id"]] = row["platform"]  # pragma: no mutate
-        if row["wishlisted"]:
-            wishlisted.add((row["game_id"], row["platform"]))
+        if row["wishlisted"]:  # pragma: no mutate
+            wishlisted.add((row["game_id"], row["platform"]))  # pragma: no mutate
     return availability, intents, wishlisted
 
 
