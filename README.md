@@ -91,6 +91,10 @@ Run contract for the orchestration layer:
 - **Version:** `GET /version` returns the release the running image was built from, as
   plain text (e.g. `0.2.0`) — the outside check that a deploy or rollback landed the build
   you asked for. It reads nothing and touches no database, so it's safe to poll.
+- **Installing:** the app serves `/manifest.webmanifest` and `/sw.js` itself, so browsers
+  offer to install it as an app. Pass both through to the app rather than serving them from
+  disk: the service worker has to come from the root to cover every page, and must not be
+  cached long. It caches nothing itself, so every page still comes from the app.
 - **Identity:** off unless `SPINDRIFT_PROXY_AUTH` is set — see below.
 
 ```
