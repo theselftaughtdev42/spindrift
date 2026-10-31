@@ -251,3 +251,26 @@ def test_three_problems_report_two_more_problems():
 )
 def test_a_refusal_ends_by_saying_the_data_is_unchanged(data: dict[str, object] | bytes):
     assert refusal(data).endswith(UNCHANGED)
+
+
+def test_a_wishlist_mark_on_a_platform_the_game_is_not_available_on_is_refused():
+    game = {"name": "Hades", "status": None, "platforms": ["Steam"], "intended": None}
+    with pytest.raises(SnapshotError, match="wishlisted on Switch, which isn't one of its"):
+        parse(json.dumps(snapshot_data(games=[{**game, "wishlisted": ["Switch"]}])))
+
+
+def test_a_wishlist_mark_on_a_platform_spindrift_does_not_have_is_refused():
+    game = {"name": "Hades", "status": None, "platforms": [], "intended": None}
+    with pytest.raises(SnapshotError, match="Nowhere is not a platform Spindrift has"):
+        parse(json.dumps(snapshot_data(games=[{**game, "wishlisted": ["Nowhere"]}])))
+
+
+def test_a_wishlist_written_as_null_is_refused_rather_than_becoming_empty():
+    game = {"name": "Hades", "status": None, "platforms": ["Steam"], "intended": None}
+    with pytest.raises(SnapshotError, match="wishlisted: Input should be a valid list"):
+        parse(json.dumps(snapshot_data(games=[{**game, "wishlisted": None}])))
+
+
+def test_a_wishlist_setting_written_as_a_word_is_refused_rather_than_becoming_true():
+    with pytest.raises(SnapshotError, match="wishlist: Input should be a valid boolean"):
+        parse(json.dumps(snapshot_data(wishlist="yes")))

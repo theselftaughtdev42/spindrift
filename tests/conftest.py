@@ -88,9 +88,11 @@ def snapshot_data(**overrides: object) -> dict[str, object]:
                 "status": "playing",
                 "platforms": ["Steam", "Switch"],
                 "intended": "Steam",
+                "wishlisted": [],
             }
         ],
         "search_urls": [{"url": "https://example.com/search?q={}", "active": True}],
+        "wishlist": False,
     }
     data.update(overrides)
     return data

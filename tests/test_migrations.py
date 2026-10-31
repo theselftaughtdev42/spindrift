@@ -107,6 +107,7 @@ def test_availabilities_survive_the_upgrade_that_gives_a_catalogue_an_owner(
             "status": "playing",
             "platforms": ["Steam", "Switch"],
             "intended": "Steam",
+            "wishlisted": [],
         }
     ]
     assert exported["search_urls"] == [{"url": "https://example.com/search?q={}", "active": True}]
@@ -310,8 +311,8 @@ def test_deleting_a_game_deletes_its_availabilities(catalogue: sqlite3.Connectio
 
 # Append-only once released: changing this number is the deliberate step in front of
 # editing a migration that deployments have already run.
-def test_the_catalogue_has_six_migrations():
-    assert len(MIGRATIONS) == 6
+def test_the_catalogue_has_seven_migrations():
+    assert len(MIGRATIONS) == 7
 
 
 def test_a_catalogue_that_cannot_be_opened_leaves_no_connection_behind(tmp_path: Path):

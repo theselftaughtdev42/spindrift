@@ -175,7 +175,8 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     def by_platform() -> str:
         connection = db.get_connection()
         decisions = connection.execute(
-            "SELECT game_platforms.platform, games.name, games.status"
+            "SELECT game_platforms.platform, game_platforms.wishlisted,"
+            " games.id, games.name, games.status"
             " FROM game_platforms JOIN games ON games.id = game_platforms.game_id"
             " WHERE games.owner_id = ? AND game_platforms.intended"
             " ORDER BY games.name COLLATE NOCASE",
@@ -186,7 +187,43 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         for decision in decisions:
             games.setdefault(decision["platform"], []).append(decision)
         groups = [(platform, games[platform]) for platform in PLATFORMS if platform in games]
-        return render_template("by_platform.html", groups=groups)
+        return render_template(
+            "by_platform.html",
+            groups=groups,
+            wishlist=deployment.wishlist_enabled(connection, owner()),
+        )
+
+    @app.post("/games/<int:game_id>/platforms/<platform>/wishlist")
+    def toggle_wishlisted(game_id: int, platform: str) -> ResponseReturnValue:
+        """Mark or unmark one availability as on that platform's store wishlist."""
+        connection = db.get_connection()
+        # The feature off is as if the route weren't there.
+        if not deployment.wishlist_enabled(connection, owner()):
+            abort(404)
+        # Through the game, so another cataloguer's availability is as absent as a missing one.
+        row = connection.execute(
+            "SELECT game_platforms.wishlisted, games.name FROM game_platforms"
+            " JOIN games ON games.id = game_platforms.game_id"
+            " WHERE games.id = ? AND games.owner_id = ? AND game_platforms.platform = ?",
+            (game_id, owner(), platform),
+        ).fetchone()
+        if row is None:
+            abort(404)
+        wishlisted = not row["wishlisted"]
+        connection.execute(
+            "UPDATE game_platforms SET wishlisted = ? WHERE game_id = ? AND platform = ?",
+            (wishlisted, game_id, platform),
+        )
+        connection.commit()
+        if not request.headers.get("HX-Request"):
+            # Back to the row, or a long page would land at the top.
+            anchor = f"wishlisted-{game_id}-{platform.replace(' ', '-')}"
+            return redirect(url_for("by_platform", _anchor=anchor))
+        return render_template(
+            "_wishlisted.html",
+            game={"id": game_id, "name": row["name"], "wishlisted": wishlisted},
+            platform=platform,
+        )
 
     @app.post("/games")
     def add_game() -> str:
@@ -304,7 +341,18 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
 
     @app.get("/settings")
     def settings() -> str:
-        return render_template("settings.html", **saved_search_urls())
+        open_group = "wishlist" if request.args.get("saved") == "wishlist" else None
+        return render_template(
+            "settings.html", open_group=open_group, **saved_search_urls(), **wishlist_setting()
+        )
+
+    @app.post("/settings/wishlist")
+    def set_wishlist() -> ResponseReturnValue:
+        """Turn the wishlist on or off for this cataloguer. Marks survive turning it off."""
+        connection = db.get_connection()
+        with connection:
+            deployment.set_wishlist(connection, owner(), bool(request.form.get("enabled")))
+        return redirect(url_for("settings", saved="wishlist"))
 
     @app.post("/settings/urls")
     def add_search_url() -> ResponseReturnValue:
@@ -414,7 +462,11 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
     def refused(group: str, error: str) -> str:
         """The settings page again, reopened at the group that refused."""
         return render_template(
-            "settings.html", error=error, open_group=group, **saved_search_urls()
+            "settings.html",
+            error=error,
+            open_group=group,
+            **saved_search_urls(),
+            **wishlist_setting(),
         )
 
     def search_group(
@@ -433,8 +485,13 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         if request.headers.get("HX-Request"):  # pragma: no mutate
             return render_template("_search_urls.html", **group)
         if error:
-            return render_template("settings.html", open_group="search", **group)
+            return render_template(
+                "settings.html", open_group="search", **group, **wishlist_setting()
+            )
         return redirect(url_for("settings"))
+
+    def wishlist_setting() -> Context:
+        return {"wishlist": deployment.wishlist_enabled(db.get_connection(), owner())}
 
     def saved_search_urls() -> Context:
         connection = db.get_connection()
@@ -443,7 +500,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
                 "SELECT id, url, active FROM search_urls WHERE owner_id = ?"  # pragma: no mutate
                 " ORDER BY id",  # pragma: no mutate
                 (owner(),),
-            ).fetchall()
+            ).fetchall(),
         }
 
     def retargeted_catalogue(error: str) -> Response:

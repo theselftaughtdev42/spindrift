@@ -3,6 +3,12 @@
 
 {% block title %}By platform — Spindrift{% endblock %}
 
+{% block head %}
+  {%- if wishlist %}
+    <script src="{{ url_for('static', filename='htmx.min.js') }}" defer></script>
+  {%- endif %}
+{% endblock %}
+
 {% block nav %}
   <a class="nav" href="{{ url_for('page') }}">&larr; Catalogue</a>
 {% endblock %}
@@ -17,6 +23,7 @@
           <th scope="col">Platform</th>
           <th scope="col">Game</th>
           <th scope="col">Status</th>
+          {% if wishlist %}<th scope="col">Wishlisted</th>{% endif %}
         </tr>
       </thead>
       {% for platform, games in groups %}
@@ -33,6 +40,9 @@
                   >{{ game.status | capitalize if game.status else "—" }}</span
                 >
               </td>
+              {% if wishlist %}
+                {% include "_wishlisted.html" %}
+              {% endif %}
             </tr>
           {% endfor %}
         </tbody>

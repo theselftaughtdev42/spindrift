@@ -31,6 +31,7 @@ body {
 h1,
 h2,
 .sd-button,
+.plan td.wishlisted button,
 input[type="file"]::file-selector-button {
   text-transform: uppercase;
 }
@@ -515,8 +516,64 @@ a.whoami:hover {
 
 /* The platform heading spans the whole group and is not any one row's to dim. */
 .plan tr:is([data-status="finished"], [data-status="100%"], [data-status="abandoned"])
-  > td:not(.status) {
+  > td:not(.status, .wishlisted) {
   opacity: 0.55;
+}
+
+/* The wishlist column (ADR-0004). Pressed reads in the accent, and always with its word. */
+.plan td.wishlisted {
+  width: 1%;
+  padding-block: var(--sd-space-1);
+  white-space: nowrap;
+}
+
+.plan td.wishlisted form {
+  margin: 0;
+}
+
+.plan td.wishlisted button {
+  display: block;
+  width: 100%;
+  min-width: calc(var(--sd-space-6) + var(--sd-space-3));
+  min-height: 44px;
+  padding: var(--sd-space-1) var(--sd-space-2);
+  border: var(--sd-border-width) solid var(--sd-border);
+  border-radius: var(--sd-radius);
+  background: transparent;
+  color: var(--sd-text-muted);
+  font-family: var(--sd-font-display);
+  font-size: var(--sd-text-xs);
+  cursor: pointer;
+  transition: background-color var(--sd-step-fast);
+}
+
+.plan td.wishlisted button:hover {
+  background: var(--sd-surface-raised);
+}
+
+.plan td.wishlisted button[aria-pressed="true"] {
+  border-color: var(--sd-accent);
+  color: var(--sd-accent);
+}
+
+/* `.confirm`'s layout without its danger colour: this box switches a feature, it doesn't
+   agree to lose anything. */
+.setting {
+  display: flex;
+  align-items: center;
+  flex-basis: 100%;
+  gap: var(--sd-space-2);
+  min-height: 44px;
+  font-size: var(--sd-text-sm);
+  cursor: pointer;
+}
+
+.setting input {
+  flex: none;
+  width: var(--sd-space-3);
+  height: var(--sd-space-3);
+  margin: 0;
+  accent-color: var(--sd-primary);
 }
 
 .plan tbody tr + tr > td {

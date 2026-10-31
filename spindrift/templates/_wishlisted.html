@@ -1,0 +1,16 @@
+{#- Whether one game is on one platform's store wishlist, from `game` and `platform`.
+    Swapped in for itself; the plain form is what still works if htmx never loads. -#}
+<td class="wishlisted">
+  <form method="post" action="{{ url_for('toggle_wishlisted', game_id=game.id, platform=platform) }}">
+    <button
+      type="submit"
+      id="wishlisted-{{ game.id }}-{{ platform | replace(' ', '-') }}"
+      aria-pressed="{{ 'true' if game.wishlisted else 'false' }}"
+      aria-label="{{ game.name }} on the {{ platform }} wishlist"
+      hx-post="{{ url_for('toggle_wishlisted', game_id=game.id, platform=platform) }}"
+      hx-target="closest td"
+      hx-swap="outerHTML">
+      {{ "Yes" if game.wishlisted else "No" }}
+    </button>
+  </form>
+</td>
