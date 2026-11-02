@@ -14,7 +14,7 @@ local: static.clean
 	uv run main.py
 
 static.clean:
-	python3 spindrift/static_manifest.py --clear
+	uv run python spindrift/static_manifest.py --clear
 
 test:
 	uv run pytest tests --cov --cov-branch --cov-report=lcov:lcov.info

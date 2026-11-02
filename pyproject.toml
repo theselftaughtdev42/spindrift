@@ -6,10 +6,10 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.162.0",
-    "gunicorn>=23.0.0",
     "jinja2>=3.1.6",
     "pydantic>=2.13.5",
     "python-multipart>=0.0.33",
+    "uvicorn>=0.54.0",
 ]
 
 [dependency-groups]
@@ -69,7 +69,7 @@ pythonpath = ["."]
 source = ["spindrift"]
 # The entry point builds an app against the repository's own catalogue at import time, so
 # nothing measuring it may import it.
-omit = ["spindrift/wsgi.py"]
+omit = ["spindrift/asgi.py"]
 
 [tool.coverage.report]
 show_missing = true
@@ -82,7 +82,7 @@ exclude_lines = [
 source_paths = ["spindrift"]
 # The same entry point coverage omits, and for the same reason: it builds an app against the
 # repository's own catalogue at import time.
-do_not_mutate = ["spindrift/wsgi.py"]
+do_not_mutate = ["spindrift/asgi.py"]
 pytest_add_cli_args_test_selection = ["tests/"]
 # The theme colour is read from the design tokens, outside the package mutmut copies.
 also_copy = ["design/"]

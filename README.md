@@ -60,6 +60,10 @@ Run contract for the orchestration layer:
 
 - **Port:** the app serves HTTP on `8000`. Publish it to loopback only —
   `127.0.0.1:8000:8000` — and terminate TLS at a reverse proxy in front.
+- **Server:** one uvicorn process (`uvicorn spindrift.asgi:app`). One is enough: the
+  catalogue is SQLite in WAL mode, and more workers would only queue on its write lock. The
+  app writes every link and redirect as a path, never a full URL, so the proxy needn't
+  forward `Host`, `X-Forwarded-Proto` or the like for anything to point at the right place.
 - **Static:** `/static/` may be served straight off disk by the proxy rather than passed
   through. The image build gives every static file a second name carrying a digest of its
   contents — `theme.css` is also served as `theme.<digest>.css` — and the app writes those
