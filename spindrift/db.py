@@ -1,7 +1,8 @@
 import os
 import sqlite3
+from collections.abc import Generator
 
-from flask import current_app, g
+from starlette.requests import Request
 
 # What `sqlite3.connect` will take, and so what every caller here may pass along.
 type DatabasePath = str | os.PathLike[str]
@@ -87,7 +88,9 @@ MIGRATIONS: list[str] = [
 
 
 def connect(database_path: DatabasePath) -> sqlite3.Connection:
-    connection = sqlite3.connect(database_path)
+    # Not tied to the thread that opened it: a request's dependency setup, its route and its
+    # cleanup can each run on a different worker thread.
+    connection = sqlite3.connect(database_path, check_same_thread=False)
     try:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA journal_mode = WAL")  # pragma: no mutate
@@ -99,19 +102,16 @@ def connect(database_path: DatabasePath) -> sqlite3.Connection:
     return connection
 
 
-def get_connection() -> sqlite3.Connection:
-    # `isinstance` rather than a cast, because `g` hands back `Any` and the caller is owed
-    # a connection proved rather than promised.
-    connection = g.get("connection")
-    if not isinstance(connection, sqlite3.Connection):
-        connection = connect(current_app.config["DATABASE_PATH"])
-        g.connection = connection
-    return connection
+def get_connection(request: Request) -> Generator[sqlite3.Connection]:
+    """The one connection a request works through, closed once it has been answered.
 
-
-def close_connection(exception: BaseException | None = None) -> None:
-    connection = g.pop("connection", None)
-    if connection is not None:
+    Kept on the request's state too, for the template context that reads it.
+    """
+    connection = connect(request.app.state.database_path)
+    request.state.connection = connection
+    try:
+        yield connection
+    finally:
         connection.close()
 
 

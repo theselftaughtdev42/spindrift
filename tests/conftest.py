@@ -5,41 +5,44 @@ games and none can reach the catalogue in the working copy.
 """
 
 import html
-import io
 import json
 import re
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, cast, override
+from typing import Any
 
+import httpx2
 import pytest
-from flask import Flask
-from flask.testing import FlaskClient
-from werkzeug.test import TestResponse
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from spindrift import create_app
 from spindrift.identity import ProxyAuth
 from spindrift.snapshot import FORMAT_VERSION
 
 # The framework's own types, named once here so the tests don't name the framework.
-type App = Flask
-type Client = FlaskClient
-type Response = TestResponse
+type App = FastAPI
+type Client = TestClient
+type Response = httpx2.Response
 
 
-def client_for(app: App) -> Client:
-    """A client to send requests to `app` with."""
-    return app.test_client()
+def client_for(app: App, headers: dict[str, str] | None = None) -> Client:
+    """A client to send requests to `app` with, sending `headers` beneath any a request adds.
+
+    Redirects are handed back rather than followed, so a test sees where it was sent, and an
+    error in the app is answered with a 500 as a server would, rather than raised in the test.
+    """
+    return TestClient(app, headers=headers, follow_redirects=False, raise_server_exceptions=False)
 
 
 def text(response: Response) -> str:
     """A response's body, decoded."""
-    return response.get_data(as_text=True)
+    return response.text
 
 
 def content(response: Response) -> bytes:
     """A response's body, as sent."""
-    return response.get_data()
+    return response.content
 
 
 def json_of(response: Response) -> Any:  # noqa: ANN401 - JSON is whatever was sent
@@ -100,29 +103,9 @@ SOMEONE_ELSE = {
 }
 
 
-class _SignedInClient(FlaskClient):
-    """A client that sends the same headers with every request, beneath any it is given."""
-
-    def __init__(self, *args: object, sent: dict[str, str], **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
-        self.sent = sent
-
-    @override
-    def open(
-        self,
-        *args: object,
-        buffered: bool = False,
-        follow_redirects: bool = False,
-        **kwargs: object,
-    ) -> TestResponse:
-        given = cast(dict[str, str], kwargs.get("headers") or {})
-        kwargs["headers"] = {**self.sent, **given}
-        return super().open(*args, buffered=buffered, follow_redirects=follow_redirects, **kwargs)
-
-
 def signed_in(app: App, headers: dict[str, str]) -> Client:
     """A client every request from which comes through the proxy as one cataloguer."""
-    return _SignedInClient(app, app.response_class, sent=headers)
+    return client_for(app, headers)
 
 
 def snapshot_data(**overrides: object) -> dict[str, object]:
@@ -164,9 +147,7 @@ def upload(
     client: Client, path: str, fields: dict[str, str], files: dict[str, tuple[str, bytes]]
 ) -> Response:
     """A multipart form post: `fields` as text, `files` as (filename, bytes) by field name."""
-    form: dict[str, object] = dict(fields)
-    form.update({name: (io.BytesIO(body), filename) for name, (filename, body) in files.items()})
-    return client.post(path, data=form, content_type="multipart/form-data")
+    return client.post(path, data=fields, files=files)
 
 
 def row(body: str, game: int) -> str:

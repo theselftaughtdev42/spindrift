@@ -116,7 +116,7 @@ def test_a_script_whose_contents_are_unchanged_keeps_its_digested_name(
     assert build(static_dir, manifest_path)["htmx.min.js"] == before
 
 
-def test_a_build_leaves_the_originals_where_flask_serves_them(
+def test_a_build_leaves_the_originals_where_the_app_serves_them(
     static_dir: Path, manifest_path: Path
 ):
     (static_dir / "theme.css").write_bytes(b":root { color: red }")

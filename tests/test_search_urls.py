@@ -2,6 +2,9 @@
 
 import html
 import re
+from collections.abc import Callable
+
+import pytest
 
 from tests.conftest import HTMX, Client, Response, add_game, import_snapshot, snapshot_data, text
 
@@ -177,6 +180,47 @@ def test_the_search_control_carries_the_games_name_url_encoded(client: Client):
     body = text(client.get("/"))
 
     assert "https://example.com/search?q=Hollow%20Knight" in body
+
+
+def test_the_search_control_says_which_host_it_searches(client: Client):
+    add_game(client, "Hollow Knight")
+    url_id = save_search_url(client, OTHER_SEARCH_URL)
+    client.post("/settings/active", data={"active": url_id}, headers=HTMX)
+
+    body = text(client.get("/"))
+
+    assert 'aria-label="Search protondb.com for Hollow Knight"' in body
+
+
+def test_with_htmx_the_search_group_lists_what_is_already_saved(client: Client):
+    save_search_url(client, SEARCH_URL)
+
+    response = client.post("/settings/urls", data={"url": OTHER_SEARCH_URL}, headers=HTMX)
+
+    assert SEARCH_URL in words(response)
+    assert OTHER_SEARCH_URL in words(response)
+
+
+def wishlist_shown_on(response: Response) -> bool:
+    """Whether the settings page shows the wishlist setting ticked."""
+    return bool(re.search(r'<input\s[^>]*name="enabled"[^>]*\bchecked', text(response)))
+
+
+@pytest.mark.parametrize(
+    "refuse",
+    [
+        lambda client: client.post("/settings/urls", data={"url": "https://example.com/search"}),
+        lambda client: import_snapshot(client, snapshot_data(), confirm=False),
+        lambda client: client.post("/settings/reset", data={}),
+    ],
+    ids=["search URL", "import", "reset"],
+)
+def test_a_refused_operation_still_shows_the_wishlist_as_it_is_set(
+    client: Client, refuse: Callable[[Client], Response]
+):
+    client.post("/settings/wishlist", data={"enabled": "yes"})
+
+    assert wishlist_shown_on(refuse(client))
 
 
 def test_a_refused_search_url_reopens_the_settings_page_at_the_search_group(client: Client):

@@ -92,6 +92,10 @@ def test_the_name_falls_back_through_what_the_outpost_maps(dropped: list[str], e
     assert identified.name == expected
 
 
+def test_a_uid_and_nothing_else_is_still_somebody():
+    assert identify({"X-authentik-uid": "6f1c1e2a"}) == Cataloguer(uid="6f1c1e2a", name="6f1c1e2a")
+
+
 def test_a_blank_name_is_not_a_name():
     identified = identify(headers(X_authentik_name="   "))
     assert identified is not None
