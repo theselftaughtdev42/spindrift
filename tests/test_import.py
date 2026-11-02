@@ -3,11 +3,9 @@
 import html
 
 import pytest
-from flask.testing import FlaskClient
-from werkzeug.test import TestResponse
 
 from spindrift.snapshot import FORMAT_MAJOR
-from tests.conftest import add_game, import_snapshot, snapshot_data
+from tests.conftest import Client, Response, add_game, import_snapshot, snapshot_data, text
 
 KEPT_SEARCH_URL = "https://kept.example/search?q={}"
 SNAPSHOT_SEARCH_URL = "https://example.com/search?q={}"
@@ -20,43 +18,43 @@ DUPLICATE_NAMES = snapshot_data(
 )
 
 
-def shown(response: TestResponse) -> str:
+def shown(response: Response) -> str:
     """The words the cataloguer reads, with the template's escaping undone."""
-    return html.unescape(response.get_data(as_text=True))
+    return html.unescape(text(response))
 
 
-def existing_data(client: FlaskClient):
+def existing_data(client: Client):
     add_game(client, "Tunic", ["Switch"])
     client.post("/settings/urls", data={"url": KEPT_SEARCH_URL})
 
 
-def test_an_imported_snapshot_replaces_the_games_already_here(client: FlaskClient):
+def test_an_imported_snapshot_replaces_the_games_already_here(client: Client):
     add_game(client, "Tunic", ["Switch"])
 
     import_snapshot(client, snapshot_data())
 
-    catalogue = client.get("/").get_data(as_text=True)
+    catalogue = text(client.get("/"))
     assert "Tunic" not in catalogue
     assert "Hades" in catalogue
 
 
-def test_an_imported_snapshot_replaces_the_search_urls_already_here(client: FlaskClient):
+def test_an_imported_snapshot_replaces_the_search_urls_already_here(client: Client):
     client.post("/settings/urls", data={"url": KEPT_SEARCH_URL})
 
     import_snapshot(client, snapshot_data())
 
-    settings = client.get("/settings").get_data(as_text=True)
+    settings = text(client.get("/settings"))
     assert KEPT_SEARCH_URL not in settings
     assert SNAPSHOT_SEARCH_URL in settings
 
 
-def test_an_import_without_the_box_ticked_imports_nothing(client: FlaskClient):
+def test_an_import_without_the_box_ticked_imports_nothing(client: Client):
     import_snapshot(client, snapshot_data(), confirm=False)
 
-    assert "Hades" not in client.get("/").get_data(as_text=True)
+    assert "Hades" not in text(client.get("/"))
 
 
-def test_a_stopped_import_says_nothing_was_imported(client: FlaskClient):
+def test_a_stopped_import_says_nothing_was_imported(client: Client):
     response = import_snapshot(client, snapshot_data(), confirm=False)
 
     assert "Tick the box to confirm an import replaces everything. Nothing was imported." in shown(
@@ -64,13 +62,13 @@ def test_a_stopped_import_says_nothing_was_imported(client: FlaskClient):
     )
 
 
-def test_an_import_with_no_file_chosen_is_refused(client: FlaskClient):
+def test_an_import_with_no_file_chosen_is_refused(client: Client):
     response = import_snapshot(client, b"")
 
     assert "Choose a snapshot file to import. Nothing was imported." in shown(response)
 
 
-def test_a_file_that_is_not_valid_json_is_refused(client: FlaskClient):
+def test_a_file_that_is_not_valid_json_is_refused(client: Client):
     response = import_snapshot(client, b"{ this is not JSON")
 
     assert "That file isn't a snapshot — it isn't valid JSON. Your data is unchanged." in shown(
@@ -78,7 +76,7 @@ def test_a_file_that_is_not_valid_json_is_refused(client: FlaskClient):
     )
 
 
-def test_a_file_that_does_not_say_which_format_it_is_is_refused(client: FlaskClient):
+def test_a_file_that_does_not_say_which_format_it_is_is_refused(client: Client):
     data = snapshot_data()
     del data["spindrift"]
 
@@ -90,7 +88,7 @@ def test_a_file_that_does_not_say_which_format_it_is_is_refused(client: FlaskCli
     )
 
 
-def test_a_snapshot_from_a_different_major_format_is_refused(client: FlaskClient):
+def test_a_snapshot_from_a_different_major_format_is_refused(client: Client):
     response = import_snapshot(client, snapshot_data(spindrift="2.0"))
 
     assert (
@@ -99,14 +97,14 @@ def test_a_snapshot_from_a_different_major_format_is_refused(client: FlaskClient
     )
 
 
-def test_a_snapshot_from_a_later_minor_of_the_same_major_imports(client: FlaskClient):
+def test_a_snapshot_from_a_later_minor_of_the_same_major_imports(client: Client):
     response = import_snapshot(client, snapshot_data(spindrift=f"{FORMAT_MAJOR}.7"))
 
     assert response.status_code == 302
-    assert "Hades" in client.get("/").get_data(as_text=True)
+    assert "Hades" in text(client.get("/"))
 
 
-def test_an_intent_on_a_platform_the_game_is_not_available_on_is_refused(client: FlaskClient):
+def test_an_intent_on_a_platform_the_game_is_not_available_on_is_refused(client: Client):
     response = import_snapshot(
         client,
         snapshot_data(
@@ -127,16 +125,16 @@ def test_an_intent_on_a_platform_the_game_is_not_available_on_is_refused(client:
     )
 
 
-def test_a_value_of_the_wrong_type_is_refused_rather_than_guessed_at(client: FlaskClient):
+def test_a_value_of_the_wrong_type_is_refused_rather_than_guessed_at(client: Client):
     response = import_snapshot(
         client, snapshot_data(search_urls=[{"url": KEPT_SEARCH_URL, "active": "no"}])
     )
 
     assert "search_urls › 1 › active: Input should be a valid boolean" in shown(response)
-    assert KEPT_SEARCH_URL not in client.get("/settings").get_data(as_text=True)
+    assert KEPT_SEARCH_URL not in text(client.get("/settings"))
 
 
-def test_a_refusal_names_the_first_problem_and_how_many_others(client: FlaskClient):
+def test_a_refusal_names_the_first_problem_and_how_many_others(client: Client):
     response = import_snapshot(
         client,
         snapshot_data(
@@ -175,7 +173,7 @@ def test_a_refusal_names_the_first_problem_and_how_many_others(client: FlaskClie
     )
 
 
-def test_a_snapshot_that_breaks_a_catalogue_rule_is_refused(client: FlaskClient):
+def test_a_snapshot_that_breaks_a_catalogue_rule_is_refused(client: Client):
     response = import_snapshot(client, DUPLICATE_NAMES)
 
     assert (
@@ -189,20 +187,20 @@ def test_a_snapshot_that_breaks_a_catalogue_rule_is_refused(client: FlaskClient)
     [b"{ this is not JSON", snapshot_data(spindrift="2.0"), DUPLICATE_NAMES],
     ids=["not JSON", "another format", "a broken catalogue rule"],
 )
-def test_a_refused_import_deletes_nothing(client: FlaskClient, refused: dict[str, object] | bytes):
+def test_a_refused_import_deletes_nothing(client: Client, refused: dict[str, object] | bytes):
     existing_data(client)
 
     import_snapshot(client, refused)
 
-    assert "Tunic" in client.get("/").get_data(as_text=True)
-    assert KEPT_SEARCH_URL in client.get("/settings").get_data(as_text=True)
+    assert "Tunic" in text(client.get("/"))
+    assert KEPT_SEARCH_URL in text(client.get("/settings"))
 
 
-def test_a_successful_import_lands_on_the_catalogue_saying_it_worked(client: FlaskClient):
+def test_a_successful_import_lands_on_the_catalogue_saying_it_worked(client: Client):
     response = import_snapshot(client, snapshot_data())
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/?finished=imported"
-    catalogue = client.get(response.headers["Location"]).get_data(as_text=True)
+    catalogue = text(client.get(response.headers["Location"]))
     assert "Snapshot imported" in catalogue
     assert "Hades" in catalogue

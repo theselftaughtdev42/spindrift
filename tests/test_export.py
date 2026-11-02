@@ -1,28 +1,25 @@
 """Rules for exporting a snapshot: stories 54-59."""
 
-import json
 import re
 import sqlite3
 from datetime import date
 from pathlib import Path
 from typing import Any
 
-from flask.testing import FlaskClient
-
 from spindrift.snapshot import FORMAT_VERSION
-from tests.conftest import add_game, import_snapshot, snapshot_data
+from tests.conftest import Client, add_game, content, import_snapshot, json_of, snapshot_data, text
 
 SEARCH_URL = "https://example.com/search?q={}"
 OTHER_SEARCH_URL = "https://other.example/find?q={}"
 
 
-def exported(client: FlaskClient) -> dict[str, Any]:
-    return json.loads(client.get("/settings/export").get_data())
+def exported(client: Client) -> dict[str, Any]:
+    return json_of(client.get("/settings/export"))
 
 
-def search_url_id(client: FlaskClient, url: str) -> int:
+def search_url_id(client: Client, url: str) -> int:
     """The id a saved search URL is offered under, read from the radio that chooses it."""
-    settings = client.get("/settings").get_data(as_text=True)
+    settings = text(client.get("/settings"))
     for choice in settings.split('<div class="search-url">')[1:]:
         if f'<span class="url">{url}</span>' in choice:
             offered = re.search(r'value="(\d+)"', choice)
@@ -31,7 +28,7 @@ def search_url_id(client: FlaskClient, url: str) -> int:
     raise AssertionError(f"{url} is not a saved search URL")
 
 
-def test_an_export_holds_every_game_with_its_availabilities_intent_and_status(client: FlaskClient):
+def test_an_export_holds_every_game_with_its_availabilities_intent_and_status(client: Client):
     hades = add_game(client, "Hades", ["Steam", "Switch"])
     client.post(f"/games/{hades}/platforms/Steam")
     client.post(f"/games/{hades}/status", data={"status": "playing"})
@@ -55,7 +52,7 @@ def test_an_export_holds_every_game_with_its_availabilities_intent_and_status(cl
     ]
 
 
-def test_an_export_holds_every_search_url_and_which_one_is_active(client: FlaskClient):
+def test_an_export_holds_every_search_url_and_which_one_is_active(client: Client):
     client.post("/settings/urls", data={"url": SEARCH_URL})
     client.post("/settings/urls", data={"url": OTHER_SEARCH_URL})
     client.post("/settings/active", data={"active": search_url_id(client, OTHER_SEARCH_URL)})
@@ -66,18 +63,18 @@ def test_an_export_holds_every_search_url_and_which_one_is_active(client: FlaskC
     ]
 
 
-def test_a_snapshot_declares_which_format_it_is(client: FlaskClient):
+def test_a_snapshot_declares_which_format_it_is(client: Client):
     assert exported(client)["spindrift"] == FORMAT_VERSION
 
 
-def test_exports_of_unchanged_data_are_identical(client: FlaskClient):
+def test_exports_of_unchanged_data_are_identical(client: Client):
     add_game(client, "Hades", ["Steam"])
     client.post("/settings/urls", data={"url": SEARCH_URL})
 
-    assert client.get("/settings/export").get_data() == client.get("/settings/export").get_data()
+    assert content(client.get("/settings/export")) == content(client.get("/settings/export"))
 
 
-def test_an_export_is_named_with_todays_date(client: FlaskClient):
+def test_an_export_is_named_with_todays_date(client: Client):
     response = client.get("/settings/export")
 
     assert response.headers["Content-Disposition"] == (
@@ -85,13 +82,13 @@ def test_an_export_is_named_with_todays_date(client: FlaskClient):
     )
 
 
-def test_an_export_is_sent_as_json(client: FlaskClient):
+def test_an_export_is_sent_as_json(client: Client):
     assert (
         client.get("/settings/export").headers["Content-Type"] == "application/json; charset=utf-8"
     )
 
 
-def test_an_empty_deployment_exports_an_empty_snapshot(client: FlaskClient):
+def test_an_empty_deployment_exports_an_empty_snapshot(client: Client):
     snapshot = exported(client)
 
     assert snapshot["games"] == []
@@ -99,7 +96,7 @@ def test_an_empty_deployment_exports_an_empty_snapshot(client: FlaskClient):
 
 
 def test_a_platform_this_spindrift_no_longer_has_is_left_out_of_an_export(
-    client: FlaskClient, catalogue_path: Path
+    client: Client, catalogue_path: Path
 ):
     # Decided on the unknown platform: an export carrying that intent would name a platform
     # it had left out of the game's availabilities, which is a snapshot nothing can import.
@@ -119,7 +116,7 @@ def test_a_platform_this_spindrift_no_longer_has_is_left_out_of_an_export(
 
 
 def test_an_export_carrying_a_platform_this_spindrift_no_longer_has_imports_back(
-    client: FlaskClient, catalogue_path: Path
+    client: Client, catalogue_path: Path
 ):
     import_snapshot(client, snapshot_data())
     connection = sqlite3.connect(catalogue_path)
@@ -130,13 +127,13 @@ def test_an_export_carrying_a_platform_this_spindrift_no_longer_has_imports_back
             " SELECT id, 'Dreamcast', 1 FROM games WHERE name = 'Hades'"
         )
     connection.close()
-    snapshot = client.get("/settings/export").get_data()
+    snapshot = content(client.get("/settings/export"))
 
     assert import_snapshot(client, snapshot).status_code == 302
 
 
 def test_a_platform_this_spindrift_no_longer_has_does_not_cut_the_export_short(
-    client: FlaskClient, catalogue_path: Path
+    client: Client, catalogue_path: Path
 ):
     # Only that one availability is left out. Everything recorded after it is still a game's to
     # export, so one unknown platform cannot quietly empty the rest of the catalogue.
@@ -167,12 +164,12 @@ def test_a_platform_this_spindrift_no_longer_has_does_not_cut_the_export_short(
     ]
 
 
-def test_an_export_is_indented_so_two_snapshots_can_be_read_and_compared(client: FlaskClient):
+def test_an_export_is_indented_so_two_snapshots_can_be_read_and_compared(client: Client):
     # A snapshot is a file a cataloguer keeps. All on one line, every edit to it reads as the
     # same single change; nested two spaces at a time, a diff points at the game that moved.
     add_game(client, "Hades", ["Steam"])
 
-    body = client.get("/settings/export").get_data(as_text=True)
+    body = text(client.get("/settings/export"))
 
     depths = {len(line) - len(line.lstrip(" ")) for line in body.splitlines() if line.strip()}
     assert depths == {0, 2, 4, 6, 8}

@@ -6,11 +6,10 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from flask.testing import FlaskClient
 
 from spindrift import create_app
 from spindrift.db import MIGRATIONS, connect
-from tests.conftest import HTMX, add_game, game_id
+from tests.conftest import HTMX, Client, add_game, client_for, game_id, json_of, text
 
 # Every open file the process holds, on both this machine and CI.
 OPEN_FILES = Path("/dev/fd")
@@ -34,14 +33,14 @@ def catalogue_version(catalogue_path: Path) -> int:
         connection.close()
 
 
-def page(client: FlaskClient) -> str:
-    return client.get("/").get_data(as_text=True)
+def page(client: Client) -> str:
+    return text(client.get("/"))
 
 
 def test_a_new_deployment_builds_its_own_catalogue_on_first_run(catalogue_path: Path):
     assert not catalogue_path.exists()
 
-    client = create_app(catalogue_path).test_client()
+    client = client_for(create_app(catalogue_path))
     add_game(client, "Hades", ["Steam"])
 
     assert "Hades" in page(client)
@@ -53,7 +52,7 @@ def test_a_game_in_an_older_catalogue_survives_the_upgrade(catalogue_path: Path)
     connection.commit()
     connection.close()
 
-    client = create_app(catalogue_path).test_client()
+    client = client_for(create_app(catalogue_path))
 
     assert "Hades" in page(client)
 
@@ -63,7 +62,7 @@ def test_an_upgraded_catalogue_records_what_the_later_migrations_added(catalogue
     connection.execute("INSERT INTO games (name) VALUES ('Hades')")
     connection.commit()
     connection.close()
-    client = create_app(catalogue_path).test_client()
+    client = client_for(create_app(catalogue_path))
     game = game_id(client, "Hades")
 
     client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
@@ -78,7 +77,7 @@ def test_an_upgraded_catalogue_records_what_the_later_migrations_added(catalogue
     body = page(client)
     assert 'data-status="playing"' in body
     assert "data-intended" in body
-    assert "example.com" in client.get("/settings").get_data(as_text=True)
+    assert "example.com" in text(client.get("/settings"))
 
 
 def test_availabilities_survive_the_upgrade_that_gives_a_catalogue_an_owner(
@@ -98,9 +97,9 @@ def test_availabilities_survive_the_upgrade_that_gives_a_catalogue_an_owner(
     connection.commit()
     connection.close()
 
-    client = create_app(catalogue_path).test_client()
+    client = client_for(create_app(catalogue_path))
 
-    exported = client.get("/settings/export").get_json()
+    exported = json_of(client.get("/settings/export"))
     assert exported["games"] == [
         {
             "name": "Hades",
@@ -137,10 +136,10 @@ def test_a_migration_that_fails_leaves_the_catalogue_at_the_version_before_it(
 
 
 def test_starting_twice_over_the_same_catalogue_changes_nothing(catalogue_path: Path):
-    first = create_app(catalogue_path).test_client()
+    first = client_for(create_app(catalogue_path))
     add_game(first, "Hades", ["Steam"])
 
-    second = create_app(catalogue_path).test_client()
+    second = client_for(create_app(catalogue_path))
 
     assert "Hades" in page(second)
 

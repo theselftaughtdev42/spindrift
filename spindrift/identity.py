@@ -9,9 +9,8 @@ deployment on a home network goes on having no identity and no sign-in, as it al
 """
 
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
-
-from werkzeug.datastructures import Headers
 
 # What Authentik's proxy outpost sends. The uid is the account's own id, which survives a
 # rename; the rest are labels, and a person can change any of them this afternoon.
@@ -57,17 +56,21 @@ def resolve_proxy_auth() -> ProxyAuth | None:
     return ProxyAuth(hub_url=os.environ.get("SPINDRIFT_AUTH_HUB", "").strip() or None)
 
 
-def identify(headers: Headers) -> Cataloguer | None:
+def identify(headers: Mapping[str, str]) -> Cataloguer | None:
     """Who the proxy says this is, or `None` where the request never passed through one.
+
+    Header names are matched without regard to case, as HTTP has them, whatever mapping
+    they arrive in.
 
     A uid and nothing else is still somebody: the uid stands in as the name rather than
     the page showing a blank where a person should be.
     """
-    uid = headers.get(UID_HEADER, "").strip()
+    sent = {header.lower(): value for header, value in headers.items()}
+    uid = sent.get(UID_HEADER.lower(), "").strip()
     if not uid:
         return None
     for header in NAME_HEADERS:
-        name = headers.get(header, "").strip()
+        name = sent.get(header.lower(), "").strip()
         if name:
             return Cataloguer(uid=uid, name=name)
     return Cataloguer(uid=uid, name=uid)

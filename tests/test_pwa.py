@@ -4,37 +4,36 @@ import json
 from pathlib import Path
 from typing import Any
 
-from flask.testing import FlaskClient
-
 from spindrift import create_app
 from spindrift.pwa import TOKENS_PATH
 from spindrift.static_manifest import MANIFEST_PATH
+from tests.conftest import Client, client_for, content_type, json_of, text
 
 TOKENS = json.loads(TOKENS_PATH.read_text())
 
 
-def manifest(client: FlaskClient) -> dict[str, Any]:
+def manifest(client: Client) -> dict[str, Any]:
     """The manifest as the browser reads it. `Any`, because JSON is only shaped by the test."""
-    document: dict[str, Any] = json.loads(client.get("/manifest.webmanifest").get_data())
+    document: dict[str, Any] = json_of(client.get("/manifest.webmanifest"))
     return document
 
 
-def test_every_page_links_the_manifest_with_credentials(client: FlaskClient):
-    body = client.get("/").get_data(as_text=True)
+def test_every_page_links_the_manifest_with_credentials(client: Client):
+    body = text(client.get("/"))
 
     assert (
         '<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />' in body
     )
 
 
-def test_the_manifest_is_served_as_one(client: FlaskClient):
+def test_the_manifest_is_served_as_one(client: Client):
     response = client.get("/manifest.webmanifest")
 
     assert response.status_code == 200
-    assert response.content_type == "application/manifest+json"
+    assert content_type(response) == "application/manifest+json"
 
 
-def test_the_manifest_opens_the_catalogue_standalone(client: FlaskClient):
+def test_the_manifest_opens_the_catalogue_standalone(client: Client):
     installed = manifest(client)
 
     assert installed["name"] == "Spindrift"
@@ -43,16 +42,16 @@ def test_the_manifest_opens_the_catalogue_standalone(client: FlaskClient):
     assert installed["display"] == "standalone"
 
 
-def test_the_manifest_and_page_take_their_colour_from_the_tokens(client: FlaskClient):
+def test_the_manifest_and_page_take_their_colour_from_the_tokens(client: Client):
     installed = manifest(client)
 
     assert installed["theme_color"] == TOKENS["color"]["bg"]
     assert installed["background_color"] == TOKENS["color"]["bg"]
-    body = client.get("/").get_data(as_text=True)
+    body = text(client.get("/"))
     assert f'<meta name="theme-color" content="{TOKENS["color"]["bg"]}" />' in body
 
 
-def test_every_icon_the_manifest_names_is_there(client: FlaskClient):
+def test_every_icon_the_manifest_names_is_there(client: Client):
     icons = manifest(client)["icons"]
     assert isinstance(icons, list)
 
@@ -64,37 +63,37 @@ def test_every_icon_the_manifest_names_is_there(client: FlaskClient):
     for icon in icons:
         response = client.get(icon["src"])
         assert response.status_code == 200
-        assert response.content_type == "image/png"
+        assert content_type(response) == "image/png"
 
 
-def test_the_apple_touch_icon_is_there(client: FlaskClient):
-    body = client.get("/").get_data(as_text=True)
+def test_the_apple_touch_icon_is_there(client: Client):
+    body = text(client.get("/"))
 
     assert 'rel="apple-touch-icon" href="/static/apple-touch-icon.png"' in body
     assert client.get("/static/apple-touch-icon.png").status_code == 200
 
 
-def test_the_service_worker_is_served_from_the_root_and_always_revalidated(client: FlaskClient):
+def test_the_service_worker_is_served_from_the_root_and_always_revalidated(client: Client):
     response = client.get("/sw.js")
 
     assert response.status_code == 200
-    assert response.content_type == "text/javascript; charset=utf-8"
+    assert content_type(response) == "text/javascript; charset=utf-8"
     assert response.headers["Cache-Control"] == "no-cache"
 
 
-def test_the_service_worker_answers_no_requests(client: FlaskClient):
+def test_the_service_worker_answers_no_requests(client: Client):
     """No fetch handler: every request still reaches the server, and through it the proxy."""
-    assert "fetch" not in client.get("/sw.js").get_data(as_text=True)
+    assert "fetch" not in text(client.get("/sw.js"))
 
 
-def test_every_page_registers_the_service_worker(client: FlaskClient):
-    body = client.get("/").get_data(as_text=True)
+def test_every_page_registers_the_service_worker(client: Client):
+    body = text(client.get("/"))
 
     assert 'src="/static/pwa.js"' in body
     assert 'data-service-worker="/sw.js"' in body
 
 
-def test_the_manifest_and_service_worker_answer_without_identity(guarded_client: FlaskClient):
+def test_the_manifest_and_service_worker_answer_without_identity(guarded_client: Client):
     assert guarded_client.get("/manifest.webmanifest").status_code == 200
     assert guarded_client.get("/sw.js").status_code == 200
 
@@ -104,7 +103,7 @@ def test_the_manifest_names_digested_icons_once_a_build_has_run(catalogue_path: 
     before = MANIFEST_PATH.read_text() if MANIFEST_PATH.exists() else None
     MANIFEST_PATH.write_text(json.dumps({"icon-192.png": "icon-192.0123456789ab.png"}))
     try:
-        icons = manifest(create_app(catalogue_path).test_client())["icons"]
+        icons = manifest(client_for(create_app(catalogue_path)))["icons"]
     finally:
         if before is None:
             MANIFEST_PATH.unlink(missing_ok=True)
