@@ -96,3 +96,33 @@ def test_without_javascript_a_refused_search_url_comes_back_with_the_message_and
     body = text(response)
     assert "That URL needs {} in it" in body
     assert 'value="https://example.com/search"' in body
+
+
+def test_the_health_check_answers_a_head_request(client: Client):
+    assert client.head("/health").status_code == 200
+
+
+def test_the_version_endpoint_answers_a_head_request(client: Client):
+    assert client.head("/version").status_code == 200
+
+
+def test_a_request_missing_a_field_it_needs_is_a_bad_request(client: Client):
+    """A form missing a field the route reads is the client's mistake, not a page to render."""
+    assert client.post("/games", data={}).status_code == 400
+
+
+def test_a_request_whose_path_is_the_wrong_shape_is_not_found(client: Client):
+    assert client.post("/games/hades/status", data={"status": ""}).status_code == 404
+
+
+def test_a_field_of_the_wrong_kind_is_a_bad_request(client: Client):
+    """Text where a file belongs is the client's mistake: a 400, as for a missing field."""
+    response = client.post("/settings/import", data={"confirm": "yes", "snapshot": "Hades"})
+
+    assert response.status_code == 400
+    assert text(response) == "Bad Request"
+
+
+def test_there_are_no_api_documentation_pages(client: Client):
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        assert client.get(path).status_code == 404

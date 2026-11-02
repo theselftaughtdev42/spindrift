@@ -1,7 +1,7 @@
 """Content-addressed names for the static files, and the manifest that maps to them.
 
 nginx serves /static/ in front of the app, so the name in the HTML is the only cache-busting
-lever there is. Copies rather than renames: the originals are what Flask serves with no build.
+lever there is. Copies rather than renames: the originals are what the app serves with no build.
 """
 
 import hashlib
@@ -73,7 +73,7 @@ def load(manifest_path: Path = MANIFEST_PATH) -> Manifest:
         return {}
 
 
-# Run as a script, not `-m`, so the image can build the manifest without importing Flask.
+# Run as a script, not `-m`, so the image can build the manifest without importing the app.
 if __name__ == "__main__":
     if "--clear" in sys.argv[1:]:
         clear()

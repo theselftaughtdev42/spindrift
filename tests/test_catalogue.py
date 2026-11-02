@@ -64,6 +64,14 @@ def test_a_game_added_with_platforms_comes_back_with_those_availabilities(client
     assert not available(body, game, "Switch")
 
 
+def test_a_platform_with_a_space_in_its_name_is_percent_encoded_in_the_cell_s_address(
+    client: Client,
+):
+    game = add_game(client, "Hades", ["Xbox 360"])
+
+    assert f'hx-post="/games/{game}/platforms/Xbox%20360"' in catalogue(client)
+
+
 @pytest.mark.parametrize("name", ["", "   "])
 def test_a_name_that_is_blank_or_only_spaces_is_refused_quietly(client: Client, name: str):
     response = client.post("/games", data={"name": name}, headers=HTMX)

@@ -51,7 +51,9 @@ class ProxyAuth:
 
 def resolve_proxy_auth() -> ProxyAuth | None:
     """What the environment says about the proxy, or `None` where it says nothing."""
-    if os.environ.get("SPINDRIFT_PROXY_AUTH", "").strip().lower() not in ENABLED:
+    # Any default that is not in ENABLED reads the same, so the empty one is not a mutant.
+    setting = os.environ.get("SPINDRIFT_PROXY_AUTH", "")  # pragma: no mutate
+    if setting.strip().lower() not in ENABLED:
         return None
     return ProxyAuth(hub_url=os.environ.get("SPINDRIFT_AUTH_HUB", "").strip() or None)
 

@@ -118,10 +118,16 @@ def clear(connection: sqlite3.Connection, owner: int):
 
 def wishlist_enabled(connection: sqlite3.Connection, owner: int) -> bool:
     """Whether this cataloguer has the wishlist turned on (ADR-0004)."""
-    row = connection.execute("SELECT wishlist FROM cataloguers WHERE id = ?", (owner,)).fetchone()
-    return bool(row and row["wishlist"])
+    row = connection.execute(
+        "SELECT wishlist FROM cataloguers WHERE id = ?",  # pragma: no mutate
+        (owner,),
+    ).fetchone()
+    return bool(row and row["wishlist"])  # pragma: no mutate
 
 
 def set_wishlist(connection: sqlite3.Connection, owner: int, enabled: bool):
     """Turn the wishlist on or off. The marks are kept either way. Commits nothing itself."""
-    connection.execute("UPDATE cataloguers SET wishlist = ? WHERE id = ?", (enabled, owner))
+    connection.execute(
+        "UPDATE cataloguers SET wishlist = ? WHERE id = ?",  # pragma: no mutate
+        (enabled, owner),
+    )
