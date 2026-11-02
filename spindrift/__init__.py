@@ -95,7 +95,7 @@ def create_app(database_path: db.DatabasePath, proxy_auth: ProxyAuth | None = No
         def identify_cataloguer() -> ResponseReturnValue | None:
             if request.endpoint in UNGUARDED:
                 return None
-            cataloguer = identity.identify(request.headers)
+            cataloguer = identity.identify(dict(request.headers))
             if cataloguer is None:
                 return unidentified()
             g.cataloguer = cataloguer

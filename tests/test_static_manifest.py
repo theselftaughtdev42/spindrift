@@ -9,9 +9,9 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from flask.testing import FlaskClient
 
 from spindrift.static_manifest import DIGEST_LENGTH, MANIFEST_PATH, build, clear, load
+from tests.conftest import Client, text
 
 DIGEST = re.compile(rf"\.[0-9a-f]{{{DIGEST_LENGTH}}}(?=\.)")
 
@@ -194,8 +194,8 @@ def test_load_returns_an_empty_mapping_when_the_manifest_is_not_json(manifest_pa
     assert load(manifest_path) == {}
 
 
-def test_a_deployment_running_from_source_quotes_the_plain_static_names(client: FlaskClient):
-    body = client.get("/").get_data(as_text=True)
+def test_a_deployment_running_from_source_quotes_the_plain_static_names(client: Client):
+    body = text(client.get("/"))
 
     for name in ("theme.css", "spindrift.css", "htmx.min.js"):
         assert f"/static/{name}" in body

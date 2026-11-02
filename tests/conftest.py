@@ -10,6 +10,7 @@ import json
 import re
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Any, cast, override
 
 import pytest
 from flask import Flask
@@ -20,6 +21,36 @@ from spindrift import create_app
 from spindrift.identity import ProxyAuth
 from spindrift.snapshot import FORMAT_VERSION
 
+# The framework's own types, named once here so the tests don't name the framework.
+type App = Flask
+type Client = FlaskClient
+type Response = TestResponse
+
+
+def client_for(app: App) -> Client:
+    """A client to send requests to `app` with."""
+    return app.test_client()
+
+
+def text(response: Response) -> str:
+    """A response's body, decoded."""
+    return response.get_data(as_text=True)
+
+
+def content(response: Response) -> bytes:
+    """A response's body, as sent."""
+    return response.get_data()
+
+
+def json_of(response: Response) -> Any:  # noqa: ANN401 - JSON is whatever was sent
+    """A response's body, parsed as JSON."""
+    return json.loads(content(response))
+
+
+def content_type(response: Response) -> str:
+    """A response's Content-Type header, in full."""
+    return response.headers["Content-Type"]
+
 
 @pytest.fixture
 def catalogue_path(tmp_path: Path) -> Path:
@@ -27,13 +58,13 @@ def catalogue_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def app(catalogue_path: Path) -> Flask:
+def app(catalogue_path: Path) -> App:
     return create_app(catalogue_path)
 
 
 @pytest.fixture
-def client(app: Flask) -> FlaskClient:
-    return app.test_client()
+def client(app: App) -> Client:
+    return client_for(app)
 
 
 # Where the proxy's application hub lives, for the deployments that name one.
@@ -41,14 +72,14 @@ HUB = "https://auth.example.com/hub"
 
 
 @pytest.fixture
-def guarded_app(catalogue_path: Path) -> Flask:
+def guarded_app(catalogue_path: Path) -> App:
     """A deployment that has been told a proxy stands in front of it."""
     return create_app(catalogue_path, ProxyAuth(hub_url=HUB))
 
 
 @pytest.fixture
-def guarded_client(guarded_app: Flask) -> FlaskClient:
-    return guarded_app.test_client()
+def guarded_client(guarded_app: App) -> Client:
+    return client_for(guarded_app)
 
 
 # htmx sends this on every request it makes; its absence is a browser without JavaScript.
@@ -69,13 +100,29 @@ SOMEONE_ELSE = {
 }
 
 
-def signed_in(app: Flask, headers: dict[str, str]) -> FlaskClient:
+class _SignedInClient(FlaskClient):
+    """A client that sends the same headers with every request, beneath any it is given."""
+
+    def __init__(self, *args: object, sent: dict[str, str], **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.sent = sent
+
+    @override
+    def open(
+        self,
+        *args: object,
+        buffered: bool = False,
+        follow_redirects: bool = False,
+        **kwargs: object,
+    ) -> TestResponse:
+        given = cast(dict[str, str], kwargs.get("headers") or {})
+        kwargs["headers"] = {**self.sent, **given}
+        return super().open(*args, buffered=buffered, follow_redirects=follow_redirects, **kwargs)
+
+
+def signed_in(app: App, headers: dict[str, str]) -> Client:
     """A client every request from which comes through the proxy as one cataloguer."""
-    client = app.test_client()
-    client.environ_base.update(
-        {f"HTTP_{header.upper().replace('-', '_')}": value for header, value in headers.items()}
-    )
-    return client
+    return _SignedInClient(app, app.response_class, sent=headers)
 
 
 def snapshot_data(**overrides: object) -> dict[str, object]:
@@ -99,21 +146,27 @@ def snapshot_data(**overrides: object) -> dict[str, object]:
 
 
 def import_snapshot(
-    client: FlaskClient,
+    client: Client,
     data: dict[str, object] | bytes,
     confirm: bool = True,
     filename: str = "snapshot.json",
-) -> TestResponse:
+) -> Response:
     """Upload a snapshot the way the settings page does.
 
     `data` is a dict to serialise, or the bytes of a file that may not be a snapshot at all.
     """
     body = data if isinstance(data, bytes) else json.dumps(data).encode()
-    # Annotated, or the confirmation below would not fit beside the file it confirms.
-    form: dict[str, object] = {"snapshot": (io.BytesIO(body), filename)}
-    if confirm:
-        form["confirm"] = "yes"
-    return client.post("/settings/import", data=form, content_type="multipart/form-data")
+    fields = {"confirm": "yes"} if confirm else {}
+    return upload(client, "/settings/import", fields, {"snapshot": (filename, body)})
+
+
+def upload(
+    client: Client, path: str, fields: dict[str, str], files: dict[str, tuple[str, bytes]]
+) -> Response:
+    """A multipart form post: `fields` as text, `files` as (filename, bytes) by field name."""
+    form: dict[str, object] = dict(fields)
+    form.update({name: (io.BytesIO(body), filename) for name, (filename, body) in files.items()})
+    return client.post(path, data=form, content_type="multipart/form-data")
 
 
 def row(body: str, game: int) -> str:
@@ -127,15 +180,15 @@ def row(body: str, game: int) -> str:
     return match[0].split(">", 1)[0]
 
 
-def add_game(client: FlaskClient, name: str, platforms: Iterable[str] = ()) -> int:
+def add_game(client: Client, name: str, platforms: Iterable[str] = ()) -> int:
     """A game in the catalogue, and its id."""
     client.post("/games", data={"name": name, "platform": list(platforms)})
     return game_id(client, name)
 
 
-def game_id(client: FlaskClient, name: str) -> int:
+def game_id(client: Client, name: str) -> int:
     """The id of a named game, read the way the page identifies its rows."""
-    body = client.get("/").get_data(as_text=True)
+    body = text(client.get("/"))
     match = re.search(
         rf'id="name-(\d+)"[^>]*value="{re.escape(html.escape(name, quote=True))}"', body
     )

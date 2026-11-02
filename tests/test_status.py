@@ -2,9 +2,7 @@
 
 import re
 
-from flask.testing import FlaskClient
-
-from tests.conftest import HTMX, add_game, row
+from tests.conftest import HTMX, Client, add_game, row, text
 
 
 def selected_status(body: str, game: int) -> str:
@@ -16,28 +14,28 @@ def selected_status(body: str, game: int) -> str:
     return str(chosen[1])
 
 
-def test_a_status_set_on_a_game_sticks(client: FlaskClient):
+def test_a_status_set_on_a_game_sticks(client: Client):
     game = add_game(client, "Hades")
 
     client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
 
-    body = client.get("/").get_data(as_text=True)
+    body = text(client.get("/"))
     assert 'data-status="playing"' in row(body, game)
     assert selected_status(body, game) == "playing"
 
 
-def test_a_status_can_be_cleared_back_to_nothing_recorded(client: FlaskClient):
+def test_a_status_can_be_cleared_back_to_nothing_recorded(client: Client):
     game = add_game(client, "Hades")
     client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
 
     client.post(f"/games/{game}/status", data={"status": ""}, headers=HTMX)
 
-    body = client.get("/").get_data(as_text=True)
+    body = text(client.get("/"))
     assert "data-status" not in row(body, game)
     assert selected_status(body, game) == ""
 
 
-def test_a_status_spindrift_does_not_have_is_rejected(client: FlaskClient):
+def test_a_status_spindrift_does_not_have_is_rejected(client: Client):
     game = add_game(client, "Hades")
 
     response = client.post(f"/games/{game}/status", data={"status": "completed"}, headers=HTMX)
@@ -45,7 +43,7 @@ def test_a_status_spindrift_does_not_have_is_rejected(client: FlaskClient):
     assert response.status_code == 400
 
 
-def test_a_status_survives_renaming_the_game_and_changing_its_platforms(client: FlaskClient):
+def test_a_status_survives_renaming_the_game_and_changing_its_platforms(client: Client):
     game = add_game(client, "Hades", ["Steam"])
     client.post(f"/games/{game}/status", data={"status": "100%"}, headers=HTMX)
 
@@ -53,5 +51,5 @@ def test_a_status_survives_renaming_the_game_and_changing_its_platforms(client: 
     client.post(f"/games/{game}/platforms/Switch", headers=HTMX)
     client.post(f"/games/{game}/platforms/Steam", headers=HTMX)
 
-    body = client.get("/").get_data(as_text=True)
+    body = text(client.get("/"))
     assert 'data-status="100%"' in row(body, game)

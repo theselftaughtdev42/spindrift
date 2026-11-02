@@ -5,14 +5,11 @@ page, settings or export shows, because separation is only real where it is obse
 """
 
 import html
-import json
 import re
 from pathlib import Path
 from typing import Any
 
 import pytest
-from flask import Flask
-from flask.testing import FlaskClient
 
 from spindrift import create_app
 from spindrift.identity import ProxyAuth
@@ -20,12 +17,17 @@ from tests.conftest import (
     AUTHENTIK,
     HTMX,
     SOMEONE_ELSE,
+    App,
+    Client,
     add_game,
+    client_for,
     game_id,
     import_snapshot,
+    json_of,
     row,
     signed_in,
     snapshot_data,
+    text,
 )
 
 SEARCH_URL = "https://example.com/search?q={}"
@@ -33,24 +35,24 @@ OTHER_SEARCH_URL = "https://protondb.com/search?q={}"
 
 
 @pytest.fixture
-def tim(guarded_app: Flask) -> FlaskClient:
+def tim(guarded_app: App) -> Client:
     return signed_in(guarded_app, AUTHENTIK)
 
 
 @pytest.fixture
-def sam(guarded_app: Flask) -> FlaskClient:
+def sam(guarded_app: App) -> Client:
     return signed_in(guarded_app, SOMEONE_ELSE)
 
 
-def page(client: FlaskClient, path: str = "/") -> str:
-    return client.get(path).get_data(as_text=True)
+def page(client: Client, path: str = "/") -> str:
+    return text(client.get(path))
 
 
-def exported(client: FlaskClient) -> dict[str, Any]:
-    return json.loads(client.get("/settings/export").get_data())
+def exported(client: Client) -> dict[str, Any]:
+    return json_of(client.get("/settings/export"))
 
 
-def save_search_url(client: FlaskClient, url: str) -> int:
+def save_search_url(client: Client, url: str) -> int:
     """A search URL saved the way the settings page saves one, and its id."""
     client.post("/settings/urls", data={"url": url}, headers=HTMX)
     match = re.search(
@@ -62,11 +64,11 @@ def save_search_url(client: FlaskClient, url: str) -> int:
     return int(match[1])
 
 
-def activate(client: FlaskClient, url_id: int | str):
+def activate(client: Client, url_id: int | str):
     client.post("/settings/active", data={"active": url_id}, headers=HTMX)
 
 
-def checked(client: FlaskClient) -> list[str]:
+def checked(client: Client) -> list[str]:
     """The values of the radios the settings page shows checked; the empty one is search off."""
     shown = re.findall(
         r'<input\s[^>]*name="active"[^>]*value="([^"]*)"[^>]*\bchecked',
@@ -75,13 +77,13 @@ def checked(client: FlaskClient) -> list[str]:
     return [str(value) for value in shown]
 
 
-def saved(client: FlaskClient) -> list[str]:
+def saved(client: Client) -> list[str]:
     """The search URLs the settings page lists, not the example its empty field suggests."""
     shown = re.findall(r'<span class="url">([^<]*)</span>', page(client, "/settings"))
     return [html.unescape(url) for url in shown]
 
 
-def decide(client: FlaskClient, game: int, platform: str):
+def decide(client: Client, game: int, platform: str):
     """Two taps: available there, then the way the game will be played."""
     client.post(f"/games/{game}/platforms/{platform}", headers=HTMX)
     client.post(f"/games/{game}/platforms/{platform}", headers=HTMX)
@@ -90,22 +92,20 @@ def decide(client: FlaskClient, game: int, platform: str):
 # Separate catalogues
 
 
-def test_a_game_one_cataloguer_adds_is_not_in_anothers_catalogue(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_a_game_one_cataloguer_adds_is_not_in_anothers_catalogue(tim: Client, sam: Client):
     add_game(tim, "Hades", ["Steam"])
 
     assert "Hades" in page(tim)
     assert "Hades" not in page(sam)
 
 
-def test_a_new_cataloguer_starts_with_an_empty_catalogue(tim: FlaskClient, sam: FlaskClient):
+def test_a_new_cataloguer_starts_with_an_empty_catalogue(tim: Client, sam: Client):
     add_game(tim, "Hades", ["Steam"])
 
     assert "No games yet" in page(sam)
 
 
-def test_two_cataloguers_can_each_have_a_game_of_the_same_name(tim: FlaskClient, sam: FlaskClient):
+def test_two_cataloguers_can_each_have_a_game_of_the_same_name(tim: Client, sam: Client):
     add_game(tim, "Hades", ["Steam"])
 
     sam.post("/games", data={"name": "hades", "platform": ["Switch"]})
@@ -115,16 +115,16 @@ def test_two_cataloguers_can_each_have_a_game_of_the_same_name(tim: FlaskClient,
     assert [game["name"] for game in exported(tim)["games"]] == ["Hades"]
 
 
-def test_a_game_name_is_still_unique_within_one_catalogue(tim: FlaskClient, sam: FlaskClient):
+def test_a_game_name_is_still_unique_within_one_catalogue(tim: Client, sam: Client):
     add_game(sam, "Hades")
     add_game(tim, "Hades")
 
     response = tim.post("/games", data={"name": "HADES"})
 
-    assert "HADES is already in the catalogue." in response.get_data(as_text=True)
+    assert "HADES is already in the catalogue." in text(response)
 
 
-def test_renaming_to_a_name_in_another_catalogue_is_allowed(tim: FlaskClient, sam: FlaskClient):
+def test_renaming_to_a_name_in_another_catalogue_is_allowed(tim: Client, sam: Client):
     add_game(sam, "Hades")
     game = add_game(tim, "Tunic")
 
@@ -137,7 +137,7 @@ def test_renaming_to_a_name_in_another_catalogue_is_allowed(tim: FlaskClient, sa
 # Another cataloguer's game is as good as absent
 
 
-def test_renaming_another_cataloguers_game_is_not_found(tim: FlaskClient, sam: FlaskClient):
+def test_renaming_another_cataloguers_game_is_not_found(tim: Client, sam: Client):
     game = add_game(tim, "Hades")
 
     response = sam.post(f"/games/{game}/name", data={"name": "Tunic"}, headers=HTMX)
@@ -146,9 +146,7 @@ def test_renaming_another_cataloguers_game_is_not_found(tim: FlaskClient, sam: F
     assert [entry["name"] for entry in exported(tim)["games"]] == ["Hades"]
 
 
-def test_renaming_another_cataloguers_game_adds_nothing_to_your_own(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_renaming_another_cataloguers_game_adds_nothing_to_your_own(tim: Client, sam: Client):
     game = add_game(tim, "Hades")
 
     sam.post(f"/games/{game}/name", data={"name": "Tunic"}, headers=HTMX)
@@ -156,9 +154,7 @@ def test_renaming_another_cataloguers_game_adds_nothing_to_your_own(
     assert exported(sam)["games"] == []
 
 
-def test_tapping_a_platform_on_another_cataloguers_game_is_not_found(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_tapping_a_platform_on_another_cataloguers_game_is_not_found(tim: Client, sam: Client):
     game = add_game(tim, "Hades", ["Steam"])
 
     responses = [
@@ -171,9 +167,7 @@ def test_tapping_a_platform_on_another_cataloguers_game_is_not_found(
     assert exported(tim)["games"][0]["intended"] is None
 
 
-def test_setting_the_status_of_another_cataloguers_game_is_not_found(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_setting_the_status_of_another_cataloguers_game_is_not_found(tim: Client, sam: Client):
     game = add_game(tim, "Hades")
 
     response = sam.post(f"/games/{game}/status", data={"status": "abandoned"}, headers=HTMX)
@@ -182,9 +176,7 @@ def test_setting_the_status_of_another_cataloguers_game_is_not_found(
     assert 'data-status="abandoned"' not in row(page(tim), game)
 
 
-def test_deleting_another_cataloguers_game_leaves_it_where_it_was(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_deleting_another_cataloguers_game_leaves_it_where_it_was(tim: Client, sam: Client):
     game = add_game(tim, "Hades")
 
     sam.delete(f"/games/{game}", headers=HTMX)
@@ -193,7 +185,7 @@ def test_deleting_another_cataloguers_game_leaves_it_where_it_was(
 
 
 def test_changes_to_your_own_game_leave_a_namesake_in_another_catalogue_alone(
-    tim: FlaskClient, sam: FlaskClient
+    tim: Client, sam: Client
 ):
     theirs = add_game(sam, "Hades", ["Switch"])
     mine = add_game(tim, "Hades", ["Steam"])
@@ -217,34 +209,32 @@ def test_changes_to_your_own_game_leave_a_namesake_in_another_catalogue_alone(
 # Search URLs
 
 
-def test_a_search_url_one_cataloguer_saves_is_not_in_anothers_settings(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_a_search_url_one_cataloguer_saves_is_not_in_anothers_settings(tim: Client, sam: Client):
     save_search_url(tim, SEARCH_URL)
 
     assert saved(sam) == []
     assert "No search URLs yet" in page(sam, "/settings")
 
 
-def test_two_cataloguers_can_each_save_the_same_search_url(tim: FlaskClient, sam: FlaskClient):
+def test_two_cataloguers_can_each_save_the_same_search_url(tim: Client, sam: Client):
     save_search_url(tim, SEARCH_URL)
 
     response = sam.post("/settings/urls", data={"url": SEARCH_URL.upper()}, headers=HTMX)
 
-    assert "already saved" not in response.get_data(as_text=True)
+    assert "already saved" not in text(response)
     assert SEARCH_URL.upper() in saved(sam)
 
 
-def test_a_search_url_is_still_unique_within_one_catalogue(tim: FlaskClient, sam: FlaskClient):
+def test_a_search_url_is_still_unique_within_one_catalogue(tim: Client, sam: Client):
     save_search_url(sam, SEARCH_URL)
     save_search_url(tim, SEARCH_URL)
 
     response = tim.post("/settings/urls", data={"url": SEARCH_URL}, headers=HTMX)
 
-    assert "That URL is already saved." in response.get_data(as_text=True)
+    assert "That URL is already saved." in text(response)
 
 
-def test_each_cataloguer_has_their_own_active_search_url(tim: FlaskClient, sam: FlaskClient):
+def test_each_cataloguer_has_their_own_active_search_url(tim: Client, sam: Client):
     mine = save_search_url(tim, SEARCH_URL)
     theirs = save_search_url(sam, OTHER_SEARCH_URL)
 
@@ -255,7 +245,7 @@ def test_each_cataloguer_has_their_own_active_search_url(tim: FlaskClient, sam: 
     assert checked(sam) == [str(theirs)]
 
 
-def test_turning_search_off_leaves_another_cataloguers_on(tim: FlaskClient, sam: FlaskClient):
+def test_turning_search_off_leaves_another_cataloguers_on(tim: Client, sam: Client):
     mine = save_search_url(tim, SEARCH_URL)
     theirs = save_search_url(sam, OTHER_SEARCH_URL)
     activate(tim, mine)
@@ -266,9 +256,7 @@ def test_turning_search_off_leaves_another_cataloguers_on(tim: FlaskClient, sam:
     assert checked(sam) == [str(theirs)]
 
 
-def test_the_search_control_uses_only_your_own_active_search_url(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_the_search_control_uses_only_your_own_active_search_url(tim: Client, sam: Client):
     activate(tim, save_search_url(tim, SEARCH_URL))
     add_game(tim, "Hades")
     add_game(sam, "Hades")
@@ -277,9 +265,7 @@ def test_the_search_control_uses_only_your_own_active_search_url(
     assert 'class="search"' not in page(sam)
 
 
-def test_deleting_another_cataloguers_search_url_leaves_it_saved(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_deleting_another_cataloguers_search_url_leaves_it_saved(tim: Client, sam: Client):
     url_id = save_search_url(tim, SEARCH_URL)
 
     sam.post(f"/settings/urls/{url_id}/delete", headers=HTMX)
@@ -287,9 +273,7 @@ def test_deleting_another_cataloguers_search_url_leaves_it_saved(
     assert SEARCH_URL in saved(tim)
 
 
-def test_activating_another_cataloguers_search_url_changes_nothing(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_activating_another_cataloguers_search_url_changes_nothing(tim: Client, sam: Client):
     """Neither side moves: theirs stays off, and yours stays the one you chose."""
     mine = save_search_url(sam, OTHER_SEARCH_URL)
     activate(sam, mine)
@@ -304,7 +288,7 @@ def test_activating_another_cataloguers_search_url_changes_nothing(
 # Snapshots and resets
 
 
-def test_an_export_holds_only_your_own_catalogue(tim: FlaskClient, sam: FlaskClient):
+def test_an_export_holds_only_your_own_catalogue(tim: Client, sam: Client):
     add_game(tim, "Hades", ["Steam"])
     save_search_url(tim, SEARCH_URL)
     add_game(sam, "Tunic", ["Switch"])
@@ -316,21 +300,21 @@ def test_an_export_holds_only_your_own_catalogue(tim: FlaskClient, sam: FlaskCli
     assert [search_url["url"] for search_url in snapshot["search_urls"]] == [SEARCH_URL]
 
 
-def test_an_export_names_no_owner(tim: FlaskClient):
+def test_an_export_names_no_owner(tim: Client):
     """A snapshot is one catalogue, and who imports it decides whose it becomes."""
     add_game(tim, "Hades")
 
     assert set(exported(tim)) == set(snapshot_data())
 
 
-def test_an_import_lands_in_the_importers_catalogue(tim: FlaskClient, sam: FlaskClient):
+def test_an_import_lands_in_the_importers_catalogue(tim: Client, sam: Client):
     import_snapshot(tim, snapshot_data())
 
     assert "Hades" in page(tim)
     assert "Hades" not in page(sam)
 
 
-def test_an_import_leaves_another_cataloguers_catalogue_alone(tim: FlaskClient, sam: FlaskClient):
+def test_an_import_leaves_another_cataloguers_catalogue_alone(tim: Client, sam: Client):
     add_game(sam, "Tunic", ["Switch"])
     save_search_url(sam, OTHER_SEARCH_URL)
 
@@ -340,7 +324,7 @@ def test_an_import_leaves_another_cataloguers_catalogue_alone(tim: FlaskClient, 
     assert OTHER_SEARCH_URL in saved(sam)
 
 
-def test_the_same_snapshot_can_be_imported_by_two_cataloguers(tim: FlaskClient, sam: FlaskClient):
+def test_the_same_snapshot_can_be_imported_by_two_cataloguers(tim: Client, sam: Client):
     import_snapshot(tim, snapshot_data())
 
     import_snapshot(sam, snapshot_data())
@@ -349,7 +333,7 @@ def test_the_same_snapshot_can_be_imported_by_two_cataloguers(tim: FlaskClient, 
     assert [game["name"] for game in exported(sam)["games"]] == ["Hades"]
 
 
-def test_an_exported_catalogue_imports_into_another_cataloguers(tim: FlaskClient, sam: FlaskClient):
+def test_an_exported_catalogue_imports_into_another_cataloguers(tim: Client, sam: Client):
     game = add_game(tim, "Hades", ["Steam", "Switch"])
     decide(tim, game, "Switch")
     activate(tim, save_search_url(tim, SEARCH_URL))
@@ -359,7 +343,7 @@ def test_an_exported_catalogue_imports_into_another_cataloguers(tim: FlaskClient
     assert exported(sam) == exported(tim)
 
 
-def test_a_reset_empties_only_your_own_catalogue(tim: FlaskClient, sam: FlaskClient):
+def test_a_reset_empties_only_your_own_catalogue(tim: Client, sam: Client):
     add_game(sam, "Tunic", ["Switch"])
     save_search_url(sam, OTHER_SEARCH_URL)
     add_game(tim, "Hades", ["Steam"])
@@ -374,7 +358,7 @@ def test_a_reset_empties_only_your_own_catalogue(tim: FlaskClient, sam: FlaskCli
 # The by-platform view
 
 
-def test_the_by_platform_view_shows_only_your_own_decisions(tim: FlaskClient, sam: FlaskClient):
+def test_the_by_platform_view_shows_only_your_own_decisions(tim: Client, sam: Client):
     decide(tim, add_game(tim, "Hades"), "Steam")
     decide(sam, add_game(sam, "Tunic"), "Switch")
 
@@ -384,9 +368,7 @@ def test_the_by_platform_view_shows_only_your_own_decisions(tim: FlaskClient, sa
     assert "Tunic" not in body
 
 
-def test_a_namesakes_status_does_not_reach_your_by_platform_view(
-    tim: FlaskClient, sam: FlaskClient
-):
+def test_a_namesakes_status_does_not_reach_your_by_platform_view(tim: Client, sam: Client):
     decide(tim, add_game(tim, "Hades"), "Steam")
     theirs = add_game(sam, "Hades")
     decide(sam, theirs, "Steam")
@@ -401,7 +383,7 @@ def test_a_namesakes_status_does_not_reach_your_by_platform_view(
 def test_the_first_cataloguer_to_sign_in_adopts_the_catalogue_already_there(
     catalogue_path: Path,
 ):
-    add_game(create_app(catalogue_path).test_client(), "Hades", ["Steam"])
+    add_game(client_for(create_app(catalogue_path)), "Hades", ["Steam"])
 
     guarded = create_app(catalogue_path, ProxyAuth())
 
@@ -411,7 +393,7 @@ def test_the_first_cataloguer_to_sign_in_adopts_the_catalogue_already_there(
 def test_the_second_cataloguer_does_not_get_the_catalogue_already_there(
     catalogue_path: Path,
 ):
-    add_game(create_app(catalogue_path).test_client(), "Hades", ["Steam"])
+    add_game(client_for(create_app(catalogue_path)), "Hades", ["Steam"])
     guarded = create_app(catalogue_path, ProxyAuth())
     page(signed_in(guarded, AUTHENTIK))
 
@@ -419,7 +401,7 @@ def test_the_second_cataloguer_does_not_get_the_catalogue_already_there(
 
 
 def test_search_urls_already_there_are_adopted_too(catalogue_path: Path):
-    before = create_app(catalogue_path).test_client()
+    before = client_for(create_app(catalogue_path))
     before.post("/settings/urls", data={"url": SEARCH_URL})
 
     guarded = create_app(catalogue_path, ProxyAuth())
@@ -455,19 +437,19 @@ def test_without_a_proxy_the_deployment_shows_the_adopted_catalogue(catalogue_pa
     add_game(signed_in(guarded, AUTHENTIK), "Hades")
     add_game(signed_in(guarded, SOMEONE_ELSE), "Tunic")
 
-    body = page(create_app(catalogue_path).test_client())
+    body = page(client_for(create_app(catalogue_path)))
 
     assert "Hades" in body
     assert "Tunic" not in body
 
 
-def test_without_a_proxy_every_device_shares_one_catalogue(client: FlaskClient, app: Flask):
+def test_without_a_proxy_every_device_shares_one_catalogue(client: Client, app: App):
     add_game(client, "Hades")
 
-    assert "Hades" in page(app.test_client())
+    assert "Hades" in page(client_for(app))
 
 
-def test_without_a_proxy_identity_headers_do_not_choose_a_catalogue(app: Flask):
+def test_without_a_proxy_identity_headers_do_not_choose_a_catalogue(app: App):
     add_game(signed_in(app, SOMEONE_ELSE), "Hades")
 
     assert "Hades" in page(signed_in(app, AUTHENTIK))
@@ -476,19 +458,17 @@ def test_without_a_proxy_identity_headers_do_not_choose_a_catalogue(app: Flask):
 # Requests that never passed the proxy
 
 
-def test_a_refused_request_shows_nobodys_search_url(tim: FlaskClient, guarded_client: FlaskClient):
+def test_a_refused_request_shows_nobodys_search_url(tim: Client, guarded_client: Client):
     activate(tim, save_search_url(tim, SEARCH_URL))
     add_game(tim, "Hades")
 
     response = guarded_client.get("/")
 
     assert response.status_code == 401
-    assert "example.com/search" not in response.get_data(as_text=True)
+    assert "example.com/search" not in text(response)
 
 
-def test_a_refused_request_adds_nothing_to_anyones_catalogue(
-    tim: FlaskClient, guarded_client: FlaskClient
-):
+def test_a_refused_request_adds_nothing_to_anyones_catalogue(tim: Client, guarded_client: Client):
     add_game(tim, "Hades")
 
     guarded_client.post("/games", data={"name": "Tunic"})

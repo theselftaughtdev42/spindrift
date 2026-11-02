@@ -2,37 +2,37 @@
 
 import re
 
-from flask import Flask
-from flask.testing import FlaskClient
-from werkzeug.test import TestResponse
-
 from tests.conftest import (
     AUTHENTIK,
     HTMX,
     SOMEONE_ELSE,
+    App,
+    Client,
+    Response,
     add_game,
     import_snapshot,
     signed_in,
     snapshot_data,
+    text,
 )
 from tests.test_by_platform import decide, plan_row
 from tests.test_export import exported
 
 
-def turn_on(client: FlaskClient):
+def turn_on(client: Client):
     client.post("/settings/wishlist", data={"enabled": "yes"})
 
 
-def turn_off(client: FlaskClient):
+def turn_off(client: Client):
     client.post("/settings/wishlist", data={})
 
 
-def toggle(client: FlaskClient, game: int, platform: str = "Steam") -> TestResponse:
+def toggle(client: Client, game: int, platform: str = "Steam") -> Response:
     return client.post(f"/games/{game}/platforms/{platform}/wishlist", headers=HTMX)
 
 
-def by_platform(client: FlaskClient) -> str:
-    return client.get("/by-platform").get_data(as_text=True)
+def by_platform(client: Client) -> str:
+    return text(client.get("/by-platform"))
 
 
 def wishlisted(body: str, name: str) -> bool:
@@ -41,16 +41,14 @@ def wishlisted(body: str, name: str) -> bool:
     return match is not None
 
 
-def test_the_wishlist_is_off_until_turned_on(client: FlaskClient):
+def test_the_wishlist_is_off_until_turned_on(client: Client):
     decide(client, add_game(client, "Hades"), "Steam")
 
     assert "Wishlisted" not in by_platform(client)
-    assert 'name="enabled" value="yes" checked' not in client.get("/settings").get_data(
-        as_text=True
-    )
+    assert 'name="enabled" value="yes" checked' not in text(client.get("/settings"))
 
 
-def test_turning_it_on_adds_the_column(client: FlaskClient):
+def test_turning_it_on_adds_the_column(client: Client):
     decide(client, add_game(client, "Hades"), "Steam")
     turn_on(client)
 
@@ -60,28 +58,28 @@ def test_turning_it_on_adds_the_column(client: FlaskClient):
     assert not wishlisted(body, "Hades")
 
 
-def test_saving_the_setting_reopens_its_group_saying_what_it_did(client: FlaskClient):
+def test_saving_the_setting_reopens_its_group_saying_what_it_did(client: Client):
     response = client.post("/settings/wishlist", data={"enabled": "yes"}, follow_redirects=True)
 
-    body = response.get_data(as_text=True)
+    body = text(response)
     assert "Wishlist turned on." in body
     assert 'name="enabled" value="yes" checked' in body
 
 
-def test_a_toggle_marks_and_unmarks_a_game(client: FlaskClient):
+def test_a_toggle_marks_and_unmarks_a_game(client: Client):
     game = add_game(client, "Hades")
     decide(client, game, "Steam")
     turn_on(client)
 
     response = toggle(client, game)
-    assert 'aria-pressed="true"' in response.get_data(as_text=True)
+    assert 'aria-pressed="true"' in text(response)
     assert wishlisted(by_platform(client), "Hades")
 
     toggle(client, game)
     assert not wishlisted(by_platform(client), "Hades")
 
 
-def test_a_toggle_without_htmx_goes_back_to_the_page(client: FlaskClient):
+def test_a_toggle_without_htmx_goes_back_to_the_page(client: Client):
     game = add_game(client, "Hades")
     decide(client, game, "Steam")
     turn_on(client)
@@ -93,7 +91,7 @@ def test_a_toggle_without_htmx_goes_back_to_the_page(client: FlaskClient):
 
 
 def test_a_toggle_without_htmx_returns_to_a_platform_with_a_space_in_its_name(
-    client: FlaskClient,
+    client: Client,
 ):
     game = add_game(client, "Halo")
     decide(client, game, "Xbox 360")
@@ -104,12 +102,12 @@ def test_a_toggle_without_htmx_returns_to_a_platform_with_a_space_in_its_name(
     assert response.headers["Location"].endswith(f"#wishlisted-{game}-Xbox-360")
 
 
-def test_a_toggle_answers_with_just_its_cell_keeping_the_buttons_id(client: FlaskClient):
+def test_a_toggle_answers_with_just_its_cell_keeping_the_buttons_id(client: Client):
     game = add_game(client, "Hades")
     decide(client, game, "Steam")
     turn_on(client)
 
-    body = toggle(client, game).get_data(as_text=True).strip()
+    body = text(toggle(client, game)).strip()
 
     # One cell and the same id, so htmx can swap it in place and give focus back.
     assert body.startswith('<td class="wishlisted">')
@@ -118,7 +116,7 @@ def test_a_toggle_answers_with_just_its_cell_keeping_the_buttons_id(client: Flas
     assert f'id="wishlisted-{game}-Steam"' in body
 
 
-def test_turning_it_off_hides_the_marks_but_keeps_them(client: FlaskClient):
+def test_turning_it_off_hides_the_marks_but_keeps_them(client: Client):
     game = add_game(client, "Hades")
     decide(client, game, "Steam")
     turn_on(client)
@@ -131,34 +129,34 @@ def test_turning_it_off_hides_the_marks_but_keeps_them(client: FlaskClient):
     assert wishlisted(by_platform(client), "Hades")
 
 
-def test_a_toggle_is_refused_while_the_wishlist_is_off(client: FlaskClient):
+def test_a_toggle_is_refused_while_the_wishlist_is_off(client: Client):
     game = add_game(client, "Hades")
     decide(client, game, "Steam")
 
     assert toggle(client, game).status_code == 404
 
 
-def test_a_toggle_is_refused_where_the_game_is_not_available(client: FlaskClient):
+def test_a_toggle_is_refused_where_the_game_is_not_available(client: Client):
     game = add_game(client, "Hades", ["Steam"])
     turn_on(client)
 
     assert toggle(client, game, "Switch").status_code == 404
 
 
-def test_a_toggle_on_a_platform_spindrift_does_not_have_is_refused(client: FlaskClient):
+def test_a_toggle_on_a_platform_spindrift_does_not_have_is_refused(client: Client):
     game = add_game(client, "Hades", ["Steam"])
     turn_on(client)
 
     assert toggle(client, game, "Nowhere").status_code == 404
 
 
-def test_a_toggle_on_a_game_that_does_not_exist_is_refused(client: FlaskClient):
+def test_a_toggle_on_a_game_that_does_not_exist_is_refused(client: Client):
     turn_on(client)
 
     assert toggle(client, 999).status_code == 404
 
 
-def test_a_mark_belongs_to_its_platform_not_the_game(client: FlaskClient):
+def test_a_mark_belongs_to_its_platform_not_the_game(client: Client):
     game = add_game(client, "Hades", ["Steam", "Switch"])
     client.post(f"/games/{game}/platforms/Steam", headers=HTMX)
     turn_on(client)
@@ -171,7 +169,7 @@ def test_a_mark_belongs_to_its_platform_not_the_game(client: FlaskClient):
     assert wishlisted(by_platform(client), "Hades")
 
 
-def test_the_setting_and_marks_are_each_cataloguers_own(guarded_app: Flask):
+def test_the_setting_and_marks_are_each_cataloguers_own(guarded_app: App):
     tim = signed_in(guarded_app, AUTHENTIK)
     sam = signed_in(guarded_app, SOMEONE_ELSE)
     game = add_game(tim, "Hades")
@@ -184,7 +182,7 @@ def test_the_setting_and_marks_are_each_cataloguers_own(guarded_app: Flask):
     assert toggle(sam, game).status_code == 404
 
 
-def test_an_export_holds_the_marks_and_the_setting(client: FlaskClient):
+def test_an_export_holds_the_marks_and_the_setting(client: Client):
     game = add_game(client, "Hades", ["Steam", "Switch"])
     turn_on(client)
     toggle(client, game, "Switch")
@@ -195,14 +193,14 @@ def test_an_export_holds_the_marks_and_the_setting(client: FlaskClient):
     assert snapshot["games"][0]["wishlisted"] == ["Switch"]
 
 
-def test_an_import_brings_the_marks_and_the_setting(client: FlaskClient):
+def test_an_import_brings_the_marks_and_the_setting(client: Client):
     game = {"name": "Hades", "status": None, "platforms": ["Steam"], "intended": "Steam"}
     import_snapshot(client, snapshot_data(games=[{**game, "wishlisted": ["Steam"]}], wishlist=True))
 
     assert wishlisted(by_platform(client), "Hades")
 
 
-def test_a_snapshot_from_before_the_wishlist_imports_with_it_off(client: FlaskClient):
+def test_a_snapshot_from_before_the_wishlist_imports_with_it_off(client: Client):
     turn_on(client)
     data = snapshot_data(
         spindrift="1.0",
@@ -216,7 +214,7 @@ def test_a_snapshot_from_before_the_wishlist_imports_with_it_off(client: FlaskCl
     assert "Wishlisted" not in by_platform(client)
 
 
-def test_a_reset_turns_the_wishlist_off(client: FlaskClient):
+def test_a_reset_turns_the_wishlist_off(client: Client):
     turn_on(client)
 
     client.post("/settings/reset", data={"confirm": "yes"})
