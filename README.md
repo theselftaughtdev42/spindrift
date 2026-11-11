@@ -39,22 +39,20 @@ local run and dies on Linux.
 
 ## Container
 
-The image is published to `ghcr.io/theselftaughtdev42/spindrift` for `linux/amd64`, and
-only when a release is cut — see below. Pushes to `main` don't publish; they build on the
-pull request beforehand purely to prove the image still builds.
+Releases are published by pushing a version tag. The image is
+`ghcr.io/theselftaughtdev42/spindrift:<version>` — e.g. `…/spindrift:0.10.0` for tag
+`v0.10.0` — built for `linux/amd64`. There is no `latest`: deploys pin an exact version, and
+rolling back is deploying the previous one.
+
+The Docker workflow runs the suite, then builds the image. On a pull request it builds without
+pushing. Pushes to `main` also publish `…/spindrift:main` and `…/spindrift:sha-<commit>`, for
+trying a build before it's released. A version tag that isn't on `main` is refused.
 
 ### Releases
 
-A release is a `v*` git tag. Cut one with `make release VERSION=0.2.0`, which bumps
-`pyproject.toml`, tags `v0.2.0`, and pushes it; the publish workflow then builds one image
-and tags it three ways:
-
-- `…/spindrift:0.2.0` — that exact release, forever.
-- `…/spindrift:0.2` — the newest patch on the `0.2` line.
-- `…/spindrift:latest` — the newest release, for staying current.
-
-Pin a version for anything you want to be able to roll back to; rolling back is re-running
-the pinned tag you want. Confirm which build is actually up with `GET /version` (see below).
+`make release VERSION=0.10.0` bumps `pyproject.toml` through a pull request, tags `v0.10.0`
+on `main`, and pushes the tag; the workflow publishes `…/spindrift:0.10.0`. Confirm which
+build is actually up with `GET /version` (see below).
 
 Run contract for the orchestration layer:
 
@@ -105,7 +103,7 @@ Run contract for the orchestration layer:
 docker run -d --name spindrift \
   -p 127.0.0.1:8000:8000 \
   -v spindrift-data:/data \
-  ghcr.io/theselftaughtdev42/spindrift:latest
+  ghcr.io/theselftaughtdev42/spindrift:0.10.0
 ```
 
 ### Behind a sign-in
