@@ -5,7 +5,7 @@
 # available. Add new targets to this list.
 .PHONY: local static.clean test crap lint lint.templates types check \
 	hooks hooks.run mutants mutants.results mutants.browse mutants.check format \
-	docker.build docker.run docker.latest release release.notes
+	docker.build docker.run docker.pull release release.notes
 
 # A manifest left in the source tree names whatever some earlier build digested, so every
 # page goes on quoting those names and an edited stylesheet is served as it was. Cleared
@@ -81,8 +81,9 @@ docker.build:
 docker.run:
 	docker run --rm --name spindrift -p 127.0.0.1:8000:8000 -v "${PWD}:/data" spindrift:local
 
-docker.latest:
-	docker run --rm --name spindrift --platform linux/amd64 -p 127.0.0.1:8000:8000 -v "${PWD}:/data" ghcr.io/theselftaughtdev42/spindrift:latest
+docker.pull:
+	@test -n "$(VERSION)" || { echo "VERSION is required, e.g. make docker.pull VERSION=0.9.0"; exit 1; }
+	docker run --rm --name spindrift --platform linux/amd64 -p 127.0.0.1:8000:8000 -v "${PWD}:/data" ghcr.io/theselftaughtdev42/spindrift:$(VERSION)
 
 release:
 	@test -n "$(VERSION)" || { echo "VERSION is required, e.g. make release VERSION=0.2.0"; exit 1; }
