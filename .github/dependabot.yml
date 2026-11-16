@@ -9,3 +9,16 @@ updates:
     directory: /
     schedule: { interval: weekly }
     cooldown: { default-days: 7 }
+  # Minor and patch bumps arrive as one PR; a major one gets its own, since that's where
+  # things break.
+  - package-ecosystem: uv
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups: { python: { update-types: [minor, patch] } }
+  # Template formatting only; nothing here ships.
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups: { templates: { patterns: ["*"] } }
