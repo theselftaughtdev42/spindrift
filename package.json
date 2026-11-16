@@ -3,7 +3,7 @@
   "private": true,
   "description": "Tooling-only manifest: prettier formats the Jinja templates.",
   "devDependencies": {
-    "prettier": "^3.9.8",
+    "prettier": "^3.9.10",
     "prettier-plugin-jinja-template": "^2.2.0"
   }
 }
