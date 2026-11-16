@@ -692,7 +692,8 @@ def retargeted_catalogue(
 def catalogue(connection: sqlite3.Connection, owner: int) -> Context:
     games = connection.execute(
         "SELECT id, name, status FROM games WHERE owner_id = ?"  # pragma: no mutate
-        " ORDER BY name COLLATE NOCASE",  # pragma: no mutate
+        # What's being played first, so it's to hand without scrolling or searching.
+        " ORDER BY status IS NOT 'playing', name COLLATE NOCASE",
         (owner,),
     ).fetchall()
     availability = set()

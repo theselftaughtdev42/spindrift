@@ -121,6 +121,28 @@ def test_the_catalogue_is_ordered_by_name_regardless_of_capitalisation(client: C
     assert names(catalogue(client)) == ["apex", "Bastion", "celeste"]
 
 
+def test_games_being_played_come_first_then_the_rest_by_name(client: Client):
+    add_game(client, "apex")
+    hades = add_game(client, "Hades")
+    add_game(client, "celeste")
+    bastion = add_game(client, "bastion")
+    finished = add_game(client, "Abzu")
+    for game in (hades, bastion):
+        client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
+    client.post(f"/games/{finished}/status", data={"status": "finished"}, headers=HTMX)
+
+    assert names(catalogue(client)) == ["bastion", "Hades", "Abzu", "apex", "celeste"]
+
+
+def test_a_game_no_longer_being_played_returns_to_its_place_by_name(client: Client):
+    game = add_game(client, "Zork")
+    add_game(client, "Abzu")
+    client.post(f"/games/{game}/status", data={"status": "playing"}, headers=HTMX)
+    client.post(f"/games/{game}/status", data={"status": "abandoned"}, headers=HTMX)
+
+    assert names(catalogue(client)) == ["Abzu", "Zork"]
+
+
 def test_renaming_a_game_returns_just_that_row(client: Client):
     game = add_game(client, "Hades")
     add_game(client, "Celeste")
